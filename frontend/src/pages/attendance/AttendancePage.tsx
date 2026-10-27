@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMinutes, formatTime, staffFullName, todayKey } from '../../lib/format'
-import { ChevronLeft, ChevronRight, ClipboardCheck, Lock } from 'lucide-react'
+import { ClipboardCheck, Lock } from 'lucide-react'
 import {
   STAFF_ROLE_LABELS,
   STAFF_ROLES,
@@ -15,8 +15,11 @@ import { useAuth } from '../../auth/useAuth'
 import { AttendanceStatusBadge } from '../../components/AttendanceStatusBadge'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
-import { Input, Select } from '../../components/ui/Field'
+import { BandStepper } from '../../components/ui/BandStepper'
+import { Select } from '../../components/ui/Field'
 import { FilterBar } from '../../components/ui/FilterBar'
+import { HeroStat } from '../../components/ui/HeroStat'
+import { LiveClock } from '../../components/ui/LiveClock'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Table, type Column } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
@@ -32,6 +35,8 @@ function AttendancePage() {
   const [date, setDate] = useState(todayKey())
   const [role, setRole] = useState<StaffRole | ''>('')
   const [target, setTarget] = useState<AttendanceTarget | null>(null)
+  // Instante de referencia para atrasos; se renueva al cambiar de día o al recargar
+  const [nowMs] = useState(() => Date.now())
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['attendance', 'day', date, role],
@@ -73,10 +78,15 @@ function AttendancePage() {
         ) : r.schedule.isRestDay ? (
           <span className="text-fg-subtle">Descanso</span>
         ) : (
-          `${formatTime(r.schedule.startAt)}–${formatTime(r.schedule.endAt)}`
+          <span className="font-data">
+            {formatTime(r.schedule.startAt)}–{formatTime(r.schedule.endAt)}
+          </span>
         ),
     },
-    { header: 'Entrada', cell: (r) => formatTime(r.attendance?.checkInAt) || '—' },
+    {
+      header: 'Entrada',
+      cell: (r) => <span className="font-data">{formatTime(r.attendance?.checkInAt) || '—'}</span>,
+    },
     {
       header: 'Salida',
       cell: (r) =>
@@ -99,7 +109,15 @@ function AttendancePage() {
       header: 'Detalle',
       cell: (r) => {
         const a = r.attendance
-        if (!a) return null
+        if (!a) {
+          if (!isMissing(r)) return null
+          const delay = Math.max(0, Math.round((nowMs - new Date(r.schedule!.startAt!).getTime()) / 60_000))
+          return (
+            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+              {isPast ? 'Sin registro' : `${formatMinutes(delay)} de atraso`}
+            </span>
+          )
+        }
         return (
           <div className="text-xs text-fg-muted">
             {a.lateMinutes > 0 && <div>Retardo: {formatMinutes(a.lateMinutes)}</div>}
@@ -123,7 +141,8 @@ function AttendancePage() {
         date <= todayKey() &&
         !r.schedule?.isRestDay && (
           <Button
-            variant="ghost"
+            variant={r.attendance ? 'ghost' : isMissing(r) ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() =>
               setTarget({ staffId: r.staff.id, staffName: staffFullName(r.staff), date, attendance: r.attendance })
             }
@@ -135,19 +154,37 @@ function AttendancePage() {
   ]
 
   const count = (s: AttendanceStatus) => data.filter((r) => r.attendance?.status === s).length
-  const summary = [
-    { label: 'Con turno', value: data.filter((r) => r.schedule && !r.schedule.isRestDay).length, dot: 'bg-indigo-500' },
-    { label: 'Asistieron', value: count('present'), dot: 'bg-emerald-500' },
-    { label: 'Retardos', value: count('late'), dot: 'bg-amber-400' },
-    { label: 'Faltas', value: count('absent'), dot: 'bg-red-500' },
-    { label: 'Sin registro', value: pending, dot: 'bg-slate-400' },
-  ]
+  const scheduled = data.filter((r) => r.schedule && !r.schedule.isRestDay)
+  /** Debió entrar y no hay registro (hoy: su turno ya empezó; días pasados: cualquiera sin registro). */
+  const isMissing = (r: AttendanceDayRow) =>
+    !!r.schedule &&
+    !r.schedule.isRestDay &&
+    !r.attendance &&
+    (isPast || new Date(r.schedule.startAt!).getTime() < nowMs)
+  const missing = data.filter(isMissing).length
+  const overtime = data.reduce((t, r) => t + (r.attendance?.overtimeMinutes ?? 0), 0)
+  // Primero quien debió entrar y no ha registrado
+  const rows = [...data].sort((a, b) => Number(isMissing(b)) - Number(isMissing(a)))
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Asistencias"
         description="Entradas y salidas del día contra el turno programado"
+        meta={
+          <BandStepper
+            label={date === todayKey() ? `${dayLabel(date)} · hoy` : dayLabel(date)}
+            onPrev={() => setDate(addDaysKey(date, -1))}
+            onNext={() => setDate(addDaysKey(date, 1))}
+            nextDisabled={date >= todayKey()}
+            prevLabel="Día anterior"
+            nextLabel="Día siguiente"
+            todayLabel="Hoy"
+            onToday={() => setDate(todayKey())}
+            isToday={date === todayKey()}
+          />
+        }
+        aside={!isPast && <LiveClock />}
         actions={
           canClose &&
           isPast && (
@@ -156,37 +193,43 @@ function AttendancePage() {
             </Button>
           )
         }
+        statsColumns={5}
+        stats={
+          <>
+            <HeroStat label="Con turno" value={scheduled.length} loading={isLoading} hint="sin contar descansos" />
+            <HeroStat
+              label="Asistieron"
+              value={count('present')}
+              tone="success"
+              loading={isLoading}
+              hint={`${count('half_day')} medio(s) día`}
+            />
+            <HeroStat
+              label="Retardos"
+              value={count('late')}
+              tone={count('late') ? 'warning' : 'neutral'}
+              loading={isLoading}
+              hint={`${count('excused')} justificada(s)`}
+            />
+            <HeroStat
+              label={isPast ? 'Sin registro' : 'Sin entrada'}
+              value={missing + count('absent')}
+              tone={missing + count('absent') ? 'danger' : 'neutral'}
+              loading={isLoading}
+              hint={`${count('absent')} falta(s) registrada(s)`}
+            />
+            <HeroStat
+              label="Horas extra"
+              value={formatMinutes(overtime)}
+              tone="primary"
+              loading={isLoading}
+              hint="acumuladas en el día"
+            />
+          </>
+        }
       />
 
-      <FilterBar className="justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            size="icon"
-            icon={ChevronLeft}
-            onClick={() => setDate(addDaysKey(date, -1))}
-            aria-label="Día anterior"
-          />
-          <Input
-            type="date"
-            value={date}
-            max={todayKey()}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="w-40"
-          />
-          <Button
-            variant="secondary"
-            size="icon"
-            icon={ChevronRight}
-            disabled={date >= todayKey()}
-            onClick={() => setDate(addDaysKey(date, 1))}
-            aria-label="Día siguiente"
-          />
-          <Button variant="secondary" disabled={date === todayKey()} onClick={() => setDate(todayKey())}>
-            Hoy
-          </Button>
-          <span className="ml-2 text-sm font-semibold text-fg">{dayLabel(date)}</span>
-        </div>
+      <FilterBar className="justify-end">
         <div className="w-full sm:w-52">
           <Select value={role} onChange={(e) => setRole(e.target.value as StaffRole | '')}>
             <option value="">Todos los puestos</option>
@@ -199,24 +242,10 @@ function AttendancePage() {
         </div>
       </FilterBar>
 
-      {!isLoading && data.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {summary.map((s) => (
-            <span
-              key={s.label}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-sm shadow-card"
-            >
-              <span className={`size-2 rounded-full ${s.dot}`} />
-              <span className="text-fg-muted">{s.label}</span>
-              <span className="tabular font-semibold text-fg">{s.value}</span>
-            </span>
-          ))}
-        </div>
-      )}
-
       <Table
         columns={columns}
-        rows={data}
+        rows={rows}
+        rowClassName={(r) => isMissing(r) && 'bg-red-50/70 dark:bg-red-500/10'}
         rowKey={(r) => r.staff.id}
         loading={isLoading}
         emptyIcon={ClipboardCheck}

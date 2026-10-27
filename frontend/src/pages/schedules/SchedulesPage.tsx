@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, ChevronLeft, ChevronRight, LayoutTemplate, Plus, Users } from 'lucide-react'
+import { CalendarClock, LayoutTemplate, Plus, Users } from 'lucide-react'
 import { api } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { addDaysKey, dayLabel, formatHours, mondayOf, staffFullName, todayKey } from '../../lib/format'
@@ -19,6 +19,8 @@ import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Select } from '../../components/ui/Field'
 import { FilterBar } from '../../components/ui/FilterBar'
+import { BandStepper } from '../../components/ui/BandStepper'
+import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { BulkScheduleModal } from './BulkScheduleModal'
@@ -77,11 +79,34 @@ function SchedulesPage() {
   const weekHours = (staffId: string) =>
     days.reduce((sum, d) => sum + (byStaffDay.get(`${staffId}|${d}`)?.workedHours ?? 0), 0)
 
+  // Cifras de la banda, calculadas con lo que ya está en pantalla
+  const week = { shifts: 0, hours: 0, overMax: 0, unassigned: 0 }
+  for (const s of staff) {
+    const own = days.map((d) => byStaffDay.get(`${s.id}|${d}`)).filter((x) => !!x)
+    const hours = own.reduce((t, x) => t + x.workedHours, 0)
+    week.shifts += own.filter((x) => !x.isRestDay).length
+    week.hours += hours
+    if (hours > maxWeekly) week.overMax++
+    if (own.length === 0) week.unassigned++
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Turnos"
         description="Programación semanal del personal; haz clic en un día para asignar o cambiar el turno"
+        meta={
+          <BandStepper
+            label={`${dayLabel(monday)} – ${dayLabel(sunday)}`}
+            onPrev={() => setMonday(addDaysKey(monday, -7))}
+            onNext={() => setMonday(addDaysKey(monday, 7))}
+            prevLabel="Semana anterior"
+            nextLabel="Semana siguiente"
+            todayLabel="Esta semana"
+            onToday={() => setMonday(mondayOf(today))}
+            isToday={isCurrentWeek}
+          />
+        }
         actions={
           <>
             {canManageTemplates && (
@@ -96,29 +121,50 @@ function SchedulesPage() {
             )}
           </>
         }
+        stats={
+          <>
+            <HeroStat label="Turnos programados" value={week.shifts} loading={loading} hint="sin contar descansos" />
+            <HeroStat
+              label="Horas programadas"
+              value={`${Math.round(week.hours).toLocaleString('es-MX')} h`}
+              loading={loading}
+              hint={`${staff.length} empleado(s) en la vista`}
+            />
+            <HeroStat
+              label="Sobre el máximo semanal"
+              value={week.overMax}
+              tone={week.overMax ? 'danger' : 'neutral'}
+              loading={loading}
+              hint={`máximo ${maxWeekly} h por semana`}
+            />
+            <HeroStat
+              label="Sin turno asignado"
+              value={week.unassigned}
+              tone={week.unassigned ? 'warning' : 'neutral'}
+              loading={loading}
+              hint="nada programado esta semana"
+            />
+          </>
+        }
       />
 
       <FilterBar className="justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="icon"
-            icon={ChevronLeft}
-            onClick={() => setMonday(addDaysKey(monday, -7))}
-            aria-label="Semana anterior"
-          />
-          <Button
-            variant="secondary"
-            size="icon"
-            icon={ChevronRight}
-            onClick={() => setMonday(addDaysKey(monday, 7))}
-            aria-label="Semana siguiente"
-          />
-          <Button variant="secondary" disabled={isCurrentWeek} onClick={() => setMonday(mondayOf(today))}>
-            Esta semana
-          </Button>
-          <span className="tabular ml-2 text-sm font-semibold text-fg">
-            {dayLabel(monday)} – {dayLabel(sunday)}
+        <div className="flex flex-wrap items-center gap-4 text-xs text-fg-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-1 rounded-full bg-sky-500" />
+            Matutino
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-1 rounded-full bg-amber-500" />
+            Vespertino
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-1 rounded-full bg-indigo-500" />
+            Nocturno
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded border border-dashed border-border-strong" />
+            Descanso
           </span>
         </div>
         <div className="w-full sm:w-52">

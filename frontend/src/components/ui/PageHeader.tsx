@@ -14,13 +14,24 @@ interface PageHeaderProps {
   stats?: ReactNode
   /** Pestañas u otro contenido pegado al borde inferior de la banda */
   bottom?: ReactNode
+  /** Columnas de las cifras en pantallas anchas */
+  statsColumns?: 4 | 5
 }
 
 /**
  * Banda índigo de cada pantalla, continuación del topbar: título, acciones y,
  * opcionalmente, cifras clave flotando sobre su borde inferior.
  */
-export function PageHeader({ title, description, actions, meta, aside, stats, bottom }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  meta,
+  aside,
+  stats,
+  bottom,
+  statsColumns = 4,
+}: PageHeaderProps) {
   return (
     <div className={cn(stats && 'mb-2')}>
       <div
@@ -44,7 +55,16 @@ export function PageHeader({ title, description, actions, meta, aside, stats, bo
         </div>
         {bottom && <div className="mt-5">{bottom}</div>}
       </div>
-      {stats && <div className="-mt-14 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats}</div>}
+      {stats && (
+        <div
+          className={cn(
+            '-mt-14 grid gap-4 sm:grid-cols-2',
+            statsColumns === 5 ? 'lg:grid-cols-3 xl:grid-cols-5' : 'xl:grid-cols-4',
+          )}
+        >
+          {stats}
+        </div>
+      )}
     </div>
   )
 }

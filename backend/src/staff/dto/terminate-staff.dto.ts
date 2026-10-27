@@ -8,7 +8,9 @@ export class TerminateStaffDto {
   terminationDate: string;
 
   @ApiProperty()
-  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(3)
   @MaxLength(1000)

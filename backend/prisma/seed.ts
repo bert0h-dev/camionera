@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
-import { PrismaClient, UserRole } from '../src/generated/prisma/client.js';
+import { PrismaClient, ShiftType, UserRole } from '../src/generated/prisma/client.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -25,6 +25,17 @@ async function main() {
     },
   });
   console.log(`Admin listo: ${admin.email}`);
+
+  // Plantillas de turno base (no se sobrescriben si ya existen)
+  const templates = [
+    { name: 'Matutino', shiftType: ShiftType.morning, startTime: '06:00', endTime: '14:00' },
+    { name: 'Vespertino', shiftType: ShiftType.afternoon, startTime: '14:00', endTime: '22:00' },
+    { name: 'Nocturno', shiftType: ShiftType.night, startTime: '22:00', endTime: '06:00' },
+  ];
+  for (const t of templates) {
+    await prisma.shiftTemplate.upsert({ where: { name: t.name }, update: {}, create: t });
+  }
+  console.log(`Plantillas de turno: ${templates.map((t) => t.name).join(', ')}`);
 }
 
 main()

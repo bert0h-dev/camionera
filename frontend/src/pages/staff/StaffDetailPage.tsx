@@ -13,6 +13,7 @@ import {
 } from '../../lib/types'
 import { Button } from '../../components/ui/Button'
 import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
+import { StaffSchedulesTab } from './StaffSchedulesTab'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
@@ -22,7 +23,7 @@ import { useCanEditStaff } from './useCanEditStaff'
 const TABS = [
   { key: 'general', label: 'General', enabled: true },
   { key: 'licenses', label: 'Licencias', enabled: true },
-  { key: 'schedules', label: 'Turnos', enabled: false },
+  { key: 'schedules', label: 'Turnos', enabled: true },
   { key: 'attendance', label: 'Asistencias', enabled: false },
   { key: 'evaluations', label: 'Evaluaciones', enabled: false },
   { key: 'payroll', label: 'Nómina', enabled: false },
@@ -172,6 +173,9 @@ function StaffDetailPage() {
       )}
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
+      {tab === 'schedules' && (
+        <StaffSchedulesTab staffId={s.id} staffName={staffFullName(s)} editable={!isTerminated} />
+      )}
 
       {tab === 'general' && (
         <>

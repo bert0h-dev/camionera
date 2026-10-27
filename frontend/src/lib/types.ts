@@ -164,3 +164,40 @@ export interface Compliance {
   compliant: boolean
   missing: string[]
 }
+
+export const SHIFT_TYPES = ['morning', 'afternoon', 'night', 'split'] as const
+export type ShiftType = (typeof SHIFT_TYPES)[number]
+
+export const SHIFT_TYPE_LABELS: Record<ShiftType, string> = {
+  morning: 'Matutino',
+  afternoon: 'Vespertino',
+  night: 'Nocturno',
+  split: 'Partido',
+}
+
+export interface ShiftTemplate {
+  id: string
+  name: string
+  shiftType: ShiftType
+  startTime: string
+  endTime: string
+  breakMinutes: number
+  isActive: boolean
+}
+
+export interface Schedule {
+  id: string
+  staffId: string
+  scheduleDate: string
+  startAt: string | null
+  endAt: string | null
+  shiftType: ShiftType | null
+  breakMinutes: number
+  isRestDay: boolean
+  templateId: string | null
+  template: Pick<ShiftTemplate, 'id' | 'name'> | null
+  notes: string | null
+  overrideReason: string | null
+  workedHours: number
+  staff: Pick<Staff, 'id' | 'employeeNumber' | 'firstName' | 'lastName' | 'secondLastName' | 'role'>
+}

@@ -1,6 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { UserRole } from '../../generated/prisma/enums.js';
 
 export class GrantAccessDto {
@@ -17,7 +24,10 @@ export class GrantAccessDto {
   @MinLength(8)
   password: string;
 
-  @ApiPropertyOptional({ enum: UserRole, description: 'Por defecto, el sugerido según el puesto' })
+  @ApiPropertyOptional({
+    enum: UserRole,
+    description: 'Por defecto, el sugerido según el puesto',
+  })
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;

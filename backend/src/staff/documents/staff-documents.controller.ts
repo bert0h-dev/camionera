@@ -15,7 +15,10 @@ import type { AuthUser } from '../../auth/auth.types.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { UserRole } from '../../generated/prisma/enums.js';
-import { CreateCertificationDto, UpdateCertificationDto } from './dto/certification.dto.js';
+import {
+  CreateCertificationDto,
+  UpdateCertificationDto,
+} from './dto/certification.dto.js';
 import { CreateLicenseDto, UpdateLicenseDto } from './dto/license.dto.js';
 import { QueryExpirationsDto } from './dto/query-expirations.dto.js';
 import { StaffDocumentsService } from './staff-documents.service.js';
@@ -70,7 +73,10 @@ export class StaffDocumentsController {
 
   @Delete('licenses/:licenseId')
   @HttpCode(204)
-  deleteLicense(@Param('licenseId', ParseUUIDPipe) id: string, @CurrentUser() actor: AuthUser) {
+  deleteLicense(
+    @Param('licenseId', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
     return this.docs.deleteLicense(id, actor);
   }
 

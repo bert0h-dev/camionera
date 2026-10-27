@@ -10,19 +10,31 @@ describe('resolveUserRole', () => {
   });
 
   it('usa el sugerido si no se pide rol', () => {
-    expect(resolveUserRole(StaffRole.driver, UserRole.hr)).toBe(UserRole.driver);
-    expect(resolveUserRole(StaffRole.mechanic, UserRole.hr)).toBe(UserRole.viewer);
+    expect(resolveUserRole(StaffRole.driver, UserRole.hr)).toBe(
+      UserRole.driver,
+    );
+    expect(resolveUserRole(StaffRole.mechanic, UserRole.hr)).toBe(
+      UserRole.viewer,
+    );
   });
 
   it('RRHH no puede asignar un rol distinto al sugerido', () => {
-    expect(resolveUserRole(StaffRole.driver, UserRole.hr, UserRole.admin)).toBeNull();
-    expect(resolveUserRole(StaffRole.driver, UserRole.hr, UserRole.driver)).toBe(UserRole.driver);
+    expect(
+      resolveUserRole(StaffRole.driver, UserRole.hr, UserRole.admin),
+    ).toBeNull();
+    expect(
+      resolveUserRole(StaffRole.driver, UserRole.hr, UserRole.driver),
+    ).toBe(UserRole.driver);
   });
 
   it('admin puede asignar cualquier rol', () => {
-    expect(resolveUserRole(StaffRole.admin_staff, UserRole.admin, UserRole.coordinator)).toBe(
-      UserRole.coordinator,
-    );
+    expect(
+      resolveUserRole(
+        StaffRole.admin_staff,
+        UserRole.admin,
+        UserRole.coordinator,
+      ),
+    ).toBe(UserRole.coordinator);
   });
 });
 

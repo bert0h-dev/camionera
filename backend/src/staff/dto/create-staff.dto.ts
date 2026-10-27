@@ -10,11 +10,17 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { CURP_REGEX, NSS_REGEX, PHONE_REGEX, RFC_REGEX } from '../../common/validation/mx.js';
+import {
+  CURP_REGEX,
+  NSS_REGEX,
+  PHONE_REGEX,
+  RFC_REGEX,
+} from '../../common/validation/mx.js';
 import { StaffRole } from '../../generated/prisma/enums.js';
 
 type TransformArg = { value: unknown };
-const trim = ({ value }: TransformArg) => (typeof value === 'string' ? value.trim() : value);
+const trim = ({ value }: TransformArg) =>
+  typeof value === 'string' ? value.trim() : value;
 const upper = ({ value }: TransformArg) =>
   typeof value === 'string' ? value.trim().toUpperCase() || undefined : value;
 const digits = ({ value }: TransformArg) =>
@@ -95,7 +101,9 @@ export class CreateStaffDto {
   @ApiPropertyOptional()
   @Transform(digits)
   @IsOptional()
-  @Matches(PHONE_REGEX, { message: 'El teléfono de emergencia debe tener 10 dígitos' })
+  @Matches(PHONE_REGEX, {
+    message: 'El teléfono de emergencia debe tener 10 dígitos',
+  })
   emergencyPhone?: string;
 
   @ApiProperty({ enum: StaffRole })

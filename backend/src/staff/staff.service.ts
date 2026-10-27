@@ -24,17 +24,30 @@ const TABLE = 'staff';
 const MIN_AGE = 18;
 
 const include = {
-  user: { select: { id: true, email: true, role: true, isActive: true, lastLogin: true } },
+  user: {
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      isActive: true,
+      lastLogin: true,
+    },
+  },
 } satisfies Prisma.StaffInclude;
 
-export const fullNameOf = (s: { firstName: string; lastName: string; secondLastName?: string | null }) =>
-  [s.firstName, s.lastName, s.secondLastName].filter(Boolean).join(' ');
+export const fullNameOf = (s: {
+  firstName: string;
+  lastName: string;
+  secondLastName?: string | null;
+}) => [s.firstName, s.lastName, s.secondLastName].filter(Boolean).join(' ');
 
 function assertAdult(birthDate: Date, hireDate: Date) {
   const adultAt = new Date(birthDate);
   adultAt.setUTCFullYear(adultAt.getUTCFullYear() + MIN_AGE);
   if (adultAt > hireDate) {
-    throw new BadRequestException(`El empleado debe tener al menos ${MIN_AGE} años a la fecha de contratación`);
+    throw new BadRequestException(
+      `El empleado debe tener al menos ${MIN_AGE} años a la fecha de contratación`,
+    );
   }
 }
 
@@ -51,7 +64,9 @@ export class StaffService {
     const terms = query.search?.trim().split(/\s+/).filter(Boolean) ?? [];
     const where: Prisma.StaffWhereInput = {
       role: query.role,
-      status: query.status,
+      status:
+        query.status ??
+        (query.activeOnly ? { not: StaffStatus.inactive } : undefined),
       AND: terms.map((term) => ({
         OR: [
           { firstName: { contains: term, mode: 'insensitive' } },
@@ -114,7 +129,9 @@ export class StaffService {
   async update(id: string, dto: UpdateStaffDto, actor: AuthUser) {
     const before = await this.findOne(id);
     if (before.status === StaffStatus.inactive) {
-      throw new BadRequestException('No se puede editar a un empleado dado de baja');
+      throw new BadRequestException(
+        'No se puede editar a un empleado dado de baja',
+      );
     }
 
     const { birthDate: birth, hireDate: hire, ...data } = dto;
@@ -156,12 +173,17 @@ export class StaffService {
     }
     const terminationDate = toDate(dto.terminationDate);
     if (terminationDate < before.hireDate) {
-      throw new BadRequestException('La fecha de baja no puede ser anterior a la de contratación');
+      throw new BadRequestException(
+        'La fecha de baja no puede ser anterior a la de contratación',
+      );
     }
 
     const staff = await this.prisma.$transaction(async (tx) => {
       if (before.userId) {
-        await tx.user.update({ where: { id: before.userId }, data: { isActive: false } });
+        await tx.user.update({
+          where: { id: before.userId },
+          data: { isActive: false },
+        });
       }
       return tx.staff.update({
         where: { id },
@@ -188,22 +210,36 @@ export class StaffService {
 
   async grantAccess(id: string, dto: GrantAccessDto, actor: AuthUser) {
     const staff = await this.findOne(id);
-    if (staff.userId) throw new ConflictException('El empleado ya tiene acceso al sistema');
+    if (staff.userId)
+      throw new ConflictException('El empleado ya tiene acceso al sistema');
     if (staff.status === StaffStatus.inactive) {
-      throw new BadRequestException('No se puede dar acceso a un empleado dado de baja');
+      throw new BadRequestException(
+        'No se puede dar acceso a un empleado dado de baja',
+      );
     }
 
     const role = resolveUserRole(staff.role, actor.role, dto.role);
     if (!role) {
-      throw new ForbiddenException('Solo un administrador puede asignar un rol distinto al sugerido');
+      throw new ForbiddenException(
+        'Solo un administrador puede asignar un rol distinto al sugerido',
+      );
     }
 
     const passwordHash = await argon2.hash(dto.password);
     const updated = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email: dto.email, fullName: fullNameOf(staff), role, passwordHash },
+        data: {
+          email: dto.email,
+          fullName: fullNameOf(staff),
+          role,
+          passwordHash,
+        },
       });
-      return tx.staff.update({ where: { id }, data: { userId: user.id }, include });
+      return tx.staff.update({
+        where: { id },
+        data: { userId: user.id },
+        include,
+      });
     });
 
     await this.audit.log({

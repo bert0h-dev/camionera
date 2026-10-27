@@ -18,6 +18,29 @@ export const SETTINGS = {
     description:
       'Días de anticipación para alertar vencimiento de licencias y certificaciones',
   },
+  'schedules.max_shift_hours': {
+    type: 'number',
+    default: 14,
+    min: 1,
+    max: 24,
+    description:
+      'Horas máximas trabajadas por turno, sin contar descansos (NOM-087-SCT)',
+  },
+  'schedules.min_rest_hours': {
+    type: 'number',
+    default: 8,
+    min: 0,
+    max: 24,
+    description: 'Horas mínimas de descanso entre turnos (NOM-087-SCT)',
+  },
+  'schedules.max_weekly_hours': {
+    type: 'number',
+    default: 48,
+    min: 1,
+    max: 168,
+    description:
+      'Horas máximas trabajadas por semana, de lunes a domingo (LFT)',
+  },
 } as const satisfies Record<string, SettingDefinition>;
 
 export type SettingKey = keyof typeof SETTINGS;

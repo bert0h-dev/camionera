@@ -7,6 +7,7 @@ import UsersPage from './pages/users/UsersPage'
 import StaffListPage from './pages/staff/StaffListPage'
 import StaffFormPage from './pages/staff/StaffFormPage'
 import StaffDetailPage from './pages/staff/StaffDetailPage'
+import SchedulesPage from './pages/schedules/SchedulesPage'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route element={<ProtectedRoute roles={['hr', 'supervisor', 'coordinator']} />}>
             <Route path="/personal" element={<StaffListPage />} />
             <Route path="/personal/:id" element={<StaffDetailPage />} />
+            <Route path="/turnos" element={<SchedulesPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={['hr']} />}>
             <Route path="/personal/nuevo" element={<StaffFormPage />} />

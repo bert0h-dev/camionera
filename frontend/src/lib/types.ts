@@ -29,6 +29,9 @@ export interface User {
   role: UserRole
   isActive: boolean
   lastLogin: string | null
+  mustChangePassword: boolean
+  failedLoginAttempts: number
+  lockedUntil: string | null
   createdAt: string
   updatedAt: string
 }
@@ -468,4 +471,28 @@ export interface PayrollSettings {
 export interface MyPayslip extends Omit<PayrollEntry, 'staff' | 'adjustments'> {
   period: Pick<PayrollPeriod, 'id' | 'name' | 'periodStart' | 'periodEnd' | 'status' | 'paidAt'>
   adjustments: Pick<PayrollAdjustment, 'type' | 'concept' | 'amount'>[]
+}
+
+// ---------- Cuentas ----------
+
+export interface UserSession {
+  id: string
+  userAgent: string | null
+  ipAddress: string | null
+  startedAt: string
+  lastActiveAt: string
+  expiresAt: string
+  current: boolean
+}
+
+export interface UserDetail extends User {
+  staff: Pick<Staff, 'id' | 'employeeNumber' | 'firstName' | 'lastName' | 'secondLastName' | 'role'> | null
+  sessions: UserSession[]
+  activity: {
+    id: string
+    tableName: string
+    recordId: string
+    actionType: 'insert' | 'update' | 'delete'
+    createdAt: string
+  }[]
 }

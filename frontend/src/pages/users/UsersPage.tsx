@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../lib/api'
@@ -19,6 +20,7 @@ import { ResetPasswordModal } from './ResetPasswordModal'
 
 function UsersPage() {
   const { user: me } = useAuth()
+  const navigate = useNavigate()
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -100,49 +102,51 @@ function UsersPage() {
       header: 'Acciones',
       className: 'w-16 text-right',
       cell: (u) => (
-        <Dropdown
-          trigger={({ toggle }) => (
-            <Button variant="ghost" size="icon" icon={MoreHorizontal} onClick={toggle} aria-label="Acciones" />
-          )}
-        >
-          {(close) => (
-            <>
-              <DropdownItem
-                icon={Pencil}
-                onClick={() => {
-                  close()
-                  setFormUser(u)
-                }}
-              >
-                Editar
-              </DropdownItem>
-              <DropdownItem
-                icon={KeyRound}
-                onClick={() => {
-                  close()
-                  setPasswordUser(u)
-                }}
-              >
-                Cambiar contraseña
-              </DropdownItem>
-              {u.id !== me?.id && (
-                <>
-                  <DropdownSeparator />
-                  <DropdownItem
-                    icon={u.isActive ? UserX : UserCheck}
-                    danger={u.isActive}
-                    onClick={() => {
-                      close()
-                      toggleActive.mutate(u)
-                    }}
-                  >
-                    {u.isActive ? 'Desactivar' : 'Activar'}
-                  </DropdownItem>
-                </>
-              )}
-            </>
-          )}
-        </Dropdown>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Dropdown
+            trigger={({ toggle }) => (
+              <Button variant="ghost" size="icon" icon={MoreHorizontal} onClick={toggle} aria-label="Acciones" />
+            )}
+          >
+            {(close) => (
+              <>
+                <DropdownItem
+                  icon={Pencil}
+                  onClick={() => {
+                    close()
+                    setFormUser(u)
+                  }}
+                >
+                  Editar
+                </DropdownItem>
+                <DropdownItem
+                  icon={KeyRound}
+                  onClick={() => {
+                    close()
+                    setPasswordUser(u)
+                  }}
+                >
+                  Cambiar contraseña
+                </DropdownItem>
+                {u.id !== me?.id && (
+                  <>
+                    <DropdownSeparator />
+                    <DropdownItem
+                      icon={u.isActive ? UserX : UserCheck}
+                      danger={u.isActive}
+                      onClick={() => {
+                        close()
+                        toggleActive.mutate(u)
+                      }}
+                    >
+                      {u.isActive ? 'Desactivar' : 'Activar'}
+                    </DropdownItem>
+                  </>
+                )}
+              </>
+            )}
+          </Dropdown>
+        </div>
       ),
     },
   ]
@@ -225,6 +229,7 @@ function UsersPage() {
         columns={columns}
         rows={data?.data ?? []}
         rowKey={(u) => u.id}
+        onRowClick={(u) => navigate(`/usuarios/${u.id}`)}
         loading={isLoading}
         refreshing={isFetching && !isLoading}
         emptyIcon={ShieldCheck}

@@ -30,11 +30,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
   }, [])
 
+  const refreshUser = useCallback(async () => {
+    const { data } = await api.get<User>('/auth/me')
+    setUser(data)
+  }, [])
+
   const logout = useCallback(async () => {
     await api.post('/auth/logout').catch(() => undefined)
     clearSession()
   }, [clearSession])
 
-  const value = useMemo(() => ({ user, isLoading, login, logout }), [user, isLoading, login, logout])
+  const value = useMemo(
+    () => ({ user, isLoading, login, logout, refreshUser }),
+    [user, isLoading, login, logout, refreshUser],
+  )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -12,6 +12,9 @@ export function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
     return <AppSplash />
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />
+  // Contraseña temporal o cambio forzado: no se puede usar la app hasta cambiarla
+  if (user.mustChangePassword && location.pathname !== '/cambiar-contrasena')
+    return <Navigate to="/cambiar-contrasena" replace />
   if (roles && user.role !== 'admin' && !roles.includes(user.role)) {
     return <Navigate to="/" replace />
   }

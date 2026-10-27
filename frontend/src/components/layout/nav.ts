@@ -60,6 +60,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   evaluaciones: 'Evaluaciones',
   usuarios: 'Usuarios',
   nomina: 'Nómina',
+  'mi-cuenta': 'Mi cuenta',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

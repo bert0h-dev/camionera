@@ -517,3 +517,69 @@ export interface SettingItem {
   updatedAt: string | null
   updatedBy: string | null
 }
+
+// ---------- Bitácora ----------
+
+export type SecurityEventType =
+  | 'login_success'
+  | 'login_failed'
+  | 'account_locked'
+  | 'account_unlocked'
+  | 'logout'
+  | 'password_changed'
+  | 'password_reset_requested'
+  | 'password_reset'
+  | 'sessions_revoked'
+  | 'token_reuse'
+
+export const SECURITY_EVENT_LABELS: Record<SecurityEventType, string> = {
+  login_success: 'Inicio de sesión',
+  login_failed: 'Inicio fallido',
+  account_locked: 'Cuenta bloqueada',
+  account_unlocked: 'Cuenta desbloqueada',
+  logout: 'Cierre de sesión',
+  password_changed: 'Cambio de contraseña',
+  password_reset_requested: 'Solicitud de recuperación',
+  password_reset: 'Contraseña restablecida',
+  sessions_revoked: 'Sesiones cerradas',
+  token_reuse: 'Reutilización de sesión',
+}
+
+type AuditUser = { id: string; fullName: string; email: string } | null
+
+export interface AuditLogEntry {
+  id: string
+  userId: string | null
+  user: AuditUser
+  tableName: string
+  recordId: string
+  actionType: 'insert' | 'update' | 'delete'
+  oldValues: Record<string, unknown> | null
+  newValues: Record<string, unknown> | null
+  createdAt: string
+}
+
+export interface SecurityEventEntry {
+  id: string
+  type: SecurityEventType
+  userId: string | null
+  user: AuditUser
+  email: string | null
+  ipAddress: string | null
+  userAgent: string | null
+  details: Record<string, unknown> | null
+  createdAt: string
+}
+
+export interface AuditSummary {
+  changes: number
+  logins: number
+  failed: number
+  locked: number
+  retentionDays: number
+}
+
+export interface AuditFilters {
+  tables: { name: string; count: number }[]
+  users: { id: string; fullName: string; email: string }[]
+}

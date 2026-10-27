@@ -37,6 +37,9 @@ describe('Cuentas y seguridad (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.securityEvent.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.auditLog.deleteMany({
       where: {
         OR: [{ recordId: { in: userIds } }, { userId: { in: userIds } }],
@@ -175,5 +178,39 @@ describe('Cuentas y seguridad (e2e)', () => {
       .send({ token, newPassword: 'otra-vez-123' })
       .expect(400);
     await login(u.email, 'recuperada123').expect(200);
+  });
+
+  it('dos renovaciones casi simultáneas con la misma cookie no cierran la sesión; fuera del margen sí', async () => {
+    const u = await newUser('concurrente');
+    const first = await login(u.email, 'secreta123').expect(200);
+    const cookie = first.headers['set-cookie'] as unknown as string[];
+    const refresh = () =>
+      request(app.getHttpServer()).post('/auth/refresh').set('Cookie', cookie);
+
+    // Pestaña A y pestaña B renuevan con la misma cookie
+    await refresh().expect(200);
+    await refresh().expect(200);
+    expect(
+      await prisma.securityEvent.count({
+        where: { userId: u.id, type: 'token_reuse' },
+      }),
+    ).toBe(0);
+
+    // La misma cookie reaparece minutos después: se trata como robo y se cierran todas
+    await prisma.refreshToken.updateMany({
+      where: { userId: u.id, rotatedAt: { not: null } },
+      data: { rotatedAt: new Date(Date.now() - 5 * 60_000) },
+    });
+    await refresh().expect(401);
+    expect(
+      await prisma.securityEvent.count({
+        where: { userId: u.id, type: 'token_reuse' },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.refreshToken.count({
+        where: { userId: u.id, revokedAt: null },
+      }),
+    ).toBe(0);
   });
 });

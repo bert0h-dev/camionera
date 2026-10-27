@@ -1,5 +1,6 @@
 import {
   CalendarClock,
+  ScrollText,
   Settings,
   ClipboardCheck,
   LayoutDashboard,
@@ -43,6 +44,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, roles: ['admin'] },
       { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['hr'] },
+      { to: '/bitacora', label: 'Bitácora', icon: ScrollText, roles: ['admin'] },
     ],
   },
 ]
@@ -66,6 +68,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   nomina: 'Nómina',
   'mi-cuenta': 'Mi cuenta',
   configuracion: 'Configuración',
+  bitacora: 'Bitácora',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

@@ -43,7 +43,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 |  #  | Módulo                     |          Estado          |
 | :-: | -------------------------- | :----------------------: |
 |  1  | **Gestión de Personal**    | ✅ Completado            |
-|  2  | Administración del Sistema |       ⏳ Pendiente       |
+|  2  | **Administración del Sistema** | ✅ Completado |
 |  3  | Gestión de Rutas           |       ⏳ Pendiente       |
 |  4  | Gestión de Recorridos      |       ⏳ Pendiente       |
 |  5  | Gestión de Flota           |       ⏳ Pendiente       |
@@ -259,8 +259,8 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | Personal | `staff`, `staff_licenses`, `staff_certifications` |
 | Turnos y asistencia | `shift_templates`, `staff_schedules`, `staff_attendance` |
 | Evaluaciones | `evaluation_criteria`, `staff_evaluations`, `staff_evaluation_scores` |
-| Nómina | `staff_compensations`, `payroll_periods`, `payroll_entries`, `payroll_adjustments` |
-| Sistema | `system_settings`, `audit_logs` |
+| Acceso | `refresh_tokens` (sesiones), `password_resets` |
+| Sistema | `system_settings`, `audit_logs`, `security_events` |
 
 ---
 

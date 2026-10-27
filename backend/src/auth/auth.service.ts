@@ -28,6 +28,8 @@ const hashToken = (token: string) =>
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hora
 const RESET_MAX_PER_HOUR = 3;
 const MINUTE_MS = 60 * 1000;
+/** Margen para aceptar un token recién rotado (pestañas o peticiones que renuevan a la vez) */
+const ROTATION_GRACE_MS = 30 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -148,7 +150,30 @@ export class AuthService {
     if (!stored) throw new UnauthorizedException('Sesión inválida');
 
     if (stored.revokedAt) {
-      // Un token ya usado volvió a llegar: posible robo de la cookie
+      // Dos pestañas o peticiones renovaron casi a la vez con la misma cookie: no es robo.
+      // Solo vale si el token fue rotado hace instantes y la sesión sigue abierta.
+      const concurrent =
+        stored.rotatedAt &&
+        Date.now() - stored.rotatedAt.getTime() < ROTATION_GRACE_MS &&
+        (await this.prisma.refreshToken.count({
+          where: {
+            userId: stored.userId,
+            sessionStartedAt: stored.sessionStartedAt,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+        })) > 0;
+      if (concurrent && stored.user.isActive)
+        return {
+          user: stored.user,
+          ...(await this.issueTokens(
+            stored.user,
+            meta,
+            stored.sessionStartedAt,
+          )),
+        };
+
+      // Un token ya usado volvió a llegar fuera del margen: posible robo de la cookie
       await this.revokeAllForUser(stored.userId);
       await this.security.log({
         type: SecurityEventType.token_reuse,
@@ -163,9 +188,10 @@ export class AuthService {
       throw new UnauthorizedException('Sesión expirada');
     }
 
+    const now = new Date();
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: now, rotatedAt: now },
     });
     return {
       user: stored.user,

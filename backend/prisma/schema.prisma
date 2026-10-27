@@ -159,6 +159,8 @@ model RefreshToken {
   tokenHash        String    @unique @map("token_hash") @db.VarChar(255)
   expiresAt        DateTime  @map("expires_at") @db.Timestamptz()
   revokedAt        DateTime? @map("revoked_at") @db.Timestamptz()
+  // Se llena al rotar (no al cerrar sesión): distingue una renovación concurrente de un robo
+  rotatedAt        DateTime? @map("rotated_at") @db.Timestamptz()
   userAgent        String?   @map("user_agent") @db.Text
   ipAddress        String?   @map("ip_address") @db.VarChar(45)
   // Hereda el valor del token anterior al rotar: identifica la sesión aunque cambie el token

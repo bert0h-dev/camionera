@@ -1,4 +1,14 @@
-import { CalendarClock, ClipboardCheck, FileBadge, Lock, Route, Ticket, Wallet, type LucideIcon } from 'lucide-react'
+import {
+  CalendarClock,
+  ClipboardCheck,
+  FileBadge,
+  Lock,
+  Route,
+  ScrollText,
+  Ticket,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import type { SettingItem } from '../../lib/types'
 import { SettingsForm } from './SettingsForm'
 
@@ -28,6 +38,12 @@ const GROUPS: { group: string; title: string; description: string; icon: LucideI
     title: 'Seguridad de acceso',
     description: 'Bloqueo de cuentas por intentos fallidos',
     icon: Lock,
+  },
+  {
+    group: 'audit',
+    title: 'Bitácora',
+    description: 'Cuánto tiempo se conservan los cambios y eventos de seguridad',
+    icon: ScrollText,
   },
   {
     group: 'tickets',

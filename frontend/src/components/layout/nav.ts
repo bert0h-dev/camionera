@@ -42,7 +42,7 @@ export const NAV: NavGroup[] = [
     label: 'Sistema',
     items: [
       { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, roles: ['admin'] },
-      { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },
+      { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['hr'] },
     ],
   },
 ]

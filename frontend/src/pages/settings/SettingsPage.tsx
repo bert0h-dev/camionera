@@ -9,13 +9,15 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { SettingsForm } from './SettingsForm'
+import { ParametersTab } from './ParametersTab'
+import { useAuth } from '../../auth/useAuth'
 
 type TabKey = 'company' | 'taxes' | 'params'
 
 const TABS: TabItem<TabKey>[] = [
   { key: 'company', label: 'Empresa', icon: Building2 },
   { key: 'taxes', label: 'Impuestos y comisiones', icon: Percent },
-  { key: 'params', label: 'Parámetros', icon: SlidersHorizontal, disabled: true }, // fase 2.3
+  { key: 'params', label: 'Parámetros', icon: SlidersHorizontal },
 ]
 
 const SAMPLE_FARE = 500
@@ -54,7 +56,10 @@ function TaxPreview({ values }: { values: Record<string, SettingValue> }) {
 }
 
 function SettingsPage() {
-  const [tab, setTab] = useState<TabKey>('company')
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  // RRHH solo administra los parámetros de personal y nómina
+  const [tab, setTab] = useState<TabKey>(isAdmin ? 'company' : 'params')
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => (await api.get<SettingItem[]>('/settings')).data,
@@ -64,49 +69,58 @@ function SettingsPage() {
   const value = (key: string) => all.find((s) => s.key === key)?.value
   const company = of('company')
   const filled = company.filter((s) => s.value !== '').length
+  const tabs = TABS.filter((t) => isAdmin || t.key === 'params')
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Configuración"
-        description="Datos de la empresa e impuestos que usarán los boletos, recibos y reportes"
+        description={
+          isAdmin
+            ? 'Datos de la empresa, impuestos y parámetros que rigen la operación'
+            : 'Parámetros de personal y nómina que rigen la operación'
+        }
         refreshing={isFetching && !isLoading}
         stats={
-          <>
-            <HeroStat
-              label="Empresa"
-              value={(value('company.trade_name') as string) || '—'}
-              hint={`${filled} de ${company.length} datos capturados`}
-              tone={company.length && filled < company.length ? 'warning' : 'neutral'}
-              loading={isLoading}
-            />
-            <HeroStat
-              label="IVA"
-              value={`${value('taxes.vat_rate') ?? '—'} %`}
-              hint={value('taxes.prices_include_vat') ? 'incluido en las tarifas' : 'se suma a las tarifas'}
-              tone="primary"
-              loading={isLoading}
-            />
-            <HeroStat
-              label="Comisión en taquilla"
-              value={`${value('commissions.vendor_percent') ?? '—'} %`}
-              hint="para el vendedor por boleto"
-              loading={isLoading}
-            />
-            <HeroStat
-              label="Cargo en línea"
-              value={`${value('commissions.online_percent') ?? '—'} %`}
-              hint="se suma al comprar en línea"
-              loading={isLoading}
-            />
-          </>
+          isAdmin && (
+            <>
+              <HeroStat
+                label="Empresa"
+                value={(value('company.trade_name') as string) || '—'}
+                hint={`${filled} de ${company.length} datos capturados`}
+                tone={company.length && filled < company.length ? 'warning' : 'neutral'}
+                loading={isLoading}
+              />
+              <HeroStat
+                label="IVA"
+                value={`${value('taxes.vat_rate') ?? '—'} %`}
+                hint={value('taxes.prices_include_vat') ? 'incluido en las tarifas' : 'se suma a las tarifas'}
+                tone="primary"
+                loading={isLoading}
+              />
+              <HeroStat
+                label="Comisión en taquilla"
+                value={`${value('commissions.vendor_percent') ?? '—'} %`}
+                hint="para el vendedor por boleto"
+                loading={isLoading}
+              />
+              <HeroStat
+                label="Cargo en línea"
+                value={`${value('commissions.online_percent') ?? '—'} %`}
+                hint="se suma al comprar en línea"
+                loading={isLoading}
+              />
+            </>
+          )
         }
       />
 
-      <Tabs items={TABS} value={tab} onChange={setTab} className="border-b border-border" />
+      <Tabs items={tabs} value={tab} onChange={setTab} className="border-b border-border" />
 
       {isLoading ? (
         <LoadingBlock text="Cargando configuración…" />
+      ) : tab === 'params' ? (
+        <ParametersTab settings={all} />
       ) : tab === 'company' ? (
         <SettingsForm
           key={`company-${data?.length}-${company.map((s) => s.updatedAt).join()}`}

@@ -24,6 +24,8 @@ export const settingGroup = (key: string) => key.split('.')[0];
 
 export const SETTINGS = {
   'documents.expiry_alert_days': {
+    label: 'Aviso de vencimiento de documentos',
+    unit: 'días',
     type: 'number',
     default: 30,
     min: 1,
@@ -32,6 +34,8 @@ export const SETTINGS = {
       'Días de anticipación para alertar vencimiento de licencias y certificaciones',
   },
   'schedules.max_shift_hours': {
+    label: 'Horas máximas por turno',
+    unit: 'h',
     type: 'number',
     default: 14,
     min: 1,
@@ -40,6 +44,8 @@ export const SETTINGS = {
       'Horas máximas trabajadas por turno, sin contar descansos (NOM-087-SCT)',
   },
   'schedules.min_rest_hours': {
+    label: 'Descanso mínimo entre turnos',
+    unit: 'h',
     type: 'number',
     default: 8,
     min: 0,
@@ -47,6 +53,8 @@ export const SETTINGS = {
     description: 'Horas mínimas de descanso entre turnos (NOM-087-SCT)',
   },
   'schedules.max_weekly_hours': {
+    label: 'Horas máximas por semana',
+    unit: 'h',
     type: 'number',
     default: 48,
     min: 1,
@@ -55,6 +63,8 @@ export const SETTINGS = {
       'Horas máximas trabajadas por semana, de lunes a domingo (LFT)',
   },
   'attendance.late_tolerance_minutes': {
+    label: 'Tolerancia de retardo',
+    unit: 'min',
     type: 'number',
     default: 10,
     min: 0,
@@ -63,6 +73,8 @@ export const SETTINGS = {
       'Minutos de tolerancia después del inicio del turno antes de contar retardo',
   },
   'attendance.half_day_percent': {
+    label: 'Mínimo trabajado para no ser medio día',
+    unit: '%',
     type: 'number',
     default: 50,
     min: 1,
@@ -71,6 +83,8 @@ export const SETTINGS = {
       'Porcentaje mínimo del turno trabajado; por debajo cuenta como medio día',
   },
   'attendance.overtime_threshold_minutes': {
+    label: 'Mínimo para contar horas extra',
+    unit: 'min',
     type: 'number',
     default: 30,
     min: 0,
@@ -79,6 +93,8 @@ export const SETTINGS = {
       'Minutos después del fin del turno a partir de los cuales se cuentan horas extra',
   },
   'attendance.early_check_in_minutes': {
+    label: 'Entrada anticipada permitida',
+    unit: 'min',
     type: 'number',
     default: 60,
     min: 0,
@@ -87,11 +103,14 @@ export const SETTINGS = {
       'Minutos antes del inicio del turno en que el empleado ya puede registrar su entrada',
   },
   'payroll.late_penalty_enabled': {
+    label: 'Descontar faltas por retardos',
     type: 'boolean',
     default: false,
     description: 'Descontar faltas por acumulación de retardos en la prenómina',
   },
   'payroll.lates_per_absence': {
+    label: 'Retardos que equivalen a una falta',
+    unit: 'retardos',
     type: 'number',
     default: 3,
     min: 1,
@@ -100,6 +119,8 @@ export const SETTINGS = {
       'Retardos que equivalen a una falta (si el descuento está activo)',
   },
   'security.max_failed_logins': {
+    label: 'Intentos fallidos antes de bloquear',
+    unit: 'intentos',
     type: 'number',
     default: 5,
     min: 3,
@@ -108,6 +129,8 @@ export const SETTINGS = {
       'Intentos fallidos de inicio de sesión antes de bloquear la cuenta',
   },
   'security.lockout_minutes': {
+    label: 'Duración del bloqueo',
+    unit: 'min',
     type: 'number',
     default: 15,
     min: 1,
@@ -226,6 +249,81 @@ export const SETTINGS = {
     description:
       'Porcentaje que se agrega al importe de los boletos comprados en línea',
   },
+
+  // ---------- Bitácora ----------
+  'audit.retention_days': {
+    type: 'number',
+    default: 365,
+    min: 30,
+    max: 3650,
+    label: 'Conservar bitácora',
+    unit: 'días',
+    description:
+      'Días que se conservan los cambios y eventos de seguridad; lo más antiguo se borra cada noche',
+  },
+
+  // ---------- Boletos (se usarán en el Módulo 6) ----------
+  'tickets.cancellation_hours': {
+    type: 'number',
+    default: 2,
+    min: 0,
+    max: 72,
+    label: 'Cancelación hasta',
+    unit: 'h antes',
+    description:
+      'Horas antes de la salida en que todavía se puede cancelar un boleto',
+  },
+  'tickets.refund_percent': {
+    type: 'number',
+    default: 80,
+    min: 0,
+    max: 100,
+    label: 'Reembolso al cancelar',
+    unit: '%',
+    description:
+      'Porcentaje del importe que se devuelve al cancelar dentro del plazo',
+  },
+  'tickets.checkin_minutes': {
+    type: 'number',
+    default: 30,
+    min: 0,
+    max: 180,
+    label: 'Check-in antes de la salida',
+    unit: 'min',
+    description:
+      'Minutos antes de la salida en que el pasajero debe presentarse a abordar',
+  },
+  'tickets.max_per_purchase': {
+    type: 'number',
+    default: 10,
+    min: 1,
+    max: 50,
+    label: 'Boletos por compra',
+    unit: 'boletos',
+    description: 'Máximo de boletos en una sola compra',
+  },
+
+  // ---------- Recorridos (se usarán en el Módulo 4) ----------
+  'trips.unit_turnaround_minutes': {
+    type: 'number',
+    default: 30,
+    min: 0,
+    max: 240,
+    label: 'Tiempo entre recorridos de una unidad',
+    unit: 'min',
+    description:
+      'Minutos mínimos entre la llegada de una unidad y su siguiente salida (limpieza y revisión)',
+  },
+  'trips.driver_gap_minutes': {
+    type: 'number',
+    default: 30,
+    min: 0,
+    max: 240,
+    label: 'Tiempo entre recorridos de un conductor',
+    unit: 'min',
+    description:
+      'Minutos mínimos entre el fin de un recorrido y el inicio del siguiente para el mismo conductor',
+  },
 } as const satisfies Record<string, SettingDefinition>;
 
 export type SettingKey = keyof typeof SETTINGS;
@@ -237,3 +335,9 @@ export type SettingValue<K extends SettingKey> =
       : string;
 
 export const isSettingKey = (key: string): key is SettingKey => key in SETTINGS;
+
+/** Grupos que RRHH puede ver y editar; el admin edita todos (undefined = sin restricción). */
+const HR_GROUPS = ['documents', 'schedules', 'attendance', 'payroll'];
+
+export const editableGroups = (role: string) =>
+  role === 'admin' ? undefined : HR_GROUPS;

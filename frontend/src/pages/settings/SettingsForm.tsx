@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { RotateCcw, Save } from 'lucide-react'
+import { RotateCcw, Save, Undo2 } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import type { SettingItem, SettingValue } from '../../lib/types'
@@ -23,10 +23,12 @@ interface Props {
   wide?: string[]
   /** Contenido extra bajo los campos (p. ej. un ejemplo calculado con los valores actuales) */
   preview?: (values: Record<string, SettingValue>) => ReactNode
+  /** Muestra el botón para volver a los valores por defecto */
+  resettable?: boolean
 }
 
 /** Formulario de una sección de parámetros: se guarda completa o no se guarda nada. */
-export function SettingsForm({ title, description, items, wide = [], preview }: Props) {
+export function SettingsForm({ title, description, items, wide = [], preview, resettable }: Props) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const initial = Object.fromEntries(items.map((i) => [i.key, i.value]))
@@ -77,7 +79,17 @@ export function SettingsForm({ title, description, items, wide = [], preview }: 
                 ? `Último cambio: ${last.updatedBy ?? 'sistema'} · ${DATE_TIME.format(new Date(last.updatedAt!))}`
                 : 'Valores por defecto, aún sin cambios'}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {resettable && items.some((i) => values[i.key] !== i.default) && (
+                <Button
+                  variant="ghost"
+                  icon={Undo2}
+                  onClick={() => setValues(Object.fromEntries(items.map((i) => [i.key, i.default])))}
+                  title="Pone los valores por defecto; se aplican al guardar"
+                >
+                  Valores por defecto
+                </Button>
+              )}
               {dirty && (
                 <Button variant="ghost" icon={RotateCcw} onClick={() => setValues(initial)}>
                   Descartar

@@ -79,22 +79,22 @@ export class AuthController {
   @Post('logout')
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    await this.auth.logout(cookieOf(req));
+    await this.auth.logout(cookieOf(req), this.meta(req));
     res.clearCookie(REFRESH_COOKIE, this.cookieOptions());
   }
 
   @Public()
   @Post('forgot-password')
   @HttpCode(204)
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    await this.auth.requestPasswordReset(dto.email);
+  async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
+    await this.auth.requestPasswordReset(dto.email, this.meta(req));
   }
 
   @Public()
   @Post('reset-password')
   @HttpCode(204)
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.auth.resetPassword(dto.token, dto.newPassword);
+  async resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+    await this.auth.resetPassword(dto.token, dto.newPassword, this.meta(req));
   }
 
   @ApiBearerAuth()

@@ -123,4 +123,46 @@ describe('Configuración general (e2e)', () => {
       .send({ values: { 'taxes.vat_rate': 0 } })
       .expect(403);
   });
+
+  it('RRHH ve y edita solo los parámetros de personal y nómina', async () => {
+    const email = `config-rh-${Date.now()}@camionera.mx`;
+    const created = await request(app.getHttpServer())
+      .post('/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email,
+        fullName: 'RRHH Config',
+        password: 'secreta123',
+        role: 'hr',
+      })
+      .expect(201);
+    userIds.push(created.body.id);
+    const token = await login(email, 'secreta123');
+
+    const list = await api(token, 'get', '/settings').expect(200);
+    const groups = new Set<string>(
+      list.body.map((s: { group: string }) => s.group),
+    );
+    expect([...groups].sort((a, b) => a.localeCompare(b))).toEqual([
+      'attendance',
+      'documents',
+      'payroll',
+      'schedules',
+    ]);
+    // El admin ve también boletos y recorridos
+    const all = await api(adminToken, 'get', '/settings').expect(200);
+    expect(all.body.map((s: { key: string }) => s.key)).toContain(
+      'tickets.checkin_minutes',
+    );
+
+    const tolerance = list.body.find(
+      (s: { key: string }) => s.key === 'attendance.late_tolerance_minutes',
+    ).value;
+    await api(token, 'patch', '/settings')
+      .send({ values: { 'attendance.late_tolerance_minutes': tolerance } })
+      .expect(200);
+    await api(token, 'patch', '/settings')
+      .send({ values: { 'tickets.refund_percent': 50 } })
+      .expect(403);
+  });
 });

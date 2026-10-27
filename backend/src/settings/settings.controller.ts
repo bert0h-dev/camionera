@@ -5,6 +5,7 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../generated/prisma/enums.js';
+import { editableGroups } from './settings.registry.js';
 import { SettingsService } from './settings.service.js';
 
 class UpdateSettingDto {
@@ -31,9 +32,11 @@ class UpdateManySettingsDto {
 export class SettingsController {
   constructor(private readonly settings: SettingsService) {}
 
+  /** El admin ve todos; RRHH solo los parámetros de personal y nómina. */
   @Get()
-  findAll() {
-    return this.settings.findAll();
+  @Roles(UserRole.hr)
+  findAll(@CurrentUser() actor: AuthUser) {
+    return this.settings.findAll(editableGroups(actor.role));
   }
 
   /** Datos de la empresa, impuestos y comisiones: los necesita cualquier pantalla que imprima o cobre. */
@@ -53,19 +56,30 @@ export class SettingsController {
 
   /** Guarda una sección completa; si un valor es inválido no se guarda nada. */
   @Patch()
+  @Roles(UserRole.hr)
   updateMany(
     @Body() dto: UpdateManySettingsDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.settings.setMany(dto.values, actor.id);
+    return this.settings.setMany(
+      dto.values,
+      actor.id,
+      editableGroups(actor.role),
+    );
   }
 
   @Patch(':key')
+  @Roles(UserRole.hr)
   update(
     @Param('key') key: string,
     @Body() dto: UpdateSettingDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.settings.set(key, dto.value, actor.id);
+    return this.settings.set(
+      key,
+      dto.value,
+      actor.id,
+      editableGroups(actor.role),
+    );
   }
 }

@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service.js';
+import { SecurityEventsService } from '../audit/security-events.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import { paginate } from '../common/dto/pagination.dto.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { ActionType } from '../generated/prisma/enums.js';
+import { ActionType, SecurityEventType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { QueryUsersDto } from './dto/query-users.dto.js';
@@ -18,6 +19,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly auth: AuthService,
+    private readonly security: SecurityEventsService,
   ) {}
 
   async findAll(query: QueryUsersDto) {
@@ -136,6 +138,11 @@ export class UsersService {
   async revokeSessions(id: string, actorId: string) {
     await this.auth.revokeAllForUser(id);
     await this.logAction(id, actorId, { sessionsRevoked: true });
+    await this.security.log({
+      type: SecurityEventType.sessions_revoked,
+      userId: id,
+      details: { scope: 'all', by: actorId },
+    });
   }
 
   async unlock(id: string, actorId: string) {
@@ -144,6 +151,11 @@ export class UsersService {
       data: { lockedUntil: null, failedLoginAttempts: 0 },
     });
     await this.logAction(id, actorId, { unlocked: true });
+    await this.security.log({
+      type: SecurityEventType.account_unlocked,
+      userId: id,
+      details: { by: actorId },
+    });
   }
 
   private logAction(id: string, actorId: string, newValues: object) {

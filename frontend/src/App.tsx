@@ -19,6 +19,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import UserDetailPage from './pages/users/UserDetailPage'
 import SettingsPage from './pages/settings/SettingsPage'
+import AuditPage from './pages/audit/AuditPage'
 
 function App() {
   return (
@@ -34,7 +35,7 @@ function App() {
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/usuarios/:id" element={<UserDetailPage />} />
-            <Route path="/configuracion" element={<SettingsPage />} />
+            <Route path="/bitacora" element={<AuditPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={['hr', 'supervisor', 'coordinator']} />}>
             <Route path="/personal" element={<StaffListPage />} />
@@ -45,6 +46,7 @@ function App() {
             <Route path="/evaluaciones/:id" element={<EvaluationDetailPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={['hr']} />}>
+            <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="/nomina" element={<PayrollPage />} />
             <Route path="/nomina/:id" element={<PayrollPeriodPage />} />
             <Route path="/personal/nuevo" element={<StaffFormPage />} />

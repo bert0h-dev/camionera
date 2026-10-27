@@ -62,7 +62,9 @@ describe('API (e2e)', () => {
       .expect((res) => expect(res.body.email).toBe(admin.email));
 
     await request(app.getHttpServer()).post('/auth/refresh').set('Cookie', cookie).expect(200);
-    // El refresh token anterior ya fue rotado y no se puede reutilizar
-    await request(app.getHttpServer()).post('/auth/refresh').set('Cookie', cookie).expect(401);
+    // Una segunda renovación inmediata con la misma cookie (otra pestaña) se acepta.
+    // El caso de robo (fuera del margen) se prueba con un usuario de prueba en account.e2e-spec
+    // para no cerrar las sesiones del admin en cada corrida.
+    await request(app.getHttpServer()).post('/auth/refresh').set('Cookie', cookie).expect(200);
   });
 });

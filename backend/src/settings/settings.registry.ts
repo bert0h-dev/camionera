@@ -5,9 +5,22 @@ export interface SettingDefinition {
   type: 'number' | 'string' | 'boolean';
   default: number | string | boolean;
   description: string;
+  /** Nombre corto para la interfaz (si falta se usa la descripción) */
+  label?: string;
+  /** Unidad mostrada junto al valor: %, min, h, días… */
+  unit?: string;
   min?: number;
   max?: number;
+  /** Decimales permitidos en números (0 = entero) */
+  decimals?: number;
+  maxLength?: number;
+  /** Formato obligatorio para textos no vacíos */
+  pattern?: string;
+  patternMessage?: string;
 }
+
+/** Grupo del parámetro: la parte antes del primer punto de la clave. */
+export const settingGroup = (key: string) => key.split('.')[0];
 
 export const SETTINGS = {
   'documents.expiry_alert_days': {
@@ -101,6 +114,117 @@ export const SETTINGS = {
     max: 1440,
     description:
       'Minutos que la cuenta queda bloqueada tras superar los intentos fallidos',
+  },
+
+  // ---------- Empresa (datos que saldrán en boletos, recibos y reportes) ----------
+  'company.legal_name': {
+    type: 'string',
+    default: '',
+    label: 'Razón social',
+    maxLength: 200,
+    description: 'Nombre legal de la empresa como aparece ante el SAT',
+  },
+  'company.trade_name': {
+    type: 'string',
+    default: 'Central Camionera',
+    label: 'Nombre comercial',
+    maxLength: 120,
+    description: 'Nombre con el que se presenta a los pasajeros',
+  },
+  'company.rfc': {
+    type: 'string',
+    default: '',
+    label: 'RFC',
+    maxLength: 13,
+    pattern: '^[A-ZÑ&]{3,4}\\d{6}[A-Z0-9]{3}$',
+    patternMessage:
+      'RFC con formato inválido (12 caracteres para persona moral, 13 para física)',
+    description: 'Registro Federal de Contribuyentes',
+  },
+  'company.tax_regime': {
+    type: 'string',
+    default: '',
+    label: 'Régimen fiscal',
+    maxLength: 120,
+    description:
+      'Clave y nombre del régimen fiscal (p. ej. 601 General de Ley Personas Morales)',
+  },
+  'company.address': {
+    type: 'string',
+    default: '',
+    label: 'Domicilio fiscal',
+    maxLength: 300,
+    description: 'Calle, número, colonia, municipio, estado y código postal',
+  },
+  'company.phone': {
+    type: 'string',
+    default: '',
+    label: 'Teléfono',
+    maxLength: 10,
+    pattern: '^\\d{10}$',
+    patternMessage: 'El teléfono debe tener 10 dígitos',
+    description: 'Teléfono de atención',
+  },
+  'company.email': {
+    type: 'string',
+    default: '',
+    label: 'Correo de contacto',
+    maxLength: 255,
+    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
+    patternMessage: 'Correo inválido',
+    description: 'Correo de atención a clientes',
+  },
+  'company.website': {
+    type: 'string',
+    default: '',
+    label: 'Sitio web',
+    maxLength: 200,
+    pattern: '^https?://\\S+$',
+    patternMessage: 'El sitio debe empezar con http:// o https://',
+    description: 'Página web de la empresa',
+  },
+
+  // ---------- Impuestos ----------
+  'taxes.vat_rate': {
+    type: 'number',
+    default: 16,
+    min: 0,
+    max: 30,
+    decimals: 2,
+    unit: '%',
+    label: 'Tasa de IVA',
+    description: 'IVA aplicado a la venta de boletos',
+  },
+  'taxes.prices_include_vat': {
+    type: 'boolean',
+    default: true,
+    label: 'Las tarifas ya incluyen IVA',
+    description:
+      'Si está activo, el IVA se desglosa del precio; si no, se suma al precio de la tarifa',
+  },
+
+  // ---------- Comisiones ----------
+  'commissions.vendor_percent': {
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 50,
+    decimals: 2,
+    unit: '%',
+    label: 'Comisión del vendedor en taquilla',
+    description:
+      'Porcentaje del importe de cada boleto vendido en taquilla que corresponde al vendedor',
+  },
+  'commissions.online_percent': {
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 50,
+    decimals: 2,
+    unit: '%',
+    label: 'Cargo por servicio en línea',
+    description:
+      'Porcentaje que se agrega al importe de los boletos comprados en línea',
   },
 } as const satisfies Record<string, SettingDefinition>;
 

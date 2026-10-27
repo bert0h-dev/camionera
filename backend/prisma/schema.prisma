@@ -139,6 +139,7 @@ model User {
   refreshTokens      RefreshToken[]
   passwordResets     PasswordReset[]
   auditLogs          AuditLog[]
+  securityEvents     SecurityEvent[]
   settings           SystemSetting[]
   schedules          StaffSchedule[]
   attendance         StaffAttendance[]
@@ -548,4 +549,38 @@ model AuditLog {
   @@index([actionType])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+enum SecurityEventType {
+  login_success
+  login_failed
+  account_locked
+  account_unlocked
+  logout
+  password_changed
+  password_reset_requested
+  password_reset
+  sessions_revoked
+  token_reuse
+}
+
+// Eventos de acceso y seguridad (complementa audit_logs, que registra cambios de datos)
+model SecurityEvent {
+  id        String            @id @default(uuid(7)) @db.Uuid
+  type      SecurityEventType
+  // Usuario afectado; null si el correo no corresponde a ninguna cuenta
+  userId    String?           @map("user_id") @db.Uuid
+  // Correo usado en el intento (útil en inicios de sesión fallidos)
+  email     String?           @db.VarChar(255)
+  ipAddress String?           @map("ip_address") @db.VarChar(45)
+  userAgent String?           @map("user_agent") @db.Text
+  details   Json?             @db.JsonB
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("security_events")
 }

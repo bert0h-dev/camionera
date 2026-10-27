@@ -250,6 +250,18 @@ export const SETTINGS = {
       'Porcentaje que se agrega al importe de los boletos comprados en línea',
   },
 
+  // ---------- Bitácora ----------
+  'audit.retention_days': {
+    type: 'number',
+    default: 365,
+    min: 30,
+    max: 3650,
+    label: 'Conservar bitácora',
+    unit: 'días',
+    description:
+      'Días que se conservan los cambios y eventos de seguridad; lo más antiguo se borra cada noche',
+  },
+
   // ---------- Boletos (se usarán en el Módulo 6) ----------
   'tickets.cancellation_hours': {
     type: 'number',

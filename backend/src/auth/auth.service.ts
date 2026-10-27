@@ -10,7 +10,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
 import { AuditService } from '../audit/audit.service.js';
-import { ActionType } from '../generated/prisma/enums.js';
+import { SecurityEventsService } from '../audit/security-events.service.js';
+import { ActionType, SecurityEventType } from '../generated/prisma/enums.js';
 import { brandedEmail, MailService } from '../mail/mail.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -40,6 +41,7 @@ export class AuthService {
     private readonly settings: SettingsService,
     private readonly mail: MailService,
     private readonly audit: AuditService,
+    private readonly security: SecurityEventsService,
     config: ConfigService,
   ) {
     this.refreshTtlMs =
@@ -57,14 +59,32 @@ export class AuthService {
       where: { email: email.toLowerCase() },
       omit: { passwordHash: false },
     });
-    if (!user || !user.isActive)
+    const event = {
+      email,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    };
+    if (!user || !user.isActive) {
+      await this.security.log({
+        ...event,
+        type: SecurityEventType.login_failed,
+        userId: user?.id,
+        details: { reason: user ? 'inactive' : 'unknown_email' },
+      });
       throw new UnauthorizedException('Credenciales inválidas');
+    }
 
     const now = new Date();
     if (user.lockedUntil && user.lockedUntil > now) {
       const minutes = Math.ceil(
         (user.lockedUntil.getTime() - now.getTime()) / MINUTE_MS,
       );
+      await this.security.log({
+        ...event,
+        type: SecurityEventType.login_failed,
+        userId: user.id,
+        details: { reason: 'locked' },
+      });
       throw new UnauthorizedException(
         `Cuenta bloqueada por intentos fallidos. Intenta de nuevo en ${minutes} min o pide al administrador que la desbloquee.`,
       );
@@ -86,6 +106,19 @@ export class AuthService {
             }
           : { failedLoginAttempts: attempts },
       });
+      await this.security.log({
+        ...event,
+        type: SecurityEventType.login_failed,
+        userId: user.id,
+        details: { reason: 'wrong_password', attempts },
+      });
+      if (lock)
+        await this.security.log({
+          ...event,
+          type: SecurityEventType.account_locked,
+          userId: user.id,
+          details: { minutes: lockMinutes },
+        });
       throw new UnauthorizedException(
         lock
           ? `Demasiados intentos fallidos. La cuenta quedó bloqueada ${lockMinutes} min.`
@@ -97,6 +130,11 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLogin: now, failedLoginAttempts: 0, lockedUntil: null },
       omit: { passwordHash: false },
+    });
+    await this.security.log({
+      ...event,
+      type: SecurityEventType.login_success,
+      userId: user.id,
     });
     return { user: safeUser, ...(await this.issueTokens(safeUser, meta)) };
   }
@@ -110,7 +148,15 @@ export class AuthService {
     if (!stored) throw new UnauthorizedException('Sesión inválida');
 
     if (stored.revokedAt) {
+      // Un token ya usado volvió a llegar: posible robo de la cookie
       await this.revokeAllForUser(stored.userId);
+      await this.security.log({
+        type: SecurityEventType.token_reuse,
+        userId: stored.userId,
+        email: stored.user.email,
+        ipAddress: meta.ipAddress,
+        userAgent: meta.userAgent,
+      });
       throw new UnauthorizedException('Sesión inválida');
     }
     if (stored.expiresAt < new Date() || !stored.user.isActive) {
@@ -127,11 +173,21 @@ export class AuthService {
     };
   }
 
-  async logout(refreshToken: string | undefined) {
+  async logout(refreshToken: string | undefined, meta: SessionMeta = {}) {
     if (!refreshToken) return;
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash: hashToken(refreshToken), revokedAt: null },
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: hashToken(refreshToken) },
+    });
+    if (!stored || stored.revokedAt) return;
+    await this.prisma.refreshToken.update({
+      where: { id: stored.id },
       data: { revokedAt: new Date() },
+    });
+    await this.security.log({
+      type: SecurityEventType.logout,
+      userId: stored.userId,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
     });
   }
 
@@ -183,6 +239,11 @@ export class AuthService {
       actionType: ActionType.update,
       newValues: { passwordChanged: true },
     });
+    await this.security.log({
+      type: SecurityEventType.password_changed,
+      userId,
+      email: user.email,
+    });
   }
 
   // ---------- Sesiones ----------
@@ -210,6 +271,11 @@ export class AuthService {
     if (!currentRefreshToken)
       throw new BadRequestException('No se pudo identificar la sesión actual');
     await this.revokeAllForUser(userId, hashToken(currentRefreshToken));
+    await this.security.log({
+      type: SecurityEventType.sessions_revoked,
+      userId,
+      details: { scope: 'others' },
+    });
   }
 
   async revokeSession(userId: string, sessionId: string) {
@@ -218,14 +284,27 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
     if (count === 0) throw new NotFoundException('Sesión no encontrada');
+    await this.security.log({
+      type: SecurityEventType.sessions_revoked,
+      userId,
+      details: { scope: 'one', sessionId },
+    });
   }
 
   // ---------- Recuperación por correo ----------
 
   /** Siempre responde igual, exista o no el correo, para no revelar cuentas. */
-  async requestPasswordReset(email: string) {
+  async requestPasswordReset(email: string, meta: SessionMeta = {}) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+    });
+    await this.security.log({
+      type: SecurityEventType.password_reset_requested,
+      userId: user?.id,
+      email,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+      details: user?.isActive ? undefined : { sent: false },
     });
     if (!user || !user.isActive) return;
 
@@ -267,7 +346,11 @@ export class AuthService {
     }
   }
 
-  async resetPassword(token: string, newPassword: string) {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    meta: SessionMeta = {},
+  ) {
     const reset = await this.prisma.passwordReset.findUnique({
       where: { tokenHash: hashToken(token) },
       include: { user: true },
@@ -305,6 +388,13 @@ export class AuthService {
       recordId: reset.userId,
       actionType: ActionType.update,
       newValues: { passwordReset: 'email' },
+    });
+    await this.security.log({
+      type: SecurityEventType.password_reset,
+      userId: reset.userId,
+      email: reset.user.email,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
     });
   }
 

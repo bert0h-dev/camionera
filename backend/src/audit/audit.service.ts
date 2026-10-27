@@ -19,8 +19,10 @@ export class AuditService {
     await this.prisma.auditLog.create({
       data: {
         ...entry,
-        oldValues: (entry.oldValues ?? undefined) as Prisma.InputJsonValue | undefined,
-        newValues: (entry.newValues ?? undefined) as Prisma.InputJsonValue | undefined,
+        oldValues: (entry.oldValues ?? undefined) as
+          Prisma.InputJsonValue | undefined,
+        newValues: (entry.newValues ?? undefined) as
+          Prisma.InputJsonValue | undefined,
       },
     });
   }

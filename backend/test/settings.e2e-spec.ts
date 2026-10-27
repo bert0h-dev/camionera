@@ -140,8 +140,10 @@ describe('Configuración general (e2e)', () => {
     const token = await login(email, 'secreta123');
 
     const list = await api(token, 'get', '/settings').expect(200);
-    const groups = new Set(list.body.map((s: { group: string }) => s.group));
-    expect([...groups].sort()).toEqual([
+    const groups = new Set<string>(
+      list.body.map((s: { group: string }) => s.group),
+    );
+    expect([...groups].sort((a, b) => a.localeCompare(b))).toEqual([
       'attendance',
       'documents',
       'payroll',

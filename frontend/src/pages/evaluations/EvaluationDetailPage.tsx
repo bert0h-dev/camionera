@@ -5,7 +5,8 @@ import { api, apiErrorMessage } from '../../lib/api'
 import { formatDate, formatMinutes, staffFullName } from '../../lib/format'
 import { STAFF_ROLE_LABELS, type EvaluationDetail } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
-import { EvaluationStatusBadge, ScoreValue } from '../../components/EvaluationBadges'
+import { EvaluationStatusBadge } from '../../components/EvaluationBadges'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { Textarea } from '../../components/ui/Field'
@@ -103,31 +104,32 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/evaluaciones" className="text-sm text-link hover:underline">
-            ← Evaluaciones
-          </Link>
-          <h1 className="mt-1 text-2xl font-bold text-fg">
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-3">
             <Link to={`/personal/${ev.staff.id}`} className="hover:underline">
               {staffFullName(ev.staff)}
             </Link>
-          </h1>
-          <p className="text-sm text-fg-muted">
-            {STAFF_ROLE_LABELS[ev.staff.role]} · Periodo {formatDate(ev.periodStart)} – {formatDate(ev.periodEnd)} ·
-            Evaluador: {ev.evaluator.fullName}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <EvaluationStatusBadge status={ev.status} />
-          <div className="text-right">
-            <div className="text-xs text-fg-muted">Promedio</div>
-            <div className="text-2xl">
-              <ScoreValue value={editable ? live : ev.overallScore} />
+            <EvaluationStatusBadge status={ev.status} />
+          </span>
+        }
+        description={`${STAFF_ROLE_LABELS[ev.staff.role]} · Evaluador: ${ev.evaluator.fullName}`}
+        meta={
+          <span className="font-data text-base font-bold tracking-wide text-amber-400">
+            PERIODO {formatDate(ev.periodStart)} – {formatDate(ev.periodEnd)}
+          </span>
+        }
+        aside={
+          <div className="rounded-xl bg-black/25 px-5 py-2.5 text-right ring-1 ring-white/10">
+            <div className="font-data text-3xl leading-none font-bold text-amber-400">
+              {(editable ? live : ev.overallScore) == null ? '—' : Number(editable ? live : ev.overallScore).toFixed(2)}
+            </div>
+            <div className="mt-1 text-[11px] tracking-wider text-indigo-300 uppercase">
+              Promedio {editable && pending > 0 ? `· faltan ${pending}` : 'de 5'}
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
         <div className="space-y-4">

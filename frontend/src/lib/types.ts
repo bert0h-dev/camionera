@@ -377,3 +377,95 @@ export interface StaffSummary {
   requiresLicense: boolean
   nextShifts: Omit<Schedule, 'staff' | 'template' | 'workedHours'>[]
 }
+
+// ---------- Nómina ----------
+
+export type PaymentType = 'daily' | 'monthly'
+export type PaymentFrequency = 'weekly' | 'biweekly'
+export type PayrollStatus = 'draft' | 'closed' | 'paid'
+export type AdjustmentType = 'perception' | 'deduction'
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = { daily: 'Salario diario', monthly: 'Sueldo mensual' }
+export const PAYMENT_FREQUENCY_LABELS: Record<PaymentFrequency, string> = { weekly: 'Semanal', biweekly: 'Quincenal' }
+export const PAYROLL_STATUS_LABELS: Record<PayrollStatus, string> = {
+  draft: 'Borrador',
+  closed: 'Cerrada',
+  paid: 'Pagada',
+}
+
+export interface Compensation {
+  id: string
+  staffId: string
+  paymentType: PaymentType
+  baseSalary: string
+  paymentFrequency: PaymentFrequency
+  effectiveFrom: string
+  notes: string | null
+  createdAt: string
+  createdBy: { fullName: string }
+}
+
+export interface PayrollPeriod {
+  id: string
+  name: string
+  frequency: PaymentFrequency
+  periodStart: string
+  periodEnd: string
+  status: PayrollStatus
+  generatedAt: string | null
+  closedAt: string | null
+  paidAt: string | null
+  netTotal: string | number
+  _count: { entries: number }
+}
+
+export interface PayrollAdjustment {
+  id: string
+  type: AdjustmentType
+  concept: string
+  amount: string
+  createdAt: string
+}
+
+export interface PayrollEntry {
+  id: string
+  staffId: string
+  staff: Schedule['staff'] & { status: StaffStatus }
+  paymentType: PaymentType
+  baseSalary: string
+  dailySalary: string
+  periodDays: number
+  payableDays: string
+  absences: number
+  halfDays: number
+  lates: number
+  lateMinutes: number
+  lateAbsences: number
+  overtimeDouble: string
+  overtimeTriple: string
+  sundaysWorked: number
+  salaryAmount: string
+  overtimeAmount: string
+  sundayPremium: string
+  totalPerceptions: string
+  totalDeductions: string
+  netPay: string
+  adjustments: PayrollAdjustment[]
+}
+
+export interface PayrollPeriodDetail extends Omit<PayrollPeriod, 'netTotal' | '_count'> {
+  createdBy: { fullName: string }
+  entries: PayrollEntry[]
+  totals: { employees: number; perceptions: number; deductions: number; net: number; overtime: number }
+  missingSalary: Schedule['staff'][]
+}
+
+export interface PayrollSettings {
+  latePenaltyEnabled: boolean
+  latesPerAbsence: number
+}
+
+export interface MyPayslip extends Omit<PayrollEntry, 'staff' | 'adjustments'> {
+  period: Pick<PayrollPeriod, 'id' | 'name' | 'periodStart' | 'periodEnd' | 'status' | 'paidAt'>
+  adjustments: Pick<PayrollAdjustment, 'type' | 'concept' | 'amount'>[]
+}

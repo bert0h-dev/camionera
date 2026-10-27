@@ -11,6 +11,8 @@ import SchedulesPage from './pages/schedules/SchedulesPage'
 import AttendancePage from './pages/attendance/AttendancePage'
 import EvaluationsPage from './pages/evaluations/EvaluationsPage'
 import EvaluationDetailPage from './pages/evaluations/EvaluationDetailPage'
+import PayrollPage from './pages/payroll/PayrollPage'
+import PayrollPeriodPage from './pages/payroll/PayrollPeriodPage'
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
             <Route path="/evaluaciones/:id" element={<EvaluationDetailPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={['hr']} />}>
+            <Route path="/nomina" element={<PayrollPage />} />
+            <Route path="/nomina/:id" element={<PayrollPeriodPage />} />
             <Route path="/personal/nuevo" element={<StaffFormPage />} />
             <Route path="/personal/:id/editar" element={<StaffFormPage />} />
           </Route>

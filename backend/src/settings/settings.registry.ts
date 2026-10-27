@@ -73,6 +73,19 @@ export const SETTINGS = {
     description:
       'Minutos antes del inicio del turno en que el empleado ya puede registrar su entrada',
   },
+  'payroll.late_penalty_enabled': {
+    type: 'boolean',
+    default: false,
+    description: 'Descontar faltas por acumulación de retardos en la prenómina',
+  },
+  'payroll.lates_per_absence': {
+    type: 'number',
+    default: 3,
+    min: 1,
+    max: 20,
+    description:
+      'Retardos que equivalen a una falta (si el descuento está activo)',
+  },
 } as const satisfies Record<string, SettingDefinition>;
 
 export type SettingKey = keyof typeof SETTINGS;

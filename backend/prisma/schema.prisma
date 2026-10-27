@@ -88,6 +88,27 @@ enum EvaluationStatus {
   acknowledged
 }
 
+enum PaymentType {
+  daily
+  monthly
+}
+
+enum PaymentFrequency {
+  weekly
+  biweekly
+}
+
+enum PayrollStatus {
+  draft
+  closed
+  paid
+}
+
+enum AdjustmentType {
+  perception
+  deduction
+}
+
 enum ActionType {
   insert
   update
@@ -110,14 +131,17 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  staff          Staff?
-  refreshTokens  RefreshToken[]
-  passwordResets PasswordReset[]
-  auditLogs      AuditLog[]
-  settings       SystemSetting[]
-  schedules      StaffSchedule[]
-  attendance     StaffAttendance[]
-  evaluations    StaffEvaluation[]
+  staff              Staff?
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  auditLogs          AuditLog[]
+  settings           SystemSetting[]
+  schedules          StaffSchedule[]
+  attendance         StaffAttendance[]
+  evaluations        StaffEvaluation[]
+  compensations      StaffCompensation[]
+  payrollPeriods     PayrollPeriod[]
+  payrollAdjustments PayrollAdjustment[]
 
   @@index([role])
   @@index([isActive])
@@ -193,6 +217,8 @@ model Staff {
   schedules      StaffSchedule[]
   attendance     StaffAttendance[]
   evaluations    StaffEvaluation[]
+  compensations  StaffCompensation[]
+  payrollEntries PayrollEntry[]
 
   @@index([role])
   @@index([status])
@@ -383,6 +409,98 @@ model StaffEvaluationScore {
 
   @@unique([evaluationId, criterionId])
   @@map("staff_evaluation_scores")
+}
+
+// Historial de salario: para una fecha vale el registro con effectiveFrom más reciente
+model StaffCompensation {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  staffId          String           @map("staff_id") @db.Uuid
+  paymentType      PaymentType      @default(daily) @map("payment_type")
+  baseSalary       Decimal          @map("base_salary") @db.Decimal(12, 2)
+  paymentFrequency PaymentFrequency @default(weekly) @map("payment_frequency")
+  effectiveFrom    DateTime         @map("effective_from") @db.Date
+  notes            String?          @db.Text
+  createdById      String           @map("created_by") @db.Uuid
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  staff     Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([staffId, effectiveFrom])
+  @@map("staff_compensations")
+}
+
+model PayrollPeriod {
+  id          String           @id @default(uuid(7)) @db.Uuid
+  name        String           @db.VarChar(100)
+  frequency   PaymentFrequency @default(weekly)
+  periodStart DateTime         @map("period_start") @db.Date
+  periodEnd   DateTime         @map("period_end") @db.Date
+  status      PayrollStatus    @default(draft)
+  generatedAt DateTime?        @map("generated_at") @db.Timestamptz()
+  closedAt    DateTime?        @map("closed_at") @db.Timestamptz()
+  paidAt      DateTime?        @map("paid_at") @db.Timestamptz()
+  createdById String           @map("created_by") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  createdBy User           @relation(fields: [createdById], references: [id])
+  entries   PayrollEntry[]
+
+  @@index([periodStart])
+  @@index([status])
+  @@map("payroll_periods")
+}
+
+// Una línea por empleado y periodo; guarda copia de los datos usados en el cálculo
+model PayrollEntry {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  periodId         String      @map("period_id") @db.Uuid
+  staffId          String      @map("staff_id") @db.Uuid
+  paymentType      PaymentType @map("payment_type")
+  baseSalary       Decimal     @map("base_salary") @db.Decimal(12, 2)
+  dailySalary      Decimal     @map("daily_salary") @db.Decimal(12, 2)
+  periodDays       Int         @map("period_days")
+  payableDays      Decimal     @map("payable_days") @db.Decimal(5, 2)
+  absences         Int         @default(0)
+  halfDays         Int         @default(0) @map("half_days")
+  lates            Int         @default(0)
+  lateMinutes      Int         @default(0) @map("late_minutes")
+  lateAbsences     Int         @default(0) @map("late_absences")
+  overtimeDouble   Decimal     @default(0) @map("overtime_double") @db.Decimal(6, 2)
+  overtimeTriple   Decimal     @default(0) @map("overtime_triple") @db.Decimal(6, 2)
+  sundaysWorked    Int         @default(0) @map("sundays_worked")
+  salaryAmount     Decimal     @map("salary_amount") @db.Decimal(12, 2)
+  overtimeAmount   Decimal     @default(0) @map("overtime_amount") @db.Decimal(12, 2)
+  sundayPremium    Decimal     @default(0) @map("sunday_premium") @db.Decimal(12, 2)
+  totalPerceptions Decimal     @map("total_perceptions") @db.Decimal(12, 2)
+  totalDeductions  Decimal     @default(0) @map("total_deductions") @db.Decimal(12, 2)
+  netPay           Decimal     @map("net_pay") @db.Decimal(12, 2)
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  period      PayrollPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  staff       Staff               @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  adjustments PayrollAdjustment[]
+
+  @@unique([periodId, staffId])
+  @@map("payroll_entries")
+}
+
+model PayrollAdjustment {
+  id          String         @id @default(uuid(7)) @db.Uuid
+  entryId     String         @map("entry_id") @db.Uuid
+  type        AdjustmentType
+  concept     String         @db.VarChar(150)
+  amount      Decimal        @db.Decimal(12, 2)
+  createdById String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+
+  entry     PayrollEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  createdBy User         @relation(fields: [createdById], references: [id])
+
+  @@index([entryId])
+  @@map("payroll_adjustments")
 }
 
 // =====================================================

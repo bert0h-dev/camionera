@@ -259,7 +259,7 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | Personal | `staff`, `staff_licenses`, `staff_certifications` |
 | Turnos y asistencia | `shift_templates`, `staff_schedules`, `staff_attendance` |
 | Evaluaciones | `evaluation_criteria`, `staff_evaluations`, `staff_evaluation_scores` |
-| Acceso | `refresh_tokens` (sesiones), `password_resets` |
+| Nómina | `staff_compensations`, `payroll_periods`, `payroll_entries`, `payroll_adjustments` |
 | Sistema | `system_settings`, `audit_logs`, `security_events` |
 
 ---

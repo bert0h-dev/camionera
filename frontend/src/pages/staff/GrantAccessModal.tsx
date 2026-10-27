@@ -67,7 +67,9 @@ export function GrantAccessModal({ staff, open, onClose }: { staff: Staff; open:
             </option>
           ))}
         </Select>
-        {!isAdmin && <p className="text-xs text-slate-500">Solo un administrador puede asignar un rol distinto al sugerido.</p>}
+        {!isAdmin && (
+          <p className="text-xs text-fg-muted">Solo un administrador puede asignar un rol distinto al sugerido.</p>
+        )}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             Cancelar

@@ -88,7 +88,12 @@ export function LicenseFormModal({ staffId, license, open, onClose }: Props) {
           <Input label="Número" error={errors.licenseNumber?.message} {...register('licenseNumber')} />
           <Input label="Expedida por" error={errors.issuer?.message} {...register('issuer')} />
           <Input label="Fecha de expedición" type="date" error={errors.issueDate?.message} {...register('issueDate')} />
-          <Input label="Fecha de vencimiento" type="date" error={errors.expiryDate?.message} {...register('expiryDate')} />
+          <Input
+            label="Fecha de vencimiento"
+            type="date"
+            error={errors.expiryDate?.message}
+            {...register('expiryDate')}
+          />
         </div>
         <Textarea label="Notas" rows={2} {...register('notes')} />
         <div className="flex justify-end gap-2">

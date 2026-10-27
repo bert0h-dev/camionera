@@ -32,8 +32,8 @@ function EvaluationDetailPage() {
     queryFn: async () => (await api.get<EvaluationDetail>(`/evaluations/${id}`)).data,
   })
 
-  if (isLoading) return <p className="text-slate-500">Cargando…</p>
-  if (!data) return <p className="text-slate-500">Evaluación no encontrada.</p>
+  if (isLoading) return <p className="text-fg-muted">Cargando…</p>
+  if (!data) return <p className="text-fg-muted">Evaluación no encontrada.</p>
   return <EvaluationView key={data.id} evaluation={data} />
 }
 
@@ -105,15 +105,15 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link to="/evaluaciones" className="text-sm text-blue-700 hover:underline">
+          <Link to="/evaluaciones" className="text-sm text-link hover:underline">
             ← Evaluaciones
           </Link>
-          <h1 className="mt-1 text-2xl font-bold text-slate-800">
+          <h1 className="mt-1 text-2xl font-bold text-fg">
             <Link to={`/personal/${ev.staff.id}`} className="hover:underline">
               {staffFullName(ev.staff)}
             </Link>
           </h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-fg-muted">
             {STAFF_ROLE_LABELS[ev.staff.role]} · Periodo {formatDate(ev.periodStart)} – {formatDate(ev.periodEnd)} ·
             Evaluador: {ev.evaluator.fullName}
           </p>
@@ -121,7 +121,7 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
         <div className="flex items-center gap-3">
           <EvaluationStatusBadge status={ev.status} />
           <div className="text-right">
-            <div className="text-xs text-slate-500">Promedio</div>
+            <div className="text-xs text-fg-muted">Promedio</div>
             <div className="text-2xl">
               <ScoreValue value={editable ? live : ev.overallScore} />
             </div>
@@ -131,16 +131,16 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
         <div className="space-y-4">
-          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
             {ev.scores.map((s) => {
               const draft = scores.find((d) => d.criterionId === s.criterionId)!
               return (
                 <li key={s.criterionId} className="space-y-2 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <span className="font-medium text-slate-800">{s.criterionName}</span>
-                      <span className="ml-2 text-xs text-slate-500">peso {s.weight}</span>
-                      {s.criterion.description && <p className="text-xs text-slate-500">{s.criterion.description}</p>}
+                      <span className="font-medium text-fg">{s.criterionName}</span>
+                      <span className="ml-2 text-xs text-fg-muted">peso {s.weight}</span>
+                      {s.criterion.description && <p className="text-xs text-fg-muted">{s.criterion.description}</p>}
                     </div>
                     <div className="flex gap-1" role="radiogroup" aria-label={s.criterionName}>
                       {[1, 2, 3, 4, 5].map((n) => (
@@ -153,8 +153,8 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
                           onClick={() => setScore(s.criterionId, { score: n })}
                           className={`h-9 w-9 rounded-md border text-sm font-semibold ${
                             draft.score === n
-                              ? 'border-blue-600 bg-blue-600 text-white'
-                              : 'border-slate-300 bg-white text-slate-700 enabled:hover:bg-slate-50'
+                              ? 'border-primary bg-primary text-primary-fg'
+                              : 'border-border-strong bg-surface text-fg enabled:hover:bg-surface-muted'
                           } disabled:cursor-default`}
                         >
                           {n}
@@ -164,13 +164,13 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
                   </div>
                   {editable ? (
                     <input
-                      className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                      className="w-full rounded-md border border-border-strong px-3 py-1.5 text-sm"
                       placeholder="Comentario (opcional)"
                       value={draft.comment}
                       onChange={(e) => setScore(s.criterionId, { comment: e.target.value })}
                     />
                   ) : (
-                    s.comment && <p className="text-sm text-slate-600">{s.comment}</p>
+                    s.comment && <p className="text-sm text-fg-muted">{s.comment}</p>
                   )}
                 </li>
               )
@@ -196,7 +196,7 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
               </div>
             </div>
           ) : (
-            <dl className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 text-sm sm:grid-cols-2">
+            <dl className="grid gap-4 rounded-lg border border-border bg-surface p-4 text-sm sm:grid-cols-2">
               <TextBlock label="Fortalezas" value={ev.strengths} />
               <TextBlock label="Áreas de mejora" value={ev.improvements} />
               <TextBlock label="Comentarios generales" value={ev.comments} />
@@ -224,15 +224,15 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
           )}
         </div>
 
-        <aside className="h-fit space-y-2 rounded-lg border border-slate-200 bg-white p-4 text-sm">
-          <h2 className="font-semibold text-slate-800">Asistencia del periodo</h2>
+        <aside className="h-fit space-y-2 rounded-lg border border-border bg-surface p-4 text-sm">
+          <h2 className="font-semibold text-fg">Asistencia del periodo</h2>
           <Row label="Asistencias" value={a.present + a.late} />
           <Row label="Retardos" value={`${a.late} (${formatMinutes(a.lateMinutes)})`} />
           <Row label="Medios días" value={a.halfDay} />
           <Row label="Faltas" value={a.absent} />
           <Row label="Justificadas" value={a.excused} />
           <Row label="Horas extra" value={formatMinutes(a.overtimeMinutes)} />
-          <p className="pt-2 text-xs text-slate-500">Solo como referencia para calificar.</p>
+          <p className="pt-2 text-xs text-fg-muted">Solo como referencia para calificar.</p>
         </aside>
       </div>
 
@@ -260,8 +260,8 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
 function TextBlock({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="whitespace-pre-line text-slate-700">{value || '—'}</dd>
+      <dt className="text-xs text-fg-muted">{label}</dt>
+      <dd className="whitespace-pre-line text-fg">{value || '—'}</dd>
     </div>
   )
 }
@@ -269,8 +269,8 @@ function TextBlock({ label, value }: { label: string; value: string | null }) {
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-600">{label}</span>
-      <span className="font-medium text-slate-800">{value}</span>
+      <span className="text-fg-muted">{label}</span>
+      <span className="font-medium text-fg">{value}</span>
     </div>
   )
 }

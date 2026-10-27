@@ -40,13 +40,13 @@ export function StaffEvaluationsTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
           {trend.length > 0 ? (
             <>
               <span>Tendencia:</span>
               {trend.map((s, i) => (
                 <span key={i} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-slate-400">→</span>}
+                  {i > 0 && <span className="text-fg-subtle">→</span>}
                   <ScoreValue value={s} />
                 </span>
               ))}

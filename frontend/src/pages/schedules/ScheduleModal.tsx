@@ -165,7 +165,7 @@ function ScheduleForm({ target, onClose }: { target: ScheduleTarget; onClose: ()
       <Textarea label="Notas" rows={2} {...register('notes')} />
 
       {violations && (
-        <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <div className="space-y-2 rounded-md border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-3 text-sm text-red-800 dark:text-red-300">
           <ul className="list-disc pl-5">
             {violations.map((v) => (
               <li key={v}>{v}</li>
@@ -196,7 +196,12 @@ function ScheduleForm({ target, onClose }: { target: ScheduleTarget; onClose: ()
       <div className="flex justify-between gap-2 pt-1">
         <div>
           {target?.schedule && (
-            <Button variant="ghost" className="text-red-600" loading={remove.isPending} onClick={() => remove.mutate()}>
+            <Button
+              variant="ghost"
+              className="text-red-600 dark:text-red-300"
+              loading={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
               Eliminar
             </Button>
           )}

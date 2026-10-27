@@ -100,10 +100,10 @@ export function TemplatesModal({ open, onClose }: { open: boolean; onClose: () =
         </form>
       ) : (
         <div className="space-y-4">
-          <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+          <ul className="divide-y divide-border rounded-md border border-border">
             {templates.map((t) => (
               <li key={t.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                <div className={t.isActive ? '' : 'text-slate-400 line-through'}>
+                <div className={t.isActive ? '' : 'text-fg-subtle line-through'}>
                   <span className="font-medium">{t.name}</span> · {t.startTime}–{t.endTime}
                   {t.breakMinutes > 0 && ` · ${t.breakMinutes} min descanso`}
                 </div>

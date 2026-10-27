@@ -45,12 +45,22 @@ export function TerminateModal({ staff, open, onClose }: { staff: Staff; open: b
   return (
     <Modal open={open} title="Dar de baja" onClose={onClose}>
       <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="rounded-md bg-amber-50 dark:bg-amber-500/15 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
           Vas a dar de baja a <strong>{staffFullName(staff)}</strong>.
           {staff.user && ' Su acceso al sistema se desactivará.'} Esta acción no se puede deshacer desde aquí.
         </p>
-        <Input label="Fecha de baja" type="date" error={errors.terminationDate?.message} {...register('terminationDate')} />
-        <Textarea label="Motivo" rows={3} error={errors.terminationReason?.message} {...register('terminationReason')} />
+        <Input
+          label="Fecha de baja"
+          type="date"
+          error={errors.terminationDate?.message}
+          {...register('terminationDate')}
+        />
+        <Textarea
+          label="Motivo"
+          rows={3}
+          error={errors.terminationReason?.message}
+          {...register('terminationReason')}
+        />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             Cancelar

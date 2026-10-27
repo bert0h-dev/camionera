@@ -2,11 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../../lib/api'
 import { daysLabel, formatDate } from '../../../lib/format'
-import {
-  CERTIFICATION_TYPE_LABELS,
-  type StaffCertification,
-  type StaffLicense,
-} from '../../../lib/types'
+import { CERTIFICATION_TYPE_LABELS, type StaffCertification, type StaffLicense } from '../../../lib/types'
 import { DocumentStatusBadge } from '../../../components/DocumentStatusBadge'
 import { Button } from '../../../components/ui/Button'
 import { ConfirmModal } from '../../../components/ui/ConfirmModal'
@@ -21,7 +17,7 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold text-slate-800">{title}</h2>
+        <h2 className="font-semibold text-fg">{title}</h2>
         {action}
       </div>
       {children}
@@ -32,7 +28,7 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
 const expiryCell = (doc: { expiryDate: string | null; daysToExpiry: number | null }) => (
   <div>
     <div>{formatDate(doc.expiryDate)}</div>
-    <div className="text-xs text-slate-500">{daysLabel(doc.daysToExpiry)}</div>
+    <div className="text-xs text-fg-muted">{daysLabel(doc.daysToExpiry)}</div>
   </div>
 )
 
@@ -64,7 +60,12 @@ export function StaffDocumentsTab({ staffId, canEdit }: { staffId: string; canEd
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
 
-  const actions = <T extends { id: string }>(doc: T, onEdit: () => void, kind: 'licenses' | 'certifications', label: string) =>
+  const actions = <T extends { id: string }>(
+    doc: T,
+    onEdit: () => void,
+    kind: 'licenses' | 'certifications',
+    label: string,
+  ) =>
     canEdit && (
       <div className="flex justify-end gap-1">
         <Button variant="ghost" onClick={onEdit}>
@@ -96,7 +97,7 @@ export function StaffDocumentsTab({ staffId, canEdit }: { staffId: string; canEd
       cell: (c) => (
         <div>
           <div className="font-medium">{c.name}</div>
-          <div className="text-xs text-slate-500">{CERTIFICATION_TYPE_LABELS[c.type]}</div>
+          <div className="text-xs text-fg-muted">{CERTIFICATION_TYPE_LABELS[c.type]}</div>
         </div>
       ),
     },

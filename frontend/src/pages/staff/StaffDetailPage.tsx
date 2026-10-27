@@ -47,16 +47,16 @@ function countExpired(licenses: StaffLicense[] = [], certs: StaffCertification[]
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium tracking-wide text-slate-500 uppercase">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-800">{children || '—'}</dd>
+      <dt className="text-xs font-medium tracking-wide text-fg-muted uppercase">{label}</dt>
+      <dd className="mt-0.5 text-sm text-fg">{children || '—'}</dd>
     </div>
   )
 }
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="mb-4 font-semibold text-slate-800">{title}</h2>
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <h2 className="mb-4 font-semibold text-fg">{title}</h2>
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
     </section>
   )
@@ -92,25 +92,25 @@ function StaffDetailPage() {
     enabled: s?.role === 'driver' && s.status !== 'inactive',
   })
 
-  if (isLoading) return <p className="text-slate-500">Cargando…</p>
-  if (isError || !s) return <p className="text-red-600">No se encontró el empleado.</p>
+  if (isLoading) return <p className="text-fg-muted">Cargando…</p>
+  if (isError || !s) return <p className="text-red-600 dark:text-red-300">No se encontró el empleado.</p>
 
   const isTerminated = s.status === 'inactive'
   const expiredCount = isTerminated ? 0 : countExpired(licenses.data, certifications.data)
 
   return (
     <div className="space-y-4">
-      <Link to="/personal" className="text-sm text-blue-700 hover:underline">
+      <Link to="/personal" className="text-sm text-link hover:underline">
         ← Personal
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-800">{staffFullName(s)}</h1>
+            <h1 className="text-2xl font-bold text-fg">{staffFullName(s)}</h1>
             <StaffStatusBadge status={s.status} />
           </div>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-fg-muted">
             <span className="font-mono">{s.employeeNumber}</span> · {STAFF_ROLE_LABELS[s.role]}
           </p>
         </div>
@@ -131,7 +131,7 @@ function StaffDetailPage() {
         )}
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
+      <div className="flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -141,10 +141,10 @@ function StaffDetailPage() {
             onClick={() => setTab(t.key)}
             className={`border-b-2 px-4 py-2 text-sm whitespace-nowrap ${
               t.key === tab
-                ? 'border-blue-600 font-semibold text-blue-700'
+                ? 'border-primary font-semibold text-link'
                 : t.enabled
-                  ? 'border-transparent text-slate-600 hover:text-slate-800'
-                  : 'cursor-not-allowed border-transparent text-slate-400'
+                  ? 'border-transparent text-fg-muted hover:text-fg'
+                  : 'cursor-not-allowed border-transparent text-fg-subtle'
             }`}
           >
             {t.label}
@@ -153,18 +153,18 @@ function StaffDetailPage() {
       </div>
 
       {isTerminated && (
-        <div className="rounded-lg border border-slate-300 bg-slate-100 p-4 text-sm text-slate-700">
+        <div className="rounded-lg border border-border-strong bg-surface-sunken p-4 text-sm text-fg">
           <strong>Baja el {formatDate(s.terminationDate)}.</strong> Motivo: {s.terminationReason}
         </div>
       )}
 
       {compliance.data && !compliance.data.compliant && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-4 text-sm text-red-800 dark:text-red-300">
           <strong>No puede asignarse a recorridos.</strong> Le falta: {compliance.data.missing.join(', ')}.
         </div>
       )}
       {expiredCount > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-4 text-sm text-amber-800 dark:text-amber-300">
           Tiene {expiredCount} documento(s) vencido(s).{' '}
           {tab !== 'licenses' && (
             <button type="button" className="font-semibold underline" onClick={() => setTab('licenses')}>
@@ -176,9 +176,7 @@ function StaffDetailPage() {
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
       {tab === 'attendance' && <StaffAttendanceTab staffId={s.id} />}
-      {tab === 'evaluations' && (
-        <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />
-      )}
+      {tab === 'evaluations' && <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />}
       {tab === 'schedules' && (
         <StaffSchedulesTab staffId={s.id} staffName={staffFullName(s)} editable={!isTerminated} />
       )}
@@ -204,7 +202,7 @@ function StaffDetailPage() {
               {s.user ? (
                 <>
                   {s.user.email} · {ROLE_LABELS[s.user.role]}
-                  {!s.user.isActive && <span className="text-slate-500"> (desactivado)</span>}
+                  {!s.user.isActive && <span className="text-fg-muted"> (desactivado)</span>}
                 </>
               ) : (
                 'Sin acceso'

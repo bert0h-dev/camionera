@@ -72,7 +72,7 @@ function SchedulesPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Turnos</h1>
+        <h1 className="text-2xl font-bold text-fg">Turnos</h1>
         <div className="flex flex-wrap gap-2">
           {canManageTemplates && (
             <Button variant="secondary" onClick={() => setTemplatesOpen(true)}>
@@ -94,7 +94,7 @@ function SchedulesPage() {
           <Button variant="secondary" onClick={() => setMonday(addDaysKey(monday, 7))} aria-label="Semana siguiente">
             →
           </Button>
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-fg">
             {dayLabel(monday)} – {dayLabel(sunday)}
           </span>
         </div>
@@ -110,32 +110,32 @@ function SchedulesPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="min-w-[900px] w-full table-fixed text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-surface-muted">
             <tr>
-              <th className="w-52 px-3 py-2 text-left font-semibold text-slate-600">Empleado</th>
+              <th className="w-52 px-3 py-2 text-left font-semibold text-fg-muted">Empleado</th>
               {days.map((d) => (
                 <th
                   key={d}
-                  className={`px-2 py-2 text-left font-semibold ${d === today ? 'text-blue-700' : 'text-slate-600'}`}
+                  className={`px-2 py-2 text-left font-semibold ${d === today ? 'text-link' : 'text-fg-muted'}`}
                 >
                   {dayLabel(d)}
                 </th>
               ))}
-              <th className="w-20 px-2 py-2 text-right font-semibold text-slate-600">Horas</th>
+              <th className="w-20 px-2 py-2 text-right font-semibold text-fg-muted">Horas</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-fg-muted">
                   Cargando…
                 </td>
               </tr>
             ) : staff.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-fg-muted">
                   No hay empleados activos con ese puesto
                 </td>
               </tr>
@@ -145,26 +145,26 @@ function SchedulesPage() {
                 return (
                   <tr key={s.id}>
                     <td className="px-3 py-2 align-top">
-                      <Link to={`/personal/${s.id}`} className="font-medium text-blue-700 hover:underline">
+                      <Link to={`/personal/${s.id}`} className="font-medium text-link hover:underline">
                         {staffFullName(s)}
                       </Link>
-                      <div className="text-xs text-slate-500">{STAFF_ROLE_LABELS[s.role]}</div>
+                      <div className="text-xs text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</div>
                     </td>
                     {days.map((d) => {
                       const schedule = byStaffDay.get(`${s.id}|${d}`) ?? null
                       const open = () => setTarget({ staffId: s.id, staffName: staffFullName(s), date: d, schedule })
                       return (
-                        <td key={d} className={`px-1 py-1 align-top ${d === today ? 'bg-blue-50/50' : ''}`}>
+                        <td key={d} className={`px-1 py-1 align-top ${d === today ? 'bg-primary-soft/50' : ''}`}>
                           {canSchedule ? (
                             <button
                               type="button"
                               onClick={open}
-                              className="block min-h-11 w-full rounded text-left hover:ring-2 hover:ring-blue-200"
+                              className="block min-h-11 w-full rounded text-left hover:ring-2 hover:ring-ring"
                             >
                               {schedule ? (
                                 <ShiftChip schedule={schedule} />
                               ) : (
-                                <span className="block px-2 py-1 text-xs text-slate-300">+</span>
+                                <span className="block px-2 py-1 text-xs text-fg-subtle">+</span>
                               )}
                             </button>
                           ) : (
@@ -174,7 +174,7 @@ function SchedulesPage() {
                       )
                     })}
                     <td
-                      className={`px-2 py-2 text-right align-top font-medium ${hours > maxWeekly ? 'text-red-600' : 'text-slate-700'}`}
+                      className={`px-2 py-2 text-right align-top font-medium ${hours > maxWeekly ? 'text-red-600 dark:text-red-300' : 'text-fg'}`}
                     >
                       {formatHours(hours)}
                     </td>

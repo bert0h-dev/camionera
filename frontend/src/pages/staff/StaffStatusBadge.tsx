@@ -1,11 +1,11 @@
 import { STAFF_STATUS_LABELS, type StaffStatus } from '../../lib/types'
 
 const STYLES: Record<StaffStatus, string> = {
-  active: 'bg-green-100 text-green-700',
-  vacation: 'bg-sky-100 text-sky-700',
-  sick_leave: 'bg-amber-100 text-amber-800',
-  suspended: 'bg-orange-100 text-orange-700',
-  inactive: 'bg-slate-200 text-slate-600',
+  active: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300',
+  vacation: 'bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  sick_leave: 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300',
+  suspended: 'bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300',
+  inactive: 'bg-border text-fg-muted',
 }
 
 export function StaffStatusBadge({ status }: { status: StaffStatus }) {

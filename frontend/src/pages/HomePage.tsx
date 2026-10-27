@@ -12,8 +12,8 @@ function HomePage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-800">Bienvenido, {user?.fullName}</h1>
-        <p className="text-slate-600">
+        <h1 className="text-2xl font-bold text-fg">Bienvenido, {user?.fullName}</h1>
+        <p className="text-fg-muted">
           Rol: <span className="font-medium">{user && ROLE_LABELS[user.role]}</span>
         </p>
       </div>

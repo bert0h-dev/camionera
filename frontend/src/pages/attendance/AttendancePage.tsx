@@ -47,10 +47,10 @@ function AttendancePage() {
       header: 'Empleado',
       cell: (r) => (
         <div>
-          <Link to={`/personal/${r.staff.id}`} className="font-medium text-blue-700 hover:underline">
+          <Link to={`/personal/${r.staff.id}`} className="font-medium text-link hover:underline">
             {staffFullName(r.staff)}
           </Link>
-          <div className="text-xs text-slate-500">{STAFF_ROLE_LABELS[r.staff.role]}</div>
+          <div className="text-xs text-fg-muted">{STAFF_ROLE_LABELS[r.staff.role]}</div>
         </div>
       ),
     },
@@ -58,9 +58,9 @@ function AttendancePage() {
       header: 'Turno',
       cell: (r) =>
         !r.schedule ? (
-          <span className="text-xs text-amber-700">Sin turno</span>
+          <span className="text-xs text-amber-700 dark:text-amber-300">Sin turno</span>
         ) : r.schedule.isRestDay ? (
-          <span className="text-slate-400">Descanso</span>
+          <span className="text-fg-subtle">Descanso</span>
         ) : (
           `${formatTime(r.schedule.startAt)}–${formatTime(r.schedule.endAt)}`
         ),
@@ -70,7 +70,7 @@ function AttendancePage() {
       header: 'Salida',
       cell: (r) =>
         r.attendance?.checkInAt && !r.attendance.checkOutAt ? (
-          <span className="text-xs text-slate-500">En turno / sin salida</span>
+          <span className="text-xs text-fg-muted">En turno / sin salida</span>
         ) : (
           formatTime(r.attendance?.checkOutAt) || '—'
         ),
@@ -81,7 +81,7 @@ function AttendancePage() {
         r.attendance ? (
           <AttendanceStatusBadge status={r.attendance.status} />
         ) : r.schedule?.isRestDay ? null : (
-          <span className="text-xs text-slate-400">Pendiente</span>
+          <span className="text-xs text-fg-subtle">Pendiente</span>
         ),
     },
     {
@@ -90,13 +90,15 @@ function AttendancePage() {
         const a = r.attendance
         if (!a) return null
         return (
-          <div className="text-xs text-slate-600">
+          <div className="text-xs text-fg-muted">
             {a.lateMinutes > 0 && <div>Retardo: {formatMinutes(a.lateMinutes)}</div>}
             {a.workedMinutes > 0 && <div>Trabajó: {formatMinutes(a.workedMinutes)}</div>}
             {a.overtimeMinutes > 0 && (
-              <div className="font-medium text-indigo-700">Extra: {formatMinutes(a.overtimeMinutes)}</div>
+              <div className="font-medium text-indigo-700 dark:text-indigo-300">
+                Extra: {formatMinutes(a.overtimeMinutes)}
+              </div>
             )}
-            {a.source === 'self' && <div className="text-slate-400">Autoregistro</div>}
+            {a.source === 'self' && <div className="text-fg-subtle">Autoregistro</div>}
           </div>
         )
       },
@@ -124,7 +126,7 @@ function AttendancePage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Asistencias</h1>
+        <h1 className="text-2xl font-bold text-fg">Asistencias</h1>
         {canClose && isPast && (
           <Button variant="secondary" loading={closeDay.isPending} onClick={() => closeDay.mutate()}>
             Cerrar día ({pending} sin registro)
@@ -165,7 +167,7 @@ function AttendancePage() {
             ))}
           </Select>
         </div>
-        <span className="text-sm text-slate-600">{dayLabel(date)}</span>
+        <span className="text-sm text-fg-muted">{dayLabel(date)}</span>
       </div>
 
       <Table

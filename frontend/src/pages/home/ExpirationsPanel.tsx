@@ -67,12 +67,12 @@ export function ExpirationsPanel() {
   const expiring = (data?.items.length ?? 0) - expired
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+    <section className="rounded-lg border border-border bg-surface">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div>
-          <h2 className="font-semibold text-slate-800">Documentos del personal por vencer</h2>
+          <h2 className="font-semibold text-fg">Documentos del personal por vencer</h2>
           {data && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-fg-muted">
               {expired} vencido(s) · {expiring} por vencer en los próximos {data.alertDays} días
             </p>
           )}
@@ -89,26 +89,26 @@ export function ExpirationsPanel() {
       </div>
 
       {isLoading ? (
-        <p className="px-5 py-6 text-sm text-slate-500">Cargando…</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">Cargando…</p>
       ) : !data?.items.length ? (
-        <p className="px-5 py-6 text-sm text-slate-500">Todo en orden: no hay documentos vencidos ni por vencer.</p>
+        <p className="px-5 py-6 text-sm text-fg-muted">Todo en orden: no hay documentos vencidos ni por vencer.</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-border">
           {data.items.map((item) => (
             <li key={`${item.kind}-${item.id}`}>
               <Link
                 to={`/personal/${item.staff.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 hover:bg-slate-50"
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 hover:bg-surface-muted"
               >
                 <div className="min-w-0">
-                  <div className="font-medium text-slate-800">{staffFullName(item.staff)}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="font-medium text-fg">{staffFullName(item.staff)}</div>
+                  <div className="text-xs text-fg-muted">
                     {item.staff.employeeNumber} · {STAFF_ROLE_LABELS[item.staff.role]} · {item.label}
                     {item.number && ` (${item.number})`}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-right">
-                  <div className="text-xs text-slate-600">
+                  <div className="text-xs text-fg-muted">
                     <div>{formatDate(item.expiryDate)}</div>
                     <div>{daysLabel(item.daysToExpiry)}</div>
                   </div>

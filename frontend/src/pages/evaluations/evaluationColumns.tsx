@@ -11,8 +11,8 @@ export const evaluationColumns = (withStaff: boolean): Column<Evaluation>[] => [
           header: 'Empleado',
           cell: (e: Evaluation) => (
             <div>
-              <div className="font-medium text-slate-800">{staffFullName(e.staff)}</div>
-              <div className="text-xs text-slate-500">{STAFF_ROLE_LABELS[e.staff.role]}</div>
+              <div className="font-medium text-fg">{staffFullName(e.staff)}</div>
+              <div className="text-xs text-fg-muted">{STAFF_ROLE_LABELS[e.staff.role]}</div>
             </div>
           ),
         },
@@ -26,7 +26,7 @@ export const evaluationColumns = (withStaff: boolean): Column<Evaluation>[] => [
     header: '',
     className: 'text-right',
     cell: (e) => (
-      <Link to={`/evaluaciones/${e.id}`} className="text-sm font-medium text-blue-700 hover:underline">
+      <Link to={`/evaluaciones/${e.id}`} className="text-sm font-medium text-link hover:underline">
         {e.status === 'draft' ? 'Continuar' : 'Ver'}
       </Link>
     ),

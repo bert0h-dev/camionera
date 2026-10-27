@@ -5,53 +5,100 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react'
+import { ChevronDown, type LucideIcon } from 'lucide-react'
+import { cn } from '../../lib/cn'
 
-const CONTROL =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none disabled:bg-slate-100'
+const CONTROL = cn(
+  'w-full rounded-lg border border-border-strong bg-surface px-3 text-sm text-fg shadow-sm transition-colors',
+  'placeholder:text-fg-subtle',
+  'focus:border-primary focus:ring-4 focus:ring-ring focus:outline-none',
+  'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle',
+)
+const ERROR = 'border-red-500 focus:border-red-500 focus:ring-red-500/25'
 
-interface FieldWrapperProps {
+interface FieldProps {
   label?: string
   error?: string
-  children: ReactNode
+  hint?: string
+  required?: boolean
 }
 
-function FieldWrapper({ label, error, children }: FieldWrapperProps) {
+function FieldWrapper({ label, error, hint, required, children }: FieldProps & { children: ReactNode }) {
   return (
-    <label className="block space-y-1">
-      {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
+    <label className="block space-y-1.5">
+      {label && (
+        <span className="text-sm font-medium text-fg">
+          {label}
+          {required && <span className="ml-0.5 text-red-500">*</span>}
+        </span>
+      )}
       {children}
-      {error && <span className="block text-xs text-red-600">{error}</span>}
+      {error ? (
+        <span className="block text-xs font-medium text-red-600 dark:text-red-400">{error}</span>
+      ) : (
+        hint && <span className="block text-xs text-fg-muted">{hint}</span>
+      )}
     </label>
   )
 }
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }
+type InputProps = InputHTMLAttributes<HTMLInputElement> & FieldProps & { icon?: LucideIcon }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, className = '', ...props }, ref) => (
-  <FieldWrapper label={label} error={error}>
-    <input ref={ref} className={`${CONTROL} ${error ? 'border-red-400' : ''} ${className}`} {...props} />
-  </FieldWrapper>
-))
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, hint, required, icon: Icon, className, ...props }, ref) => (
+    <FieldWrapper label={label} error={error} hint={hint} required={required}>
+      <span className="relative block">
+        {Icon && (
+          <Icon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle" />
+        )}
+        <input
+          ref={ref}
+          required={required}
+          aria-invalid={!!error}
+          className={cn(CONTROL, 'h-9', Icon && 'pl-9', error && ERROR, className)}
+          {...props}
+        />
+      </span>
+    </FieldWrapper>
+  ),
+)
 Input.displayName = 'Input'
 
-type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & { label?: string; error?: string }
+type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & FieldProps
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, className = '', children, ...props }, ref) => (
-    <FieldWrapper label={label} error={error}>
-      <select ref={ref} className={`${CONTROL} ${error ? 'border-red-400' : ''} ${className}`} {...props}>
-        {children}
-      </select>
+  ({ label, error, hint, required, className, children, ...props }, ref) => (
+    <FieldWrapper label={label} error={error} hint={hint} required={required}>
+      <span className="relative block">
+        <select
+          ref={ref}
+          required={required}
+          aria-invalid={!!error}
+          className={cn(CONTROL, 'h-9 appearance-none pr-9', error && ERROR, className)}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-fg-subtle" />
+      </span>
     </FieldWrapper>
   ),
 )
 Select.displayName = 'Select'
 
-type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; error?: string }
+type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & FieldProps
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ label, error, className = '', ...props }, ref) => (
-  <FieldWrapper label={label} error={error}>
-    <textarea ref={ref} className={`${CONTROL} ${error ? 'border-red-400' : ''} ${className}`} {...props} />
-  </FieldWrapper>
-))
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ label, error, hint, required, className, ...props }, ref) => (
+    <FieldWrapper label={label} error={error} hint={hint} required={required}>
+      <textarea
+        ref={ref}
+        required={required}
+        aria-invalid={!!error}
+        className={cn(CONTROL, 'py-2', error && ERROR, className)}
+        {...props}
+      />
+    </FieldWrapper>
+  ),
+)
 Textarea.displayName = 'Textarea'

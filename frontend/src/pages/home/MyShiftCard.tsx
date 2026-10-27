@@ -37,26 +37,26 @@ export function MyShiftCard() {
   const checkedOut = !!attendance?.checkOutAt
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="font-semibold text-slate-800">Mi turno</h2>
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <h2 className="font-semibold text-fg">Mi turno</h2>
       {schedule ? (
-        <p className="mt-1 text-slate-700">
+        <p className="mt-1 text-fg">
           {dayLabel(schedule.scheduleDate.slice(0, 10))} ·{' '}
           <strong>
             {formatTime(schedule.startAt)}–{formatTime(schedule.endAt)}
           </strong>
         </p>
       ) : (
-        <p className="mt-1 text-sm text-slate-500">No tienes turno programado por ahora.</p>
+        <p className="mt-1 text-sm text-fg-muted">No tienes turno programado por ahora.</p>
       )}
 
       {attendance && (
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-700">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-fg">
           <AttendanceStatusBadge status={attendance.status} />
           {checkedIn && <span>Entrada: {formatTime(attendance.checkInAt)}</span>}
           {checkedOut && <span>Salida: {formatTime(attendance.checkOutAt)}</span>}
           {attendance.lateMinutes > 0 && (
-            <span className="text-amber-700">Retardo: {formatMinutes(attendance.lateMinutes)}</span>
+            <span className="text-amber-700 dark:text-amber-300">Retardo: {formatMinutes(attendance.lateMinutes)}</span>
           )}
         </div>
       )}

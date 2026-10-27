@@ -35,10 +35,10 @@ function shiftMonth(month: string, delta: number) {
   return d.toISOString().slice(0, 7)
 }
 
-function Stat({ label, value, tone = 'text-slate-800' }: { label: string; value: string | number; tone?: string }) {
+function Stat({ label, value, tone = 'text-fg' }: { label: string; value: string | number; tone?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <div className="text-xs text-slate-500">{label}</div>
+    <div className="rounded-lg border border-border bg-surface px-4 py-3">
+      <div className="text-xs text-fg-muted">{label}</div>
       <div className={`text-lg font-semibold ${tone}`}>{value}</div>
     </div>
   )
@@ -65,7 +65,7 @@ export function StaffAttendanceTab({ staffId }: { staffId: string }) {
     { header: 'Retardo', cell: (a) => (a.lateMinutes ? formatMinutes(a.lateMinutes) : '—') },
     { header: 'Trabajado', cell: (a) => (a.workedMinutes ? formatMinutes(a.workedMinutes) : '—') },
     { header: 'Extra', cell: (a) => (a.overtimeMinutes ? formatMinutes(a.overtimeMinutes) : '—') },
-    { header: 'Notas', cell: (a) => <span className="text-xs whitespace-pre-line text-slate-500">{a.notes}</span> },
+    { header: 'Notas', cell: (a) => <span className="text-xs whitespace-pre-line text-fg-muted">{a.notes}</span> },
   ]
 
   return (
@@ -74,7 +74,7 @@ export function StaffAttendanceTab({ staffId }: { staffId: string }) {
         <Button variant="secondary" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">
           ←
         </Button>
-        <span className="w-40 text-center text-sm font-medium text-slate-700">
+        <span className="w-40 text-center text-sm font-medium text-fg">
           {MONTHS[m - 1]} {y}
         </span>
         <Button
@@ -89,11 +89,15 @@ export function StaffAttendanceTab({ staffId }: { staffId: string }) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Asistencias" value={count('present') + count('late')} />
-        <Stat label="Retardos" value={count('late')} tone="text-amber-700" />
-        <Stat label="Medios días" value={count('half_day')} tone="text-orange-700" />
-        <Stat label="Faltas" value={count('absent')} tone="text-red-700" />
-        <Stat label="Justificadas" value={count('excused')} tone="text-sky-700" />
-        <Stat label="Horas extra" value={formatMinutes(sum('overtimeMinutes'))} tone="text-indigo-700" />
+        <Stat label="Retardos" value={count('late')} tone="text-amber-700 dark:text-amber-300" />
+        <Stat label="Medios días" value={count('half_day')} tone="text-orange-700 dark:text-orange-300" />
+        <Stat label="Faltas" value={count('absent')} tone="text-red-700 dark:text-red-300" />
+        <Stat label="Justificadas" value={count('excused')} tone="text-sky-700 dark:text-sky-300" />
+        <Stat
+          label="Horas extra"
+          value={formatMinutes(sum('overtimeMinutes'))}
+          tone="text-indigo-700 dark:text-indigo-300"
+        />
       </div>
 
       <Table

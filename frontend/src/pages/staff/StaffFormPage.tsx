@@ -7,12 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../lib/api'
 import { dateOnly } from '../../lib/format'
 import { CURP_REGEX, NSS_REGEX, PHONE_REGEX, RFC_REGEX } from '../../lib/validation'
-import {
-  STAFF_ROLE_LABELS,
-  STAFF_ROLES,
-  STAFF_STATUS_LABELS,
-  type Staff,
-} from '../../lib/types'
+import { STAFF_ROLE_LABELS, STAFF_ROLES, STAFF_STATUS_LABELS, type Staff } from '../../lib/types'
 import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/toast-context'
@@ -20,7 +15,10 @@ import { useToast } from '../../components/ui/toast-context'
 const EDITABLE_STATUSES = ['active', 'vacation', 'sick_leave', 'suspended'] as const
 
 const optional = (regex: RegExp, message: string) =>
-  z.string().trim().refine((v) => v === '' || regex.test(v), message)
+  z
+    .string()
+    .trim()
+    .refine((v) => v === '' || regex.test(v), message)
 
 const schema = z.object({
   firstName: z.string().trim().min(2, 'Mínimo 2 caracteres'),
@@ -30,7 +28,10 @@ const schema = z.object({
   rfc: optional(RFC_REGEX, 'RFC con formato inválido'),
   nss: optional(NSS_REGEX, 'Debe tener 11 dígitos'),
   birthDate: z.string().min(1, 'Obligatorio'),
-  email: z.string().trim().refine((v) => v === '' || z.email().safeParse(v).success, 'Correo inválido'),
+  email: z
+    .string()
+    .trim()
+    .refine((v) => v === '' || z.email().safeParse(v).success, 'Correo inválido'),
   phone: z.string().regex(PHONE_REGEX, 'Debe tener 10 dígitos'),
   address: z.string().trim(),
   emergencyContact: z.string().trim(),
@@ -92,8 +93,8 @@ function toForm(s: Staff): FormValues {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="mb-4 font-semibold text-slate-800">{title}</h2>
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <h2 className="mb-4 font-semibold text-fg">{title}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>
   )
@@ -150,11 +151,11 @@ function StaffFormPage() {
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
 
-  if (isEdit && isLoading) return <p className="text-slate-500">Cargando…</p>
+  if (isEdit && isLoading) return <p className="text-fg-muted">Cargando…</p>
 
   return (
     <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
-      <h1 className="text-2xl font-bold text-slate-800">
+      <h1 className="text-2xl font-bold text-fg">
         {isEdit ? `Editar empleado ${staff?.employeeNumber ?? ''}` : 'Nuevo empleado'}
       </h1>
 
@@ -165,8 +166,22 @@ function StaffFormPage() {
         <Input label="Fecha de nacimiento *" type="date" error={errors.birthDate?.message} {...register('birthDate')} />
         <Input label="CURP" maxLength={18} onInput={upperCase} error={errors.curp?.message} {...register('curp')} />
         <Input label="RFC" maxLength={13} onInput={upperCase} error={errors.rfc?.message} {...register('rfc')} />
-        <Input label="NSS" maxLength={11} inputMode="numeric" onInput={digitsOnly} error={errors.nss?.message} {...register('nss')} />
-        <Input label="Teléfono *" maxLength={10} inputMode="numeric" onInput={digitsOnly} error={errors.phone?.message} {...register('phone')} />
+        <Input
+          label="NSS"
+          maxLength={11}
+          inputMode="numeric"
+          onInput={digitsOnly}
+          error={errors.nss?.message}
+          {...register('nss')}
+        />
+        <Input
+          label="Teléfono *"
+          maxLength={10}
+          inputMode="numeric"
+          onInput={digitsOnly}
+          error={errors.phone?.message}
+          {...register('phone')}
+        />
         <Input label="Correo" type="email" error={errors.email?.message} {...register('email')} />
         <div className="sm:col-span-2 lg:col-span-3">
           <Textarea label="Dirección" rows={2} error={errors.address?.message} {...register('address')} />

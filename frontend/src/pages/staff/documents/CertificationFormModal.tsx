@@ -5,11 +5,7 @@ import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../../lib/api'
 import { dateOnly } from '../../../lib/format'
-import {
-  CERTIFICATION_TYPE_LABELS,
-  CERTIFICATION_TYPES,
-  type StaffCertification,
-} from '../../../lib/types'
+import { CERTIFICATION_TYPE_LABELS, CERTIFICATION_TYPES, type StaffCertification } from '../../../lib/types'
 import { Button } from '../../../components/ui/Button'
 import { Input, Select, Textarea } from '../../../components/ui/Field'
 import { Modal } from '../../../components/ui/Modal'

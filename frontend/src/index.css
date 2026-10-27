@@ -1,1 +1,137 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* Modo oscuro por clase en <html> (ver lib/theme.ts) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Tokens semánticos. Los componentes usan estos nombres (bg-surface, text-fg, border-border…)
+ * y cada tema solo redefine las variables.
+ */
+:root {
+  color-scheme: light;
+  --app: #f6f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-sunken: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #94a3b8;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-fg: #ffffff;
+  --primary-soft: #eef2ff;
+  --primary-soft-fg: #4338ca;
+  --link: #4f46e5;
+  --ring: rgb(99 102 241 / 0.35);
+
+  --accent: #f59e0b;
+  --accent-soft: #fffbeb;
+  --accent-soft-fg: #b45309;
+
+  --overlay: rgb(15 23 42 / 0.45);
+  --shadow-color: 15 23 42;
+}
+
+.dark {
+  color-scheme: dark;
+  --app: #0b1020;
+  --surface: #111827;
+  --surface-muted: #161f31;
+  --surface-sunken: #0d1424;
+  --border: #1f2a3f;
+  --border-strong: #2d3a52;
+  --fg: #e5e9f2;
+  --fg-muted: #9aa6bd;
+  --fg-subtle: #64708a;
+
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-fg: #ffffff;
+  --primary-soft: rgb(99 102 241 / 0.16);
+  --primary-soft-fg: #a5b4fc;
+  --link: #a5b4fc;
+  --ring: rgb(129 140 248 / 0.45);
+
+  --accent: #fbbf24;
+  --accent-soft: rgb(251 191 36 / 0.14);
+  --accent-soft-fg: #fcd34d;
+
+  --overlay: rgb(2 6 23 / 0.7);
+  --shadow-color: 0 0 0;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-fg: var(--primary-soft-fg);
+  --color-link: var(--link);
+  --color-ring: var(--ring);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+
+  --color-overlay: var(--overlay);
+
+  --shadow-card: 0 1px 2px rgb(var(--shadow-color) / 0.06), 0 1px 3px rgb(var(--shadow-color) / 0.04);
+  --shadow-pop: 0 10px 30px -10px rgb(var(--shadow-color) / 0.25), 0 4px 10px -4px rgb(var(--shadow-color) / 0.12);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in: slide-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@layer base {
+  html {
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  body {
+    @apply bg-app font-sans text-fg antialiased;
+  }
+  /* Horas, importes y números alineados */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--primary-soft);
+  }
+}

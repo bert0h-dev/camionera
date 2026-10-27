@@ -1,9 +1,10 @@
 import type { DocumentStatus } from '../lib/types'
+import { Badge, type BadgeTone } from './ui/Badge'
 
-const STYLES: Record<DocumentStatus, string> = {
-  valid: 'bg-green-100 text-green-700',
-  expiring: 'bg-amber-100 text-amber-800',
-  expired: 'bg-red-100 text-red-700',
+const TONES: Record<DocumentStatus, BadgeTone> = {
+  valid: 'success',
+  expiring: 'warning',
+  expired: 'danger',
 }
 
 const LABELS: Record<DocumentStatus, string> = {
@@ -14,8 +15,8 @@ const LABELS: Record<DocumentStatus, string> = {
 
 export function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STYLES[status]}`}>
+    <Badge tone={TONES[status]} dot>
       {LABELS[status]}
-    </span>
+    </Badge>
   )
 }

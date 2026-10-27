@@ -83,7 +83,7 @@ function NewEvaluationForm({ staffId, onClose }: Omit<Props, 'open'>) {
         <Input label="Inicio del periodo" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <Input label="Fin del periodo" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
-      <p className="text-xs text-slate-500">Se agregan los criterios activos que aplican al puesto del empleado.</p>
+      <p className="text-xs text-fg-muted">Se agregan los criterios activos que aplican al puesto del empleado.</p>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           Cancelar

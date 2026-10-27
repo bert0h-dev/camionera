@@ -59,7 +59,7 @@ function StaffListPage() {
     {
       header: 'Nombre',
       cell: (s) => (
-        <Link to={`/personal/${s.id}`} className="font-medium text-blue-700 hover:underline">
+        <Link to={`/personal/${s.id}`} className="font-medium text-link hover:underline">
           {staffFullName(s)}
         </Link>
       ),
@@ -71,11 +71,11 @@ function StaffListPage() {
       header: 'Acceso',
       cell: (s) =>
         s.user ? (
-          <span className={s.user.isActive ? 'text-green-700' : 'text-slate-400'}>
+          <span className={s.user.isActive ? 'text-green-700 dark:text-green-300' : 'text-fg-subtle'}>
             {s.user.isActive ? 'Sí' : 'Desactivado'}
           </span>
         ) : (
-          <span className="text-slate-400">No</span>
+          <span className="text-fg-subtle">No</span>
         ),
     },
   ]
@@ -83,7 +83,7 @@ function StaffListPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Personal</h1>
+        <h1 className="text-2xl font-bold text-fg">Personal</h1>
         {canEdit && <Button onClick={() => navigate('/personal/nuevo')}>Nuevo empleado</Button>}
       </div>
 

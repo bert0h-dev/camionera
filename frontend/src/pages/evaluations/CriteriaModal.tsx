@@ -93,17 +93,17 @@ export function CriteriaModal({ open, onClose }: { open: boolean; onClose: () =>
             />
           </div>
           <fieldset>
-            <legend className="mb-1 text-sm font-medium text-slate-700">Aplica a (ninguno = todos)</legend>
+            <legend className="mb-1 text-sm font-medium text-fg">Aplica a (ninguno = todos)</legend>
             <div className="flex flex-wrap gap-3">
               {STAFF_ROLES.map((r) => (
-                <label key={r} className="flex items-center gap-1 text-sm text-slate-700">
+                <label key={r} className="flex items-center gap-1 text-sm text-fg">
                   <input type="checkbox" checked={draft.appliesTo.includes(r)} onChange={() => toggleRole(r)} />
                   {STAFF_ROLE_LABELS[r]}
                 </label>
               ))}
             </div>
           </fieldset>
-          <p className="text-xs text-slate-500">Los cambios solo afectan evaluaciones nuevas.</p>
+          <p className="text-xs text-fg-muted">Los cambios solo afectan evaluaciones nuevas.</p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setDraft(null)}>
               Cancelar
@@ -115,12 +115,12 @@ export function CriteriaModal({ open, onClose }: { open: boolean; onClose: () =>
         </form>
       ) : (
         <div className="space-y-4">
-          <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+          <ul className="divide-y divide-border rounded-md border border-border">
             {criteria.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                <div className={c.isActive ? '' : 'text-slate-400 line-through'}>
+                <div className={c.isActive ? '' : 'text-fg-subtle line-through'}>
                   <span className="font-medium">{c.name}</span> · peso {c.weight}
-                  <div className="text-xs text-slate-500">{rolesLabel(c.appliesTo)}</div>
+                  <div className="text-xs text-fg-muted">{rolesLabel(c.appliesTo)}</div>
                 </div>
                 <div className="flex gap-1">
                   <Button

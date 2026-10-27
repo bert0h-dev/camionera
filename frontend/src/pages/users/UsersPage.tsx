@@ -59,7 +59,7 @@ function UsersPage() {
       header: 'Estado',
       cell: (u) => (
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300' : 'bg-border text-fg-muted'}`}
         >
           {u.isActive ? 'Activo' : 'Inactivo'}
         </span>
@@ -93,12 +93,16 @@ function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Usuarios</h1>
+        <h1 className="text-2xl font-bold text-fg">Usuarios</h1>
         <Button onClick={() => setFormUser(null)}>Nuevo usuario</Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
-        <Input placeholder="Buscar por nombre o correo…" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+        <Input
+          placeholder="Buscar por nombre o correo…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
         <Select
           value={role}
           onChange={(e) => {

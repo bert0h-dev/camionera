@@ -27,9 +27,12 @@ const BUSINESS_TIMEZONE = 'America/Mexico_City'
 /** Hora local de la central (HH:mm) de un instante ISO. */
 export const formatTime = (iso: string | null | undefined) =>
   iso
-    ? new Intl.DateTimeFormat('es-MX', { timeZone: BUSINESS_TIMEZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
-        new Date(iso),
-      )
+    ? new Intl.DateTimeFormat('es-MX', {
+        timeZone: BUSINESS_TIMEZONE,
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date(iso))
     : ''
 
 /** Hoy en la central como 'AAAA-MM-DD'. */

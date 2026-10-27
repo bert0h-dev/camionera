@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
+import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { Button } from './Button'
+import { EmptyState } from './EmptyState'
+import { Skeleton } from './Skeleton'
 
 export interface Column<T> {
   header: string
@@ -13,47 +17,73 @@ interface TableProps<T> {
   rowKey: (row: T) => string
   loading?: boolean
   emptyMessage?: string
+  emptyDescription?: string
+  emptyIcon?: LucideIcon
+  emptyAction?: ReactNode
+  onRowClick?: (row: T) => void
 }
 
-export function Table<T>({ columns, rows, rowKey, loading, emptyMessage = 'Sin resultados' }: TableProps<T>) {
+export function Table<T>({
+  columns,
+  rows,
+  rowKey,
+  loading,
+  emptyMessage = 'Sin resultados',
+  emptyDescription,
+  emptyIcon,
+  emptyAction,
+  onRowClick,
+}: TableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50">
-          <tr>
-            {columns.map((c) => (
-              <th key={c.header} className={`px-4 py-3 text-left font-semibold text-slate-600 ${c.className ?? ''}`}>
-                {c.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {loading ? (
+    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="sticky top-0 z-10 border-b border-border bg-surface-muted">
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
-                Cargando…
-              </td>
+              {columns.map((c) => (
+                <th
+                  key={c.header}
+                  scope="col"
+                  className={cn(
+                    'px-4 py-3 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-fg-muted uppercase',
+                    c.className,
+                  )}
+                >
+                  {c.header}
+                </th>
+              ))}
             </tr>
-          ) : rows.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-slate-50">
-                {columns.map((c) => (
-                  <td key={c.header} className={`px-4 py-3 text-slate-700 ${c.className ?? ''}`}>
-                    {c.cell(row)}
-                  </td>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {loading
+              ? Array.from({ length: 5 }, (_, i) => (
+                  <tr key={i}>
+                    {columns.map((c) => (
+                      <td key={c.header} className="px-4 py-3.5">
+                        <Skeleton className="h-4 w-full max-w-40" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              : rows.map((row) => (
+                  <tr
+                    key={rowKey(row)}
+                    onClick={onRowClick && (() => onRowClick(row))}
+                    className={cn('transition-colors hover:bg-surface-muted', onRowClick && 'cursor-pointer')}
+                  >
+                    {columns.map((c) => (
+                      <td key={c.header} className={cn('px-4 py-3 text-fg', c.className)}>
+                        {c.cell(row)}
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
+      {!loading && rows.length === 0 && (
+        <EmptyState icon={emptyIcon} title={emptyMessage} description={emptyDescription} action={emptyAction} />
+      )}
     </div>
   )
 }
@@ -67,18 +97,30 @@ interface PaginationProps {
 
 export function Pagination({ page, totalPages, total, onChange }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between text-sm text-slate-600">
-      <span>{total} registro(s)</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-fg-muted">
+      <span className="tabular">
+        <span className="font-medium text-fg">{total}</span> registro(s)
+      </span>
       <div className="flex items-center gap-2">
-        <Button variant="secondary" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          Anterior
-        </Button>
-        <span>
-          Página {page} de {Math.max(totalPages, 1)}
+        <Button
+          variant="secondary"
+          size="icon"
+          icon={ChevronLeft}
+          disabled={page <= 1}
+          onClick={() => onChange(page - 1)}
+          aria-label="Página anterior"
+        />
+        <span className="tabular px-1">
+          Página <span className="font-medium text-fg">{page}</span> de {Math.max(totalPages, 1)}
         </span>
-        <Button variant="secondary" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>
-          Siguiente
-        </Button>
+        <Button
+          variant="secondary"
+          size="icon"
+          icon={ChevronRight}
+          disabled={page >= totalPages}
+          onClick={() => onChange(page + 1)}
+          aria-label="Página siguiente"
+        />
       </div>
     </div>
   )

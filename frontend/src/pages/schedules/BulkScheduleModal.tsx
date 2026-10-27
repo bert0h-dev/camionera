@@ -94,11 +94,11 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
         Se programaron <strong>{result.created}</strong> turno(s). No se programaron{' '}
         <strong>{result.skipped.length}</strong>:
       </p>
-      <ul className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-3">
+      <ul className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-border p-3">
         {result.skipped.map((s) => (
           <li key={`${s.staffId}-${s.date}`}>
             <span className="font-medium">{nameOf(s.staffId)}</span> · {dayLabel(s.date)}:{' '}
-            <span className="text-slate-600">{s.reason}</span>
+            <span className="text-fg-muted">{s.reason}</span>
           </li>
         ))}
       </ul>
@@ -115,17 +115,17 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
       }}
     >
       <div>
-        <div className="mb-1 flex items-center justify-between text-sm font-medium text-slate-700">
+        <div className="mb-1 flex items-center justify-between text-sm font-medium text-fg">
           <span>Empleados ({selected.length})</span>
           <button
             type="button"
-            className="text-xs text-blue-700 hover:underline"
+            className="text-xs text-link hover:underline"
             onClick={() => setSelected(selected.length === staff.length ? [] : staff.map((s) => s.id))}
           >
             {selected.length === staff.length ? 'Ninguno' : 'Todos'}
           </button>
         </div>
-        <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+        <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2">
           {staff.map((s) => (
             <label key={s.id} className="flex items-center gap-2 text-sm">
               <input
@@ -133,7 +133,7 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
                 checked={selected.includes(s.id)}
                 onChange={() => setSelected(toggle(selected, s.id))}
               />
-              {staffFullName(s)} <span className="text-xs text-slate-400">{s.employeeNumber}</span>
+              {staffFullName(s)} <span className="text-xs text-fg-subtle">{s.employeeNumber}</span>
             </label>
           ))}
         </div>
@@ -145,7 +145,7 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
       </div>
 
       <div>
-        <span className="text-sm font-medium text-slate-700">Días</span>
+        <span className="text-sm font-medium text-fg">Días</span>
         <div className="mt-1 flex flex-wrap gap-1">
           {WEEKDAYS.map((d) => (
             <button
@@ -154,8 +154,8 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
               onClick={() => setWeekdays(toggle(weekdays, d.value))}
               className={`rounded-md border px-3 py-1 text-sm ${
                 weekdays.includes(d.value)
-                  ? 'border-blue-600 bg-blue-600 text-white'
-                  : 'border-slate-300 bg-white text-slate-600'
+                  ? 'border-primary bg-primary text-primary-fg'
+                  : 'border-border-strong bg-surface text-fg-muted'
               }`}
             >
               {d.label}
@@ -173,7 +173,7 @@ function BulkForm({ staff, defaultFrom, defaultTo, onClose }: Omit<Props, 'open'
         <option value={REST}>Día de descanso</option>
       </Select>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} />
         Reemplazar turnos que ya existan en esos días
       </label>

@@ -64,9 +64,9 @@ function AttendanceForm({ target, onClose }: { target: AttendanceTarget; onClose
         mutation.mutate()
       }}
     >
-      <p className="text-sm text-slate-600">Día del turno: {dayLabel(target.date)}</p>
+      <p className="text-sm text-fg-muted">Día del turno: {dayLabel(target.date)}</p>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <input type="checkbox" checked={excused} onChange={(e) => setExcused(e.target.checked)} />
         Falta justificada (permiso, vacaciones, incapacidad)
       </label>
@@ -80,7 +80,7 @@ function AttendanceForm({ target, onClose }: { target: AttendanceTarget; onClose
             value={checkOut}
             onChange={(e) => setCheckOut(e.target.value)}
           />
-          <p className="text-xs text-slate-500 sm:col-span-2">Sin entrada = falta.</p>
+          <p className="text-xs text-fg-muted sm:col-span-2">Sin entrada = falta.</p>
         </div>
       )}
 
@@ -92,7 +92,7 @@ function AttendanceForm({ target, onClose }: { target: AttendanceTarget; onClose
         error={isEdit && notes && notesRequired ? 'Mínimo 3 caracteres' : undefined}
       />
       {current?.notes && (
-        <div className="rounded-md bg-slate-50 p-2 text-xs whitespace-pre-line text-slate-600">
+        <div className="rounded-md bg-surface-muted p-2 text-xs whitespace-pre-line text-fg-muted">
           <strong>Historial:</strong>
           {'\n'}
           {current.notes}

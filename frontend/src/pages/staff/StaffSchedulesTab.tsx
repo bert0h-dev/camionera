@@ -5,7 +5,15 @@ import { ScheduleModal, type ScheduleTarget } from '../schedules/ScheduleModal'
 import { ShiftChip } from '../schedules/ShiftChip'
 import { useCanSchedule, useSchedules } from '../schedules/useScheduleData'
 
-export function StaffSchedulesTab({ staffId, staffName, editable }: { staffId: string; staffName: string; editable: boolean }) {
+export function StaffSchedulesTab({
+  staffId,
+  staffName,
+  editable,
+}: {
+  staffId: string
+  staffName: string
+  editable: boolean
+}) {
   const canSchedule = useCanSchedule() && editable
   const [monday, setMonday] = useState(() => mondayOf(todayKey()))
   const [target, setTarget] = useState<ScheduleTarget | null>(null)
@@ -29,17 +37,17 @@ export function StaffSchedulesTab({ staffId, staffName, editable }: { staffId: s
           <Button variant="secondary" onClick={() => setMonday(addDaysKey(monday, 7))} aria-label="Semana siguiente">
             →
           </Button>
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-fg">
             {dayLabel(monday)} – {dayLabel(days[6])}
           </span>
         </div>
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-fg-muted">
           Total de la semana: <strong>{formatHours(total)}</strong>
         </span>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-500">Cargando…</p>
+        <p className="text-sm text-fg-muted">Cargando…</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-7">
           {days.map((d) => {
@@ -47,23 +55,27 @@ export function StaffSchedulesTab({ staffId, staffName, editable }: { staffId: s
             return (
               <div
                 key={d}
-                className={`rounded-lg border bg-white p-2 ${d === today ? 'border-blue-300' : 'border-slate-200'}`}
+                className={`rounded-lg border bg-surface p-2 ${d === today ? 'border-primary' : 'border-border'}`}
               >
-                <div className={`mb-1 text-xs font-semibold ${d === today ? 'text-blue-700' : 'text-slate-500'}`}>
+                <div className={`mb-1 text-xs font-semibold ${d === today ? 'text-link' : 'text-fg-muted'}`}>
                   {dayLabel(d)}
                 </div>
                 {canSchedule ? (
                   <button
                     type="button"
-                    className="block min-h-11 w-full rounded text-left hover:ring-2 hover:ring-blue-200"
+                    className="block min-h-11 w-full rounded text-left hover:ring-2 hover:ring-ring"
                     onClick={() => setTarget({ staffId, staffName, date: d, schedule })}
                   >
-                    {schedule ? <ShiftChip schedule={schedule} /> : <span className="text-xs text-slate-300">+ Asignar</span>}
+                    {schedule ? (
+                      <ShiftChip schedule={schedule} />
+                    ) : (
+                      <span className="text-xs text-fg-subtle">+ Asignar</span>
+                    )}
                   </button>
                 ) : schedule ? (
                   <ShiftChip schedule={schedule} />
                 ) : (
-                  <span className="text-xs text-slate-400">Sin turno</span>
+                  <span className="text-xs text-fg-subtle">Sin turno</span>
                 )}
               </div>
             )

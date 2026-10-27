@@ -26,14 +26,14 @@ export function MyEvaluationsCard() {
   const unread = data.filter((e) => e.status === 'finalized').length
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="font-semibold text-slate-800">Mis evaluaciones</h2>
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <h2 className="font-semibold text-fg">Mis evaluaciones</h2>
       {unread > 0 && (
-        <p className="mt-1 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+        <p className="mt-1 rounded-md bg-primary-soft px-3 py-2 text-sm text-link">
           Tienes {unread === 1 ? 'una evaluación nueva' : `${unread} evaluaciones nuevas`}.
         </p>
       )}
-      <ul className="mt-3 divide-y divide-slate-100 text-sm">
+      <ul className="mt-3 divide-y divide-border text-sm">
         {data.map((e) => (
           <li key={e.id} className="flex items-center justify-between gap-2 py-2">
             <span>
@@ -73,18 +73,18 @@ function MyEvaluationView({ evaluation: e, onClose }: { evaluation: MyEvaluation
 
   return (
     <div className="space-y-4 text-sm">
-      <p className="text-slate-600">
+      <p className="text-fg-muted">
         Periodo {formatDate(e.periodStart)} – {formatDate(e.periodEnd)} · Evaluador: {e.evaluator.fullName} · Promedio{' '}
         <ScoreValue value={e.overallScore} />
       </p>
-      <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+      <ul className="divide-y divide-border rounded-md border border-border">
         {e.scores.map((s) => (
           <li key={s.criterionId} className="px-3 py-2">
             <div className="flex justify-between">
-              <span className="font-medium text-slate-800">{s.criterionName}</span>
+              <span className="font-medium text-fg">{s.criterionName}</span>
               <span className="font-semibold">{s.score} / 5</span>
             </div>
-            {s.comment && <p className="text-slate-600">{s.comment}</p>}
+            {s.comment && <p className="text-fg-muted">{s.comment}</p>}
           </li>
         ))}
       </ul>
@@ -120,7 +120,7 @@ function MyEvaluationView({ evaluation: e, onClose }: { evaluation: MyEvaluation
         </>
       ) : (
         e.employeeComment && (
-          <p className="text-slate-600">
+          <p className="text-fg-muted">
             <strong>Tu comentario:</strong> {e.employeeComment}
           </p>
         )

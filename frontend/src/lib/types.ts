@@ -496,3 +496,24 @@ export interface UserDetail extends User {
     createdAt: string
   }[]
 }
+
+// ---------- Configuración ----------
+
+export type SettingValue = number | string | boolean
+
+export interface SettingItem {
+  key: string
+  group: string
+  value: SettingValue
+  default: SettingValue
+  type: 'number' | 'string' | 'boolean'
+  label: string | null
+  description: string
+  unit: string | null
+  min?: number
+  max?: number
+  decimals: number
+  maxLength?: number
+  updatedAt: string | null
+  updatedBy: string | null
+}

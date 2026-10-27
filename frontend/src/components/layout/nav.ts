@@ -1,5 +1,6 @@
 import {
   CalendarClock,
+  Settings,
   ClipboardCheck,
   LayoutDashboard,
   ShieldCheck,
@@ -39,7 +40,10 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Sistema',
-    items: [{ to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, roles: ['admin'] }],
+    items: [
+      { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, roles: ['admin'] },
+      { to: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },
+    ],
   },
 ]
 
@@ -61,6 +65,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   usuarios: 'Usuarios',
   nomina: 'Nómina',
   'mi-cuenta': 'Mi cuenta',
+  configuracion: 'Configuración',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

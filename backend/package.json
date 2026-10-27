@@ -23,7 +23,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "postinstall": "prisma generate",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "seed:demo": "tsx prisma/seed-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

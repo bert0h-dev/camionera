@@ -320,11 +320,13 @@ export interface DashboardSummary {
     }
     today: {
       scheduled: number
+      started: number
       onShiftNow: number
       working: number
       missingCheckIn: number
       attendance: AttendanceCounts
     }
+    board: BoardEntry[]
     trend: ({ date: string } & AttendanceCounts)[]
     documents: { alertDays: number; expired: number; expiring: number }
     evaluations: { drafts: number; pendingAcknowledge: number }
@@ -335,4 +337,15 @@ export interface DashboardSummary {
     lateMinutes: number
     overtimeMinutes: number
   } | null
+}
+
+export type BoardState = 'missing' | 'scheduled' | 'on_time' | 'late' | 'done' | 'absent' | 'excused'
+
+export interface BoardEntry {
+  staff: Pick<Staff, 'id' | 'firstName' | 'lastName' | 'secondLastName' | 'role'>
+  startAt: string
+  endAt: string
+  checkInAt: string | null
+  lateMinutes: number
+  state: BoardState
 }

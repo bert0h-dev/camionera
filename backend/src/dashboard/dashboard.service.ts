@@ -20,6 +20,10 @@ const TEAM_READERS: UserRole[] = [
   UserRole.coordinator,
 ];
 
+/** Situación de cada turno de hoy en el tablero de entradas. */
+type BoardState =
+  'missing' | 'scheduled' | 'on_time' | 'late' | 'done' | 'absent' | 'excused';
+
 type StatusCounts = Record<AttendanceStatus, number>;
 
 const emptyCounts = (): StatusCounts => ({
@@ -80,11 +84,30 @@ export class DashboardService {
           isRestDay: false,
           staff: { status: { not: StaffStatus.inactive } },
         },
-        select: { staffId: true, startAt: true, endAt: true },
+        select: {
+          staffId: true,
+          startAt: true,
+          endAt: true,
+          staff: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              secondLastName: true,
+              role: true,
+            },
+          },
+        },
       }),
       this.prisma.staffAttendance.findMany({
         where: { attendanceDate: day },
-        select: { staffId: true, status: true, checkOutAt: true },
+        select: {
+          staffId: true,
+          status: true,
+          checkInAt: true,
+          checkOutAt: true,
+          lateMinutes: true,
+        },
       }),
       this.prisma.staffAttendance.groupBy({
         by: ['attendanceDate', 'status'],
@@ -106,7 +129,7 @@ export class DashboardService {
     ) as Partial<Record<StaffStatus, number>>;
 
     // Hoy: quién tiene turno, quién está trabajando y quién debió llegar y no ha checado
-    const recorded = new Set(attendanceToday.map((a) => a.staffId));
+    const recorded = new Map(attendanceToday.map((a) => [a.staffId, a]));
     const onShiftNow = schedulesToday.filter(
       (s) => s.startAt! <= now && now < s.endAt!,
     ).length;
@@ -121,6 +144,40 @@ export class DashboardService {
         !recorded.has(s.staffId) &&
         s.startAt!.getTime() + tolerance * MINUTE_MS < now.getTime(),
     ).length;
+    // Tablero de entradas: primero quien debió llegar y no ha checado, luego por hora
+    const board = schedulesToday
+      .map((s) => {
+        const a = recorded.get(s.staffId);
+        const late =
+          s.startAt!.getTime() + tolerance * MINUTE_MS < now.getTime();
+        const state: BoardState = a
+          ? a.status === AttendanceStatus.absent
+            ? 'absent'
+            : a.status === AttendanceStatus.excused
+              ? 'excused'
+              : a.checkOutAt
+                ? 'done'
+                : a.status === AttendanceStatus.late
+                  ? 'late'
+                  : 'on_time'
+          : late
+            ? 'missing'
+            : 'scheduled';
+        return {
+          staff: s.staff,
+          startAt: s.startAt!,
+          endAt: s.endAt!,
+          checkInAt: a?.checkInAt ?? null,
+          lateMinutes: a?.lateMinutes ?? 0,
+          state,
+        };
+      })
+      .sort(
+        (x, y) =>
+          Number(y.state === 'missing') - Number(x.state === 'missing') ||
+          x.startAt.getTime() - y.startAt.getTime(),
+      );
+
     const todayCounts = emptyCounts();
     for (const a of attendanceToday) todayCounts[a.status]++;
 
@@ -150,11 +207,13 @@ export class DashboardService {
       },
       today: {
         scheduled: schedulesToday.length,
+        started: schedulesToday.filter((s) => s.startAt! <= now).length,
         onShiftNow,
         working,
         missingCheckIn,
         attendance: todayCounts,
       },
+      board,
       trend,
       documents: {
         alertDays: expirations.alertDays,

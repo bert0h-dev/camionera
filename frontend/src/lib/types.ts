@@ -98,3 +98,69 @@ export interface Staff {
   createdAt: string
   updatedAt: string
 }
+
+export const LICENSE_TYPES = ['A', 'B', 'C', 'D', 'E'] as const
+export type LicenseType = (typeof LICENSE_TYPES)[number]
+
+export const LICENSE_TYPE_LABELS: Record<LicenseType, string> = {
+  A: 'A — Pasajeros',
+  B: 'B — Carga general',
+  C: 'C — Carga 2 y 3 ejes',
+  D: 'D — Chofer guía turismo',
+  E: 'E — Doble articulado / materiales peligrosos',
+}
+
+export const CERTIFICATION_TYPES = ['medical_exam', 'first_aid', 'defensive_driving', 'training', 'other'] as const
+export type CertificationType = (typeof CERTIFICATION_TYPES)[number]
+
+export const CERTIFICATION_TYPE_LABELS: Record<CertificationType, string> = {
+  medical_exam: 'Examen médico',
+  first_aid: 'Primeros auxilios',
+  defensive_driving: 'Manejo defensivo',
+  training: 'Capacitación',
+  other: 'Otro',
+}
+
+export type DocumentStatus = 'valid' | 'expiring' | 'expired'
+
+interface DocumentState {
+  status: DocumentStatus
+  daysToExpiry: number | null
+}
+
+export interface StaffLicense extends DocumentState {
+  id: string
+  staffId: string
+  licenseType: LicenseType
+  licenseNumber: string
+  issuer: string
+  issueDate: string
+  expiryDate: string
+  notes: string | null
+}
+
+export interface StaffCertification extends DocumentState {
+  id: string
+  staffId: string
+  type: CertificationType
+  name: string
+  issuer: string | null
+  certificateNumber: string | null
+  issueDate: string
+  expiryDate: string | null
+  notes: string | null
+}
+
+export interface ExpirationItem extends DocumentState {
+  kind: 'license' | 'certification'
+  id: string
+  label: string
+  number: string | null
+  expiryDate: string
+  staff: Pick<Staff, 'id' | 'employeeNumber' | 'firstName' | 'lastName' | 'secondLastName' | 'role'>
+}
+
+export interface Compliance {
+  compliant: boolean
+  missing: string[]
+}

@@ -8,6 +8,7 @@ import * as argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
+import { toDate } from '../common/dates.js';
 import { paginate } from '../common/dto/pagination.dto.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { ActionType, StaffStatus } from '../generated/prisma/enums.js';
@@ -25,9 +26,6 @@ const MIN_AGE = 18;
 const include = {
   user: { select: { id: true, email: true, role: true, isActive: true, lastLogin: true } },
 } satisfies Prisma.StaffInclude;
-
-/** Fecha 'AAAA-MM-DD' a Date en UTC (columnas @db.Date). */
-const toDate = (value: string) => new Date(`${value}T00:00:00Z`);
 
 export const fullNameOf = (s: { firstName: string; lastName: string; secondLastName?: string | null }) =>
   [s.firstName, s.lastName, s.secondLastName].filter(Boolean).join(' ');

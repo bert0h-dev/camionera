@@ -3,8 +3,16 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { formatDate, formatPhone, staffFullName } from '../../lib/format'
-import { ROLE_LABELS, STAFF_ROLE_LABELS, type Staff } from '../../lib/types'
+import {
+  ROLE_LABELS,
+  STAFF_ROLE_LABELS,
+  type Compliance,
+  type Staff,
+  type StaffCertification,
+  type StaffLicense,
+} from '../../lib/types'
 import { Button } from '../../components/ui/Button'
+import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
@@ -13,12 +21,25 @@ import { useCanEditStaff } from './useCanEditStaff'
 // Las demás pestañas se habilitan en las fases 1.2 a 1.6
 const TABS = [
   { key: 'general', label: 'General', enabled: true },
-  { key: 'licenses', label: 'Licencias', enabled: false },
+  { key: 'licenses', label: 'Licencias', enabled: true },
   { key: 'schedules', label: 'Turnos', enabled: false },
   { key: 'attendance', label: 'Asistencias', enabled: false },
   { key: 'evaluations', label: 'Evaluaciones', enabled: false },
   { key: 'payroll', label: 'Nómina', enabled: false },
-]
+] as const
+type TabKey = (typeof TABS)[number]['key']
+
+/** Documentos vencidos que no tienen un reemplazo vigente del mismo tipo. */
+function countExpired(licenses: StaffLicense[] = [], certs: StaffCertification[] = []) {
+  const expiredLicenses = licenses.filter(
+    (l) => l.status === 'expired' && !licenses.some((o) => o.licenseType === l.licenseType && o.status !== 'expired'),
+  )
+  const expiredCerts = certs.filter(
+    (c) =>
+      c.status === 'expired' && !certs.some((o) => o.type === c.type && o.name === c.name && o.status !== 'expired'),
+  )
+  return expiredLicenses.length + expiredCerts.length
+}
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -43,16 +64,36 @@ function StaffDetailPage() {
   const navigate = useNavigate()
   const canEdit = useCanEditStaff()
   const [modal, setModal] = useState<'access' | 'terminate' | null>(null)
+  const [tab, setTab] = useState<TabKey>('general')
 
-  const { data: s, isLoading, isError } = useQuery({
+  const {
+    data: s,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['staff', id],
     queryFn: async () => (await api.get<Staff>(`/staff/${id}`)).data,
+  })
+  // Mismas claves que la pestaña de documentos: se comparte la caché
+  const licenses = useQuery({
+    queryKey: ['staff', id, 'licenses'],
+    queryFn: async () => (await api.get<StaffLicense[]>(`/staff/${id}/licenses`)).data,
+  })
+  const certifications = useQuery({
+    queryKey: ['staff', id, 'certifications'],
+    queryFn: async () => (await api.get<StaffCertification[]>(`/staff/${id}/certifications`)).data,
+  })
+  const compliance = useQuery({
+    queryKey: ['staff', id, 'compliance'],
+    queryFn: async () => (await api.get<Compliance>(`/staff/${id}/compliance`)).data,
+    enabled: s?.role === 'driver' && s.status !== 'inactive',
   })
 
   if (isLoading) return <p className="text-slate-500">Cargando…</p>
   if (isError || !s) return <p className="text-red-600">No se encontró el empleado.</p>
 
   const isTerminated = s.status === 'inactive'
+  const expiredCount = isTerminated ? 0 : countExpired(licenses.data, certifications.data)
 
   return (
     <div className="space-y-4">
@@ -94,10 +135,13 @@ function StaffDetailPage() {
             type="button"
             disabled={!t.enabled}
             title={t.enabled ? undefined : 'Próximamente'}
+            onClick={() => setTab(t.key)}
             className={`border-b-2 px-4 py-2 text-sm whitespace-nowrap ${
-              t.key === 'general'
+              t.key === tab
                 ? 'border-blue-600 font-semibold text-blue-700'
-                : 'cursor-not-allowed border-transparent text-slate-400'
+                : t.enabled
+                  ? 'border-transparent text-slate-600 hover:text-slate-800'
+                  : 'cursor-not-allowed border-transparent text-slate-400'
             }`}
           >
             {t.label}
@@ -111,37 +155,59 @@ function StaffDetailPage() {
         </div>
       )}
 
-      <Card title="Datos personales">
-        <Item label="Fecha de nacimiento">{formatDate(s.birthDate)}</Item>
-        <Item label="CURP">{s.curp && <span className="font-mono">{s.curp}</span>}</Item>
-        <Item label="RFC">{s.rfc && <span className="font-mono">{s.rfc}</span>}</Item>
-        <Item label="NSS">{s.nss && <span className="font-mono">{s.nss}</span>}</Item>
-        <Item label="Teléfono">{formatPhone(s.phone)}</Item>
-        <Item label="Correo">{s.email}</Item>
-        <div className="sm:col-span-2 lg:col-span-3">
-          <Item label="Dirección">{s.address}</Item>
+      {compliance.data && !compliance.data.compliant && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <strong>No puede asignarse a recorridos.</strong> Le falta: {compliance.data.missing.join(', ')}.
         </div>
-      </Card>
-
-      <Card title="Datos laborales">
-        <Item label="Puesto">{STAFF_ROLE_LABELS[s.role]}</Item>
-        <Item label="Fecha de contratación">{formatDate(s.hireDate)}</Item>
-        <Item label="Acceso al sistema">
-          {s.user ? (
-            <>
-              {s.user.email} · {ROLE_LABELS[s.user.role]}
-              {!s.user.isActive && <span className="text-slate-500"> (desactivado)</span>}
-            </>
-          ) : (
-            'Sin acceso'
+      )}
+      {expiredCount > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Tiene {expiredCount} documento(s) vencido(s).{' '}
+          {tab !== 'licenses' && (
+            <button type="button" className="font-semibold underline" onClick={() => setTab('licenses')}>
+              Ver documentos
+            </button>
           )}
-        </Item>
-      </Card>
+        </div>
+      )}
 
-      <Card title="Contacto de emergencia">
-        <Item label="Nombre">{s.emergencyContact}</Item>
-        <Item label="Teléfono">{s.emergencyPhone && formatPhone(s.emergencyPhone)}</Item>
-      </Card>
+      {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
+
+      {tab === 'general' && (
+        <>
+          <Card title="Datos personales">
+            <Item label="Fecha de nacimiento">{formatDate(s.birthDate)}</Item>
+            <Item label="CURP">{s.curp && <span className="font-mono">{s.curp}</span>}</Item>
+            <Item label="RFC">{s.rfc && <span className="font-mono">{s.rfc}</span>}</Item>
+            <Item label="NSS">{s.nss && <span className="font-mono">{s.nss}</span>}</Item>
+            <Item label="Teléfono">{formatPhone(s.phone)}</Item>
+            <Item label="Correo">{s.email}</Item>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Item label="Dirección">{s.address}</Item>
+            </div>
+          </Card>
+
+          <Card title="Datos laborales">
+            <Item label="Puesto">{STAFF_ROLE_LABELS[s.role]}</Item>
+            <Item label="Fecha de contratación">{formatDate(s.hireDate)}</Item>
+            <Item label="Acceso al sistema">
+              {s.user ? (
+                <>
+                  {s.user.email} · {ROLE_LABELS[s.user.role]}
+                  {!s.user.isActive && <span className="text-slate-500"> (desactivado)</span>}
+                </>
+              ) : (
+                'Sin acceso'
+              )}
+            </Item>
+          </Card>
+
+          <Card title="Contacto de emergencia">
+            <Item label="Nombre">{s.emergencyContact}</Item>
+            <Item label="Teléfono">{s.emergencyPhone && formatPhone(s.emergencyPhone)}</Item>
+          </Card>
+        </>
+      )}
 
       <GrantAccessModal staff={s} open={modal === 'access'} onClose={() => setModal(null)} />
       <TerminateModal staff={s} open={modal === 'terminate'} onClose={() => setModal(null)} />

@@ -45,6 +45,22 @@ enum StaffStatus {
   suspended
 }
 
+enum LicenseType {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum CertificationType {
+  medical_exam
+  first_aid
+  defensive_driving
+  training
+  other
+}
+
 enum ActionType {
   insert
   update
@@ -71,6 +87,7 @@ model User {
   refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
   auditLogs      AuditLog[]
+  settings       SystemSetting[]
 
   @@index([role])
   @@index([isActive])
@@ -140,7 +157,9 @@ model Staff {
   updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  user User? @relation(fields: [userId], references: [id])
+  user           User?                @relation(fields: [userId], references: [id])
+  licenses       StaffLicense[]
+  certifications StaffCertification[]
 
   @@index([role])
   @@index([status])
@@ -148,9 +167,66 @@ model Staff {
   @@map("staff")
 }
 
+model StaffLicense {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  staffId       String      @map("staff_id") @db.Uuid
+  licenseType   LicenseType @map("license_type")
+  licenseNumber String      @map("license_number") @db.VarChar(50)
+  issuer        String      @db.VarChar(100)
+  issueDate     DateTime    @map("issue_date") @db.Date
+  expiryDate    DateTime    @map("expiry_date") @db.Date
+  notes         String?     @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, licenseNumber])
+  @@index([expiryDate])
+  @@map("staff_licenses")
+}
+
+model StaffCertification {
+  id                String            @id @default(uuid(7)) @db.Uuid
+  staffId           String            @map("staff_id") @db.Uuid
+  type              CertificationType
+  name              String            @db.VarChar(150)
+  issuer            String?           @db.VarChar(150)
+  certificateNumber String?           @map("certificate_number") @db.VarChar(100)
+  issueDate         DateTime          @map("issue_date") @db.Date
+  // null = no vence
+  expiryDate        DateTime?         @map("expiry_date") @db.Date
+  notes             String?           @db.Text
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([expiryDate])
+  @@map("staff_certifications")
+}
+
 // =====================================================
 // SISTEMA
 // =====================================================
+
+model SystemSetting {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String   @map("setting_value") @db.Text
+  settingType  String   @map("setting_type") @db.VarChar(50)
+  description  String?  @db.Text
+  updatedById  String?  @map("updated_by") @db.Uuid
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+
+  @@map("system_settings")
+}
 
 model AuditLog {
   id         String     @id @default(uuid(7)) @db.Uuid

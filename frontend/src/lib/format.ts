@@ -12,3 +12,12 @@ export const formatPhone = (phone: string | null | undefined) =>
 
 export const staffFullName = (s: { firstName: string; lastName: string; secondLastName?: string | null }) =>
   [s.firstName, s.lastName, s.secondLastName].filter(Boolean).join(' ')
+
+/** Texto de días restantes: "vence en 5 días", "venció hace 3 días", "vence hoy". */
+export function daysLabel(days: number | null) {
+  if (days === null) return 'Sin vencimiento'
+  if (days === 0) return 'Vence hoy'
+  if (days === 1) return 'Vence mañana'
+  if (days > 0) return `Vence en ${days} días`
+  return days === -1 ? 'Venció ayer' : `Venció hace ${-days} días`
+}

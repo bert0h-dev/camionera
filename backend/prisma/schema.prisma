@@ -1,5 +1,6 @@
 // Esquema de la central camionera.
-// Los modelos se agregarán conforme se defina el dominio en /contexto.
+// Fuente de diseño: contexto/01-EsquemaBD.prisma (con los ajustes de docs/02-revision-esquema-bd.md).
+// Los modelos se agregan por módulo conforme avanzamos.
 
 generator client {
   provider     = "prisma-client"
@@ -9,4 +10,109 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserRole {
+  admin
+  coordinator
+  supervisor
+  hr
+  driver
+  collector
+  vendor
+  viewer
+}
+
+enum ActionType {
+  insert
+  update
+  delete
+}
+
+// =====================================================
+// AUTH / USERS
+// =====================================================
+
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         UserRole  @default(viewer)
+  fullName     String    @map("full_name") @db.VarChar(255)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login") @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordReset[]
+  auditLogs      AuditLog[]
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz()
+  userAgent String?   @map("user_agent") @db.Text
+  ipAddress String?   @map("ip_address") @db.VarChar(45)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  usedAt    DateTime? @map("used_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_resets")
+}
+
+// =====================================================
+// SISTEMA
+// =====================================================
+
+model AuditLog {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  userId     String?    @map("user_id") @db.Uuid
+  tableName  String     @map("table_name") @db.VarChar(100)
+  recordId   String     @map("record_id") @db.Uuid
+  actionType ActionType @map("action_type")
+  oldValues  Json?      @map("old_values") @db.JsonB
+  newValues  Json?      @map("new_values") @db.JsonB
+  ipAddress  String?    @map("ip_address") @db.Inet
+  userAgent  String?    @map("user_agent") @db.Text
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tableName, recordId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -9,7 +9,8 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     const adapter = new PrismaPg({
       connectionString: config.getOrThrow<string>('DATABASE_URL'),
     });
-    super({ adapter });
+    // El hash de la contraseña nunca sale en las consultas salvo que se pida explícitamente
+    super({ adapter, omit: { user: { passwordHash: true } } });
   }
 
   async onModuleDestroy() {

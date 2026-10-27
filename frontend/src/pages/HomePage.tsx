@@ -1,24 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
-
-type Health = { status: string; timestamp: string }
+import { useAuth } from '../auth/useAuth'
+import { ROLE_LABELS } from '../lib/types'
 
 function HomePage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['health'],
-    queryFn: async () => (await api.get<Health>('/health')).data,
-  })
+  const { user } = useAuth()
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-4 text-slate-800">
-      <h1 className="text-3xl font-bold">Central Camionera</h1>
-      <p className="text-sm">
-        API:{' '}
-        {isLoading && <span className="text-slate-500">verificando…</span>}
-        {isError && <span className="font-semibold text-red-600">sin conexión</span>}
-        {data && <span className="font-semibold text-green-600">{data.status}</span>}
+    <div className="space-y-2">
+      <h1 className="text-2xl font-bold text-slate-800">Bienvenido, {user?.fullName}</h1>
+      <p className="text-slate-600">
+        Rol: <span className="font-medium">{user && ROLE_LABELS[user.role]}</span>
       </p>
-    </main>
+    </div>
   )
 }
 

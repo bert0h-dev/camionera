@@ -1,6 +1,6 @@
 # Módulo 1 — Gestión de Personal (plan propuesto)
 
-**Estado:** 🚧 En curso — 1.0 ✅ (ver 03-fase1.0-auth.md); siguiente: 1.1 Empleados
+**Estado:** 🚧 En curso — 1.0 ✅, 1.1 ✅ (docs 03 y 04); siguiente: 1.2 Licencias y certificaciones
 **Fuente:** `contexto/00-importante.md`
 
 ## Observación clave

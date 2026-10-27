@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { PrismaExceptionFilter } from './../src/common/filters/prisma-exception.filter.js';
+import { createValidationPipe } from './../src/common/validation/validation-pipe.js';
 
 // Requiere la BD de .env y el admin creado con `npm run prisma:seed`
 describe('API (e2e)', () => {
@@ -21,7 +23,8 @@ describe('API (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(createValidationPipe());
+    app.useGlobalFilters(new PrismaExceptionFilter());
     await app.init();
   });
 

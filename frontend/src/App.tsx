@@ -4,6 +4,9 @@ import { AppLayout } from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import UsersPage from './pages/users/UsersPage'
+import StaffListPage from './pages/staff/StaffListPage'
+import StaffFormPage from './pages/staff/StaffFormPage'
+import StaffDetailPage from './pages/staff/StaffDetailPage'
 
 function App() {
   return (
@@ -14,6 +17,14 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="/usuarios" element={<UsersPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={['hr', 'supervisor', 'coordinator']} />}>
+            <Route path="/personal" element={<StaffListPage />} />
+            <Route path="/personal/:id" element={<StaffDetailPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={['hr']} />}>
+            <Route path="/personal/nuevo" element={<StaffFormPage />} />
+            <Route path="/personal/:id/editar" element={<StaffFormPage />} />
           </Route>
         </Route>
       </Route>

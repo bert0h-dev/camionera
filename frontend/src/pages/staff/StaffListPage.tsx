@@ -1,27 +1,56 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { KeyRound, Phone, Plus, Search, Users } from 'lucide-react'
+import { KeyRound, Plus, Search, Users } from 'lucide-react'
 import { api } from '../../lib/api'
-import { formatPhone, staffFullName } from '../../lib/format'
+import { cn } from '../../lib/cn'
+import { formatTime, staffFullName } from '../../lib/format'
 import {
   STAFF_ROLE_LABELS,
   STAFF_ROLES,
   STAFF_STATUS_LABELS,
   STAFF_STATUSES,
   type Paginated,
-  type Staff,
   type StaffRole,
+  type StaffStats,
   type StaffStatus,
+  type StaffWithInsights,
+  type TodayState,
 } from '../../lib/types'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Field'
 import { FilterBar } from '../../components/ui/FilterBar'
+import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Pagination, Table, type Column } from '../../components/ui/Table'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { useCanEditStaff } from './useCanEditStaff'
+
+const TODAY: Record<TodayState, { label: string; className: string }> = {
+  none: { label: 'Sin turno', className: 'text-fg-subtle' },
+  rest: { label: 'Descanso', className: 'text-fg-subtle' },
+  scheduled: { label: '', className: 'text-fg-muted' }, // muestra la hora
+  missing: { label: 'SIN ENTRADA', className: 'text-red-600 dark:text-red-400 font-semibold' },
+  on_shift: { label: 'EN TURNO', className: 'text-indigo-600 dark:text-indigo-300 font-semibold' },
+  late: { label: 'RETARDO', className: 'text-amber-600 dark:text-amber-400 font-semibold' },
+  done: { label: 'TERMINÓ', className: 'text-fg-muted' },
+  absent: { label: 'FALTA', className: 'text-red-600 dark:text-red-400 font-semibold' },
+  excused: { label: 'JUSTIFICADA', className: 'text-sky-600 dark:text-sky-400' },
+}
+
+function DocumentsCell({ docs }: { docs: StaffWithInsights['documents'] }) {
+  if (!docs) return <span className="text-xs text-fg-subtle">Sin registrar</span>
+  if (docs.status === 'expired')
+    return <span className="text-xs font-medium text-red-600 dark:text-red-400">✕ Vencido</span>
+  if (docs.status === 'expiring')
+    return (
+      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+        ! Vence en {docs.daysToExpiry} días
+      </span>
+    )
+  return <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ Vigentes</span>
+}
 
 function StaffListPage() {
   const navigate = useNavigate()
@@ -42,64 +71,72 @@ function StaffListPage() {
   }, [searchInput])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['staff', { page, search, role, status }],
+    queryKey: ['staff', { page, search, role, status, insights: true }],
     queryFn: async () =>
       (
-        await api.get<Paginated<Staff>>('/staff', {
+        await api.get<Paginated<StaffWithInsights>>('/staff', {
           params: {
             page,
             limit: 20,
             search: search || undefined,
             role: role || undefined,
             status: status || undefined,
+            insights: true,
           },
         })
       ).data,
     placeholderData: keepPreviousData,
   })
+  const stats = useQuery({
+    queryKey: ['staff', 'stats'],
+    queryFn: async () => (await api.get<StaffStats>('/staff/stats')).data,
+  })
+  const s = stats.data
 
   const filtered = !!(search || role || status)
 
-  const columns: Column<Staff>[] = [
+  const columns: Column<StaffWithInsights>[] = [
     {
       header: 'Empleado',
-      cell: (s) => (
+      cell: (r) => (
         <div className="flex items-center gap-3">
-          <Avatar name={staffFullName(s)} size="sm" />
+          <Avatar name={staffFullName(r)} size="sm" />
           <div className="min-w-0">
-            <div className="truncate font-medium text-fg">{staffFullName(s)}</div>
-            <div className="font-mono text-xs text-fg-muted">{s.employeeNumber}</div>
+            <div className="truncate font-medium text-fg">{staffFullName(r)}</div>
+            <div className="font-data text-xs text-fg-muted">{r.employeeNumber}</div>
           </div>
         </div>
       ),
     },
-    { header: 'Puesto', cell: (s) => <span className="text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</span> },
-    { header: 'Estado', cell: (s) => <StaffStatusBadge status={s.status} /> },
+    { header: 'Puesto', cell: (r) => <span className="text-fg-muted">{STAFF_ROLE_LABELS[r.role]}</span> },
+    { header: 'Estado', cell: (r) => <StaffStatusBadge status={r.status} /> },
+    { header: 'Documentos', cell: (r) => <DocumentsCell docs={r.documents} /> },
     {
-      header: 'Teléfono',
-      cell: (s) => (
-        <span className="tabular inline-flex items-center gap-1.5 text-fg-muted">
-          <Phone className="size-3.5 text-fg-subtle" />
-          {formatPhone(s.phone)}
-        </span>
-      ),
+      header: 'Hoy',
+      cell: (r) => {
+        const t = TODAY[r.today.state]
+        return (
+          <span className={cn('font-data text-xs', t.className)}>
+            {r.today.state === 'scheduled' ? `${formatTime(r.today.startAt)}–${formatTime(r.today.endAt)}` : t.label}
+          </span>
+        )
+      },
     },
     {
       header: 'Acceso',
-      cell: (s) =>
-        s.user ? (
+      cell: (r) =>
+        r.user ? (
           <span
-            className={
-              s.user.isActive
-                ? 'inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400'
-                : 'inline-flex items-center gap-1.5 text-fg-subtle'
-            }
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs',
+              r.user.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-fg-subtle',
+            )}
           >
             <KeyRound className="size-3.5" />
-            {s.user.isActive ? 'Activo' : 'Desactivado'}
+            {r.user.isActive ? 'Activo' : 'Desactivado'}
           </span>
         ) : (
-          <span className="text-fg-subtle">Sin acceso</span>
+          <span className="text-xs text-fg-subtle">Sin acceso</span>
         ),
     },
   ]
@@ -115,6 +152,36 @@ function StaffListPage() {
               Nuevo empleado
             </Button>
           )
+        }
+        stats={
+          <>
+            <HeroStat
+              label="Activos"
+              value={s?.active ?? 0}
+              loading={stats.isLoading}
+              hint={s && `${s.suspended} suspendido(s)`}
+            />
+            <HeroStat
+              label="Vacaciones / incapacidad"
+              value={s?.away ?? 0}
+              tone="info"
+              loading={stats.isLoading}
+              hint="fuera temporalmente"
+            />
+            <HeroStat
+              label="Con documentos vencidos"
+              value={s?.withExpiredDocs ?? 0}
+              tone={s?.withExpiredDocs ? 'danger' : s?.withExpiringDocs ? 'warning' : 'neutral'}
+              loading={stats.isLoading}
+              hint={s && `${s.withExpiringDocs} por vencer en ${s.alertDays} días`}
+            />
+            <HeroStat
+              label="Sin acceso al sistema"
+              value={s?.withoutAccess ?? 0}
+              loading={stats.isLoading}
+              hint="no pueden hacer autoregistro"
+            />
+          </>
         }
       />
 
@@ -152,9 +219,9 @@ function StaffListPage() {
             }}
           >
             <option value="">Todos los estados</option>
-            {STAFF_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STAFF_STATUS_LABELS[s]}
+            {STAFF_STATUSES.map((st) => (
+              <option key={st} value={st}>
+                {STAFF_STATUS_LABELS[st]}
               </option>
             ))}
           </Select>
@@ -164,9 +231,9 @@ function StaffListPage() {
       <Table
         columns={columns}
         rows={data?.data ?? []}
-        rowKey={(s) => s.id}
+        rowKey={(r) => r.id}
         loading={isLoading}
-        onRowClick={(s) => navigate(`/personal/${s.id}`)}
+        onRowClick={(r) => navigate(`/personal/${r.id}`)}
         emptyIcon={Users}
         emptyMessage={filtered ? 'Ningún empleado coincide con los filtros' : 'Aún no hay empleados'}
         emptyDescription={

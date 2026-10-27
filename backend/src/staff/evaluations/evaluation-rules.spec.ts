@@ -36,13 +36,21 @@ describe('weightedScore', () => {
 
 describe('criterionApplies', () => {
   it('sin puestos aplica a todos', () => {
-    expect(criterionApplies({ appliesTo: [], isActive: true }, 'driver')).toBe(true);
+    expect(criterionApplies({ appliesTo: [], isActive: true }, 'driver')).toBe(
+      true,
+    );
   });
 
   it('respeta los puestos y la desactivación', () => {
-    expect(criterionApplies({ appliesTo: ['driver'], isActive: true }, 'vendor')).toBe(false);
-    expect(criterionApplies({ appliesTo: ['driver'], isActive: true }, 'driver')).toBe(true);
-    expect(criterionApplies({ appliesTo: [], isActive: false }, 'driver')).toBe(false);
+    expect(
+      criterionApplies({ appliesTo: ['driver'], isActive: true }, 'vendor'),
+    ).toBe(false);
+    expect(
+      criterionApplies({ appliesTo: ['driver'], isActive: true }, 'driver'),
+    ).toBe(true);
+    expect(criterionApplies({ appliesTo: [], isActive: false }, 'driver')).toBe(
+      false,
+    );
   });
 });
 
@@ -55,7 +63,11 @@ describe('missingScores', () => {
 describe('periodsOverlap', () => {
   it('detecta traslape inclusivo', () => {
     const a = { start: d('2026-01-01'), end: d('2026-06-30') };
-    expect(periodsOverlap(a, { start: d('2026-06-30'), end: d('2026-12-31') })).toBe(true);
-    expect(periodsOverlap(a, { start: d('2026-07-01'), end: d('2026-12-31') })).toBe(false);
+    expect(
+      periodsOverlap(a, { start: d('2026-06-30'), end: d('2026-12-31') }),
+    ).toBe(true);
+    expect(
+      periodsOverlap(a, { start: d('2026-07-01'), end: d('2026-12-31') }),
+    ).toBe(false);
   });
 });

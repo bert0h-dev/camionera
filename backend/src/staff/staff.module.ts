@@ -19,6 +19,8 @@ import {
   MyEvaluationsController,
 } from './evaluations/evaluations.controller.js';
 import { EvaluationsService } from './evaluations/evaluations.service.js';
+import { StaffInsightsController } from './insights/staff-insights.controller.js';
+import { StaffInsightsService } from './insights/staff-insights.service.js';
 import { StaffController } from './staff.controller.js';
 import { StaffService } from './staff.service.js';
 
@@ -27,6 +29,7 @@ import { StaffService } from './staff.service.js';
   // StaffDocumentsController primero: sus rutas estáticas (/staff/expirations) deben ganar a /staff/:id
   controllers: [
     StaffDocumentsController,
+    StaffInsightsController,
     StaffController,
     SchedulesController,
     ShiftTemplatesController,
@@ -38,6 +41,7 @@ import { StaffService } from './staff.service.js';
   ],
   providers: [
     StaffService,
+    StaffInsightsService,
     StaffDocumentsService,
     SchedulesService,
     ShiftTemplatesService,

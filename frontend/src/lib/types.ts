@@ -349,3 +349,31 @@ export interface BoardEntry {
   lateMinutes: number
   state: BoardState
 }
+
+// ---------- Insights de empleados ----------
+
+export type TodayState = 'none' | 'rest' | 'scheduled' | 'missing' | 'on_shift' | 'late' | 'done' | 'absent' | 'excused'
+
+export interface StaffWithInsights extends Staff {
+  documents: { status: DocumentStatus; daysToExpiry: number | null } | null
+  today: { state: TodayState; startAt: string | null; endAt: string | null }
+}
+
+export interface StaffStats {
+  active: number
+  away: number
+  suspended: number
+  withExpiredDocs: number
+  withExpiringDocs: number
+  withoutAccess: number
+  alertDays: number
+}
+
+export interface StaffSummary {
+  attendance: { rate: number | null; records: number; absent: number }
+  week: { hours: number; max: number }
+  lastEvaluation: { id: string; score: string | null; periodEnd: string } | null
+  license: { type: LicenseType; expiryDate: string; status: DocumentStatus; daysToExpiry: number | null } | null
+  requiresLicense: boolean
+  nextShifts: Omit<Schedule, 'staff' | 'template' | 'workedHours'>[]
+}

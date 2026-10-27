@@ -93,7 +93,7 @@ function toForm(s: Staff): FormValues {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className="rounded-xl border border-border bg-surface shadow-card p-5">
       <h2 className="mb-4 font-semibold text-fg">{title}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>

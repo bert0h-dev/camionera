@@ -131,7 +131,7 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
         <div className="space-y-4">
-          <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="divide-y divide-border rounded-xl border border-border bg-surface shadow-card">
             {ev.scores.map((s) => {
               const draft = scores.find((d) => d.criterionId === s.criterionId)!
               return (
@@ -196,7 +196,7 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
               </div>
             </div>
           ) : (
-            <dl className="grid gap-4 rounded-lg border border-border bg-surface p-4 text-sm sm:grid-cols-2">
+            <dl className="grid gap-4 rounded-xl border border-border bg-surface shadow-card p-4 text-sm sm:grid-cols-2">
               <TextBlock label="Fortalezas" value={ev.strengths} />
               <TextBlock label="Áreas de mejora" value={ev.improvements} />
               <TextBlock label="Comentarios generales" value={ev.comments} />
@@ -224,7 +224,7 @@ function EvaluationView({ evaluation: ev }: { evaluation: EvaluationDetail }) {
           )}
         </div>
 
-        <aside className="h-fit space-y-2 rounded-lg border border-border bg-surface p-4 text-sm">
+        <aside className="h-fit space-y-2 rounded-xl border border-border bg-surface shadow-card p-4 text-sm">
           <h2 className="font-semibold text-fg">Asistencia del periodo</h2>
           <Row label="Asistencias" value={a.present + a.late} />
           <Row label="Retardos" value={`${a.late} (${formatMinutes(a.lateMinutes)})`} />

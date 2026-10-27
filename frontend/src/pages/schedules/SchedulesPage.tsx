@@ -110,7 +110,7 @@ function SchedulesPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
         <table className="min-w-[900px] w-full table-fixed text-sm">
           <thead className="bg-surface-muted">
             <tr>

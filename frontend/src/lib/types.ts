@@ -303,3 +303,36 @@ export interface EvaluationDetail extends Evaluation {
     overtimeMinutes: number
   }
 }
+
+// ---------- Dashboard ----------
+
+export type AttendanceCounts = Record<AttendanceStatus, number>
+
+export interface DashboardSummary {
+  team: {
+    staff: {
+      total: number
+      active: number
+      vacation: number
+      sickLeave: number
+      suspended: number
+      byRole: { role: StaffRole; count: number }[]
+    }
+    today: {
+      scheduled: number
+      onShiftNow: number
+      working: number
+      missingCheckIn: number
+      attendance: AttendanceCounts
+    }
+    trend: ({ date: string } & AttendanceCounts)[]
+    documents: { alertDays: number; expired: number; expiring: number }
+    evaluations: { drafts: number; pendingAcknowledge: number }
+  } | null
+  me: {
+    month: string
+    attendance: AttendanceCounts
+    lateMinutes: number
+    overtimeMinutes: number
+  } | null
+}

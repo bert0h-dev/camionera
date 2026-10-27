@@ -26,7 +26,7 @@ export function MyEvaluationsCard() {
   const unread = data.filter((e) => e.status === 'finalized').length
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className="rounded-xl border border-border bg-surface shadow-card p-5">
       <h2 className="font-semibold text-fg">Mis evaluaciones</h2>
       {unread > 0 && (
         <p className="mt-1 rounded-md bg-primary-soft px-3 py-2 text-sm text-link">

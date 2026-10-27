@@ -37,7 +37,7 @@ export function MyShiftCard() {
   const checkedOut = !!attendance?.checkOutAt
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
+    <section className="rounded-xl border border-border bg-surface shadow-card p-5">
       <h2 className="font-semibold text-fg">Mi turno</h2>
       {schedule ? (
         <p className="mt-1 text-fg">

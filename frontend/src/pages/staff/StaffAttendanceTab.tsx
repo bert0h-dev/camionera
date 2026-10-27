@@ -37,7 +37,7 @@ function shiftMonth(month: string, delta: number) {
 
 function Stat({ label, value, tone = 'text-fg' }: { label: string; value: string | number; tone?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface px-4 py-3">
+    <div className="rounded-xl border border-border bg-surface shadow-card px-4 py-3">
       <div className="text-xs text-fg-muted">{label}</div>
       <div className={`text-lg font-semibold ${tone}`}>{value}</div>
     </div>

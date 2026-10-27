@@ -67,7 +67,7 @@ export function ExpirationsPanel() {
   const expiring = (data?.items.length ?? 0) - expired
 
   return (
-    <section className="rounded-lg border border-border bg-surface">
+    <section className="rounded-xl border border-border bg-surface shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 className="font-semibold text-fg">Documentos del personal por vencer</h2>

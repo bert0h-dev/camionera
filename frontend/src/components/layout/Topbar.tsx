@@ -1,12 +1,13 @@
 import { Fragment } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronRight, LogOut, Menu, Monitor, Moon, Sun, UserCog, type LucideIcon } from 'lucide-react'
+import { ChevronRight, LogOut, Menu, Monitor, Moon, Search, Sun, UserCog, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../auth/useAuth'
 import { cn } from '../../lib/cn'
 import { useTheme, type ThemePreference } from '../../lib/theme'
 import { ROLE_LABELS } from '../../lib/types'
 import { Avatar } from '../ui/Avatar'
 import { Dropdown, DropdownItem, DropdownSeparator } from '../ui/Dropdown'
+import { isMac, openCommandPalette } from '../command/commandEvents'
 import { breadcrumbs } from './nav'
 import { TopProgress } from './TopProgress'
 
@@ -49,6 +50,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         ))}
       </nav>
 
+      <SearchButton />
       <ThemeMenu />
       <UserMenu />
       <TopProgress />
@@ -138,5 +140,23 @@ function UserMenu() {
         </>
       )}
     </Dropdown>
+  )
+}
+
+/** Botón del buscador global; en pantallas angostas solo el ícono. */
+function SearchButton() {
+  return (
+    <button
+      type="button"
+      onClick={openCommandPalette}
+      aria-label="Buscar (Ctrl+K)"
+      className="flex h-9 items-center gap-2 rounded-lg bg-white/10 px-2.5 text-sm text-indigo-200 ring-1 ring-white/15 transition-colors hover:bg-white/15 hover:text-white sm:w-56 sm:px-3"
+    >
+      <Search className="size-4 shrink-0" />
+      <span className="hidden flex-1 text-left sm:block">Buscar…</span>
+      <kbd className="font-data hidden rounded border border-white/20 px-1.5 text-[11px] text-indigo-200 sm:block">
+        {isMac() ? '⌘K' : 'Ctrl K'}
+      </kbd>
+    </button>
   )
 }

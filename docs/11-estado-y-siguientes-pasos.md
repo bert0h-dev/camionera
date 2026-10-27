@@ -8,7 +8,7 @@
   - Rama `feat/m2-parametros` (2.3), PR abierto o por abrir.
   - Rama `feat/m2-bitacora` (2.4). **Incluye todo 2.3**: basta fusionar esta y cerrar la de 2.3, o fusionar 2.3 primero y luego 2.4.
   - Al fusionar: `git switch main && git pull`, luego borrar ambas ramas en local y en GitHub.
-- **Rediseño**: dirección D (banda índigo, cifras flotantes, mono para datos) aplicada a todo. **D5 pospuesta**: buscador Ctrl+K y carga diferida de rutas, porque el bundle pasa de 600 kB.
+- **Rediseño**: dirección D aplicada a todo y **D5 terminada** (rama `feat/d5-buscador`): buscador Ctrl+K y carga diferida de rutas (paquete principal de 733 kB a 74 kB).
 
 ## Lo que sigue
 1. **Módulo 3, Gestión de Rutas**, según `contexto/00-importante.md`:

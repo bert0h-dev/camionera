@@ -1,0 +1,109 @@
+# Módulo 3: Gestión de Flota
+
+**Orden acordado (2026-10-27):** 3.0 catálogos y modelos · 3.1 unidades · 3.2 mantenimientos · 3.3 incidencias · 3.4 combustible. Cada fase va en su propia rama y PR.
+
+## Decisiones del usuario
+- **Plantilla de asientos**: cada modelo tiene una plantilla visual (cuadrícula de 1 o 2 pisos) y las unidades heredan una copia.
+- **Mantenimiento preventivo**: por km **y** por días, lo que ocurra primero.
+- **Incidencias**: también las reporta el conductor.
+- **Flota**: solo unidades propias.
+- **Terminal**: cada unidad pertenece a una terminal base.
+- **Combustible**: hay un catálogo de combustibles y cada modelo indica cuál consume.
+- **Terminales con ubicación**: se marcan en un mapa (Leaflet + OpenStreetMap). La ubicación es opcional al guardar, pero **una terminal sin ubicación no se puede usar** en unidades ni rutas.
+- **Número económico**: texto libre, sin formato fijo.
+- **Cambio de modelo de una unidad**: solo si nunca ha salido a servicio.
+- **Aviso de vencimiento de documentos de unidad**: 30 días, configurable.
+
+## Permisos
+- **Consultan**: coordinación y supervisión.
+- **Editan**: coordinación.
+- El admin siempre pasa. RRHH no participa.
+
+## 3.0 Catálogos y modelos ✅ (PR #8)
+### Catálogos (`/flota/catalogos`)
+Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran: se desactivan.
+- **Combustibles** (`fuel_types`): el seed base crea Diésel, Gasolina, Gas LP y Gas natural.
+- **Ciudades** (`cities`): nombre + estado, únicos juntos.
+- **Terminales** (`terminals`):
+  - Datos: clave única en mayúsculas, ciudad y dirección.
+  - **Ubicación**: `latitude` y `longitude`, `Decimal(9,6)`, siempre juntas.
+  - **Selector en el mapa**: clic o arrastrar el marcador.
+  - **Buscador**: busca direcciones con Nominatim. Solo consulta al presionar Buscar, por su límite de 1 consulta por segundo.
+  - **Dirección automática**: búsqueda inversa al fijar el punto. Llena el campo si está vacío y, si ya tiene texto, la ofrece como sugerencia ("Usar esta").
+  - **Utilizables**: `GET /fleet/terminals?located=true` devuelve solo las que tienen ubicación.
+  - **Para otros módulos**: `CatalogsService.assertUsableTerminal(id)` rechaza las inactivas o sin ubicación.
+- **Pestaña Mapa**: todas las terminales activas con su marcador.
+- **Carga**: Leaflet va en un paquete aparte (`vendor-maps`) que solo se descarga al abrir un mapa. En tema oscuro los mosaicos se invierten.
+
+### Modelos de autobús (`/flota/modelos`)
+- **Datos**: marca + modelo únicos juntos; tipo (estándar, ejecutivo, lujo o doble piso); combustible; tanque; rendimiento esperado (km/unidad); características; especificaciones; plan preventivo (km y días).
+- **Plantilla** (`layout`, JSONB):
+  - Forma: `{ floors: [{ rows, cols, cells: [{ r, c, type, number?, category? }] }] }`.
+  - Tipos de celda: asiento, pasillo, baño, escalera, conductor, puerta y cafetería.
+  - Categorías de asiento: normal, preferente y accesible.
+  - Límites: de 1 a 25 filas y de 2 a 7 columnas. Solo el doble piso admite 2 pisos.
+- **Validación**: `backend/src/fleet/layout-rules.ts`. Revisa asientos con número y sin repetir, un solo conductor y que esté en el piso 1, y al menos un asiento.
+- **Capacidad**: la calcula el servidor (`seatCount`) a partir de la plantilla.
+- **Editor visual**: se pinta con clic o arrastrando, hay herramienta de selección para cambiar el número, renumeración, cambio de filas y columnas, y opción de agregar o quitar la planta alta.
+  - El cliente tiene una copia de las reglas en `frontend/src/pages/fleet/layout.ts`; el servidor tiene la última palabra.
+- **Plantilla inicial**: `GET /fleet/bus-models/default-layout?rows=&floors=` (2 + pasillo + 2).
+
+### Demo
+- **Comando**: `npx tsx prisma/seed-demo.ts --fleet` agrega la flota demo **sin tocar al personal demo** y se puede correr varias veces.
+- **Contenido**: 4 ciudades con su terminal y coordenadas reales (GDL, CDMXN, LEO, QRO) y 4 modelos (Volvo 9700, Irizar i8, Mercedes-Benz Multego y Volvo 9800 DD).
+
+### Pruebas
+- **Unitarias**: `layout-rules.spec.ts`.
+- **E2E**: `test/fleet.e2e-spec.ts`. Cubre permisos, layout de 2 pisos rechazado en estándar, capacidad recalculada, ubicación (lat/lng juntas) y `located=true`.
+
+## 3.1 Unidades (rama `feat/m3-unidades`)
+### Datos
+- **`buses`**:
+  - Identificación: número económico (texto libre, único), placas (únicas, 5–15 caracteres), VIN de 17 caracteres sin I/O/Q (único) y año.
+  - Relaciones: modelo y terminal base.
+  - Operación: odómetro, estado y su motivo, y fecha del último cambio.
+  - `first_service_at`: primera vez que la unidad salió a servicio.
+  - Plan preventivo propio opcional en km y días; si se deja vacío, usa el del modelo.
+- **`bus_seats`**: copia de los asientos del modelo al dar de alta la unidad (piso, fila, columna, número y categoría). Cada asiento se puede bloquear con motivo y fecha.
+- **`bus_documents`**:
+  - Tipos: seguro, tarjeta de circulación, permiso SICT, verificación y otro.
+  - Datos: folio, emisor, expedición y vencimiento opcional.
+  - Por ahora sin archivo: el almacenamiento de archivos llega en el Módulo 6.
+- **`odometer_readings`**: historial del odómetro con origen (manual, mantenimiento, combustible o recorrido) y quién lo capturó.
+- **Parámetro `fleet.document_alert_days`** (30 días): está en Configuración → Parámetros → Flota.
+
+### Reglas (`backend/src/fleet/bus-rules.ts`, con pruebas)
+- **Apta**: la unidad no está en mantenimiento ni fuera de servicio, tiene seguro y tarjeta de circulación vigentes hoy (un documento vence al terminar su día) y su terminal base tiene ubicación. Si no es apta, la API devuelve `fit` y la lista de motivos (`reasons`).
+- **Salir a servicio** (`in_service`): exige que la unidad sea apta. La primera vez se guarda `first_service_at`.
+- **Cambio de modelo**: solo mientras `first_service_at` esté vacío. Al cambiarlo se vuelven a copiar los asientos y se pierden los bloqueos.
+- **Motivo obligatorio**: para pasar a mantenimiento o fuera de servicio, y para bloquear un asiento.
+- **Odómetro**: nunca baja. `BusesService.recordOdometer(id, km, actor, source)` queda lista para mantenimiento, combustible y recorridos.
+- **Terminal base**: tiene que estar activa y con ubicación (`assertUsableTerminal`).
+- **Alertas de documentos**: solo cuenta el documento más reciente de cada tipo; los anteriores quedan como historial.
+- **Sin borrado**: las unidades no se borran; se pasan a fuera de servicio. Los documentos sí se pueden eliminar, y todo cambio queda en la bitácora.
+
+### API (`/fleet/buses`)
+- **Consultas**:
+  - `GET /` con filtros por estado, terminal, modelo y búsqueda por número, placas o VIN.
+  - `GET /summary` y `GET /expiring-documents`.
+  - `GET /:id` y `GET /:id/history`.
+- **Cambios**: `POST /`, `PATCH /:id`, `POST /:id/status`, `POST /:id/odometer`, `PATCH /:id/seats/:seatId` y `POST|PATCH|DELETE /:id/documents[/:docId]`.
+
+### Pantallas
+- **`/flota/unidades`**:
+  - Banda con unidades, disponibles, en mantenimiento, no aptas y documentos con alerta.
+  - Filtros y columna "Apta / No apta"; al pasar el cursor se ven los motivos.
+- **Detalle** (`/flota/unidades/:id`):
+  - Pestañas General, Asientos (clic para bloquear o desbloquear), Documentos e Historial (odómetro y cambios de estado).
+  - Botones Odómetro, Cambiar estado y Editar.
+- **Alta y edición**: vista previa de los asientos del modelo. Solo aparecen terminales con ubicación, y el modelo queda bloqueado si la unidad ya salió a servicio.
+- **Inicio**: panel "Documentos de unidades por vencer" para admin, coordinación y supervisión.
+- **Ctrl+K**: acción "Nueva unidad" y búsqueda de unidades por número, placas o VIN.
+
+### Demo y pruebas
+- **Demo**: `--fleet` agrega 12 unidades (1001–1012, placas `DEM…`), solo las que falten.
+  - Una está en mantenimiento y otra fuera de servicio.
+  - Tienen un seguro vencido, dos por vencer y un permiso por vencer.
+  - `--clean` las borra.
+- **Unitarias**: `bus-rules.spec.ts`.
+- **E2E**: `test/buses.e2e-spec.ts`. Cubre alta con terminal ubicada, permisos, apta con documentos, odómetro, bloqueo de asiento, modelo fijo tras salir a servicio y resumen.

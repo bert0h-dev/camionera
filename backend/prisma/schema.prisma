@@ -640,7 +640,8 @@ model Terminal {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  city City @relation(fields: [cityId], references: [id])
+  city  City  @relation(fields: [cityId], references: [id])
+  buses Bus[]
 
   @@index([cityId])
   @@map("terminals")
@@ -668,8 +669,116 @@ model BusModel {
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   fuelType FuelType @relation(fields: [fuelTypeId], references: [id])
+  buses    Bus[]
 
   @@unique([brand, model])
   @@index([busType])
   @@map("bus_models")
+}
+
+enum BusStatus {
+  available
+  in_service
+  maintenance
+  out_of_service
+}
+
+enum BusDocumentType {
+  insurance
+  circulation_card
+  sict_permit
+  emissions_check
+  other
+}
+
+enum OdometerSource {
+  manual
+  maintenance
+  fuel
+  trip
+}
+
+/// Unidad propia de la flota. Hereda una copia de los asientos de su modelo.
+model Bus {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  economicNumber  String    @unique @map("economic_number") @db.VarChar(20)
+  plates          String    @unique @db.VarChar(15)
+  vin             String    @unique @db.VarChar(17)
+  year            Int
+  busModelId      String    @map("bus_model_id") @db.Uuid
+  terminalId      String    @map("terminal_id") @db.Uuid
+  odometerKm      Int       @default(0) @map("odometer_km")
+  status          BusStatus @default(available)
+  statusReason    String?   @map("status_reason") @db.Text
+  statusChangedAt DateTime  @default(now()) @map("status_changed_at") @db.Timestamptz()
+  /// Primera vez que salió a servicio; después ya no se puede cambiar el modelo
+  firstServiceAt  DateTime? @map("first_service_at") @db.Timestamptz()
+  /// Plan preventivo propio; null = el del modelo
+  preventiveKm    Int?      @map("preventive_km")
+  preventiveDays  Int?      @map("preventive_days")
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  busModel  BusModel          @relation(fields: [busModelId], references: [id])
+  terminal  Terminal          @relation(fields: [terminalId], references: [id])
+  seats     BusSeat[]
+  documents BusDocument[]
+  readings  OdometerReading[]
+
+  @@index([status])
+  @@index([terminalId])
+  @@index([busModelId])
+  @@map("buses")
+}
+
+model BusSeat {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  busId       String    @map("bus_id") @db.Uuid
+  floor       Int       @default(0)
+  row         Int
+  col         Int
+  number      String    @db.VarChar(6)
+  category    String    @default("normal") @db.VarChar(20)
+  isBlocked   Boolean   @default(false) @map("is_blocked")
+  blockReason String?   @map("block_reason") @db.Text
+  blockedAt   DateTime? @map("blocked_at") @db.Timestamptz()
+
+  bus Bus @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  @@unique([busId, number])
+  @@map("bus_seats")
+}
+
+model BusDocument {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  busId      String          @map("bus_id") @db.Uuid
+  type       BusDocumentType
+  folio      String          @db.VarChar(60)
+  issuer     String?         @db.VarChar(150)
+  issueDate  DateTime        @map("issue_date") @db.Date
+  expiryDate DateTime?       @map("expiry_date") @db.Date
+  notes      String?         @db.Text
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+
+  bus Bus @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  @@index([busId, type])
+  @@index([expiryDate])
+  @@map("bus_documents")
+}
+
+model OdometerReading {
+  id         String         @id @default(uuid(7)) @db.Uuid
+  busId      String         @map("bus_id") @db.Uuid
+  km         Int
+  source     OdometerSource @default(manual)
+  recordedBy String?        @map("recorded_by") @db.Uuid
+  recordedAt DateTime       @default(now()) @map("recorded_at") @db.Timestamptz()
+
+  bus Bus @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  @@index([busId, recordedAt])
+  @@map("odometer_readings")
 }

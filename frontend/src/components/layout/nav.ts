@@ -1,6 +1,7 @@
 import {
   Building2,
   Bus,
+  LayoutGrid,
   CalendarClock,
   ScrollText,
   Settings,
@@ -45,7 +46,8 @@ export const NAV: NavGroup[] = [
   {
     label: 'Flota',
     items: [
-      { to: '/flota/modelos', label: 'Modelos', icon: Bus, roles: FLEET_READERS },
+      { to: '/flota/unidades', label: 'Unidades', icon: Bus, roles: FLEET_READERS },
+      { to: '/flota/modelos', label: 'Modelos', icon: LayoutGrid, roles: FLEET_READERS },
       { to: '/flota/catalogos', label: 'Catálogos', icon: Building2, roles: FLEET_READERS },
     ],
   },
@@ -82,6 +84,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   flota: 'Flota',
   modelos: 'Modelos',
   catalogos: 'Catálogos',
+  unidades: 'Unidades',
+  nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

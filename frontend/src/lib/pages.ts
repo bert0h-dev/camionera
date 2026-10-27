@@ -25,6 +25,9 @@ export const loaders = {
   busModels: () => import('../pages/fleet/BusModelsPage'),
   busModelForm: () => import('../pages/fleet/BusModelFormPage'),
   fleetCatalogs: () => import('../pages/fleet/FleetCatalogsPage'),
+  buses: () => import('../pages/fleet/BusesPage'),
+  busDetail: () => import('../pages/fleet/BusDetailPage'),
+  busForm: () => import('../pages/fleet/BusFormPage'),
 } satisfies Record<string, Loader>
 
 export type PageKey = keyof typeof loaders
@@ -45,6 +48,7 @@ const BY_SEGMENT: Record<string, PageKey> = {
   bitacora: 'audit',
   'flota/modelos': 'busModels',
   'flota/catalogos': 'fleetCatalogs',
+  'flota/unidades': 'buses',
 }
 
 const requested = new Set<PageKey>()

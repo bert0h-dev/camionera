@@ -24,6 +24,7 @@ import {
 import { addDays, dateKey, today, weekStart, zonedDateTime } from '../src/common/dates.js';
 import { computePayroll, totals } from '../src/payroll/payroll-rules.js';
 import { defaultLayout, seatCount } from '../src/fleet/layout-rules.js';
+import { seatsFromLayout } from '../src/fleet/bus-rules.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -78,6 +79,7 @@ async function clean() {
   });
   const ids = staff.map((s) => s.id);
   await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: 'DEMO · ' } } });
+  await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
   await prisma.auditLog.deleteMany({ where: { recordId: { in: ids } } });
   console.log(`Demo eliminada: ${ids.length} empleados`);
@@ -378,6 +380,60 @@ async function loadFleet() {
     });
   }
   console.log(`Flota demo: ${places.length} terminales y ${models.length} modelos`);
+
+  // Unidades demo: placas DEM… para identificarlas; solo se crean las que no existen
+  const allModels = await prisma.busModel.findMany({ where: { specifications: DEMO_SPEC }, orderBy: { brand: 'asc' } });
+  const allTerminals = await prisma.terminal.findMany({ where: { code: { in: places.map((p) => p.code) } } });
+  const day0 = today();
+  let created = 0;
+  for (let i = 0; i < 12; i++) {
+    const economicNumber = String(1001 + i);
+    if (await prisma.bus.findUnique({ where: { economicNumber } })) continue;
+    const model = allModels[i % allModels.length];
+    const odometerKm = 80_000 + i * 23_500;
+    const bus = await prisma.bus.create({
+      data: {
+        economicNumber,
+        plates: `DEM${String(i + 1).padStart(4, '0')}`,
+        vin: `3DEMO${String(i + 1).padStart(12, '0')}`,
+        year: 2018 + (i % 7),
+        busModelId: model.id,
+        terminalId: allTerminals[i % allTerminals.length].id,
+        odometerKm,
+        // Algunas en taller o fuera de servicio para ver la variedad en pantalla
+        ...(i === 3 && { status: 'maintenance', statusReason: 'Cambio de balatas' }),
+        ...(i === 8 && { status: 'out_of_service', statusReason: 'Motor en reparación mayor' }),
+        ...(i % 2 === 0 && i !== 8 && { firstServiceAt: addDays(day0, -400) }),
+        seats: { create: seatsFromLayout(model.layout as unknown as Parameters<typeof seatsFromLayout>[0]) },
+        readings: { create: { km: odometerKm } },
+      },
+    });
+    // Seguro: uno vencido, dos por vencer, el resto vigente; la tarjeta no vence
+    const insuranceExpiry = i === 5 ? addDays(day0, -3) : i === 2 || i === 7 ? addDays(day0, 12 + i) : addDays(day0, 200 + i * 5);
+    await prisma.busDocument.createMany({
+      data: [
+        {
+          busId: bus.id,
+          type: 'insurance',
+          folio: `POL-${economicNumber}`,
+          issuer: 'Qualitas',
+          issueDate: addDays(insuranceExpiry, -365),
+          expiryDate: insuranceExpiry,
+        },
+        { busId: bus.id, type: 'circulation_card', folio: `TC-${economicNumber}`, issueDate: addDays(day0, -500) },
+        {
+          busId: bus.id,
+          type: 'sict_permit',
+          folio: `SICT-${economicNumber}`,
+          issuer: 'SICT',
+          issueDate: addDays(day0, -300),
+          expiryDate: addDays(day0, i === 10 ? 20 : 400),
+        },
+      ],
+    });
+    created++;
+  }
+  console.log(`Unidades demo: ${created} nuevas`);
 }
 
 async function main() {

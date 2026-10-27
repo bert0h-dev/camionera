@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
+import { FleetModule } from './fleet/fleet.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { PayrollModule } from './payroll/payroll.module.js';
 import { HealthController } from './health/health.controller.js';
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module.js';
     StaffModule,
     DashboardModule,
     PayrollModule,
+    FleetModule,
   ],
   controllers: [HealthController],
 })

@@ -1,4 +1,6 @@
 import {
+  Building2,
+  Bus,
   CalendarClock,
   ScrollText,
   Settings,
@@ -25,6 +27,7 @@ export interface NavGroup {
 }
 
 const STAFF_READERS: UserRole[] = ['hr', 'supervisor', 'coordinator']
+const FLEET_READERS: UserRole[] = ['coordinator', 'supervisor']
 
 // Cada módulo nuevo agrega su grupo aquí
 export const NAV: NavGroup[] = [
@@ -37,6 +40,13 @@ export const NAV: NavGroup[] = [
       { to: '/asistencias', label: 'Asistencias', icon: ClipboardCheck, roles: STAFF_READERS },
       { to: '/evaluaciones', label: 'Evaluaciones', icon: Star, roles: STAFF_READERS },
       { to: '/nomina', label: 'Nómina', icon: Wallet, roles: ['hr'] },
+    ],
+  },
+  {
+    label: 'Flota',
+    items: [
+      { to: '/flota/modelos', label: 'Modelos', icon: Bus, roles: FLEET_READERS },
+      { to: '/flota/catalogos', label: 'Catálogos', icon: Building2, roles: FLEET_READERS },
     ],
   },
   {
@@ -69,6 +79,9 @@ const SEGMENT_LABELS: Record<string, string> = {
   'mi-cuenta': 'Mi cuenta',
   configuracion: 'Configuración',
   bitacora: 'Bitácora',
+  flota: 'Flota',
+  modelos: 'Modelos',
+  catalogos: 'Catálogos',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

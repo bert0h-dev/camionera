@@ -25,6 +25,9 @@ const PayrollPage = lazyPage('payroll')
 const PayrollPeriodPage = lazyPage('payrollPeriod')
 const SettingsPage = lazyPage('settings')
 const AuditPage = lazyPage('audit')
+const BusModelsPage = lazyPage('busModels')
+const BusModelFormPage = lazyPage('busModelForm')
+const FleetCatalogsPage = lazyPage('fleetCatalogs')
 
 function App() {
   return (
@@ -51,6 +54,14 @@ function App() {
               <Route path="/asistencias" element={<AttendancePage />} />
               <Route path="/evaluaciones" element={<EvaluationsPage />} />
               <Route path="/evaluaciones/:id" element={<EvaluationDetailPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['coordinator', 'supervisor']} />}>
+              <Route path="/flota/modelos" element={<BusModelsPage />} />
+              <Route path="/flota/modelos/:id" element={<BusModelFormPage />} />
+              <Route path="/flota/catalogos" element={<FleetCatalogsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['coordinator']} />}>
+              <Route path="/flota/modelos/nuevo" element={<BusModelFormPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['hr']} />}>
               <Route path="/configuracion" element={<SettingsPage />} />

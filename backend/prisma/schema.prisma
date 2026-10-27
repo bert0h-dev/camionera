@@ -586,3 +586,90 @@ model SecurityEvent {
   @@index([createdAt])
   @@map("security_events")
 }
+
+// =====================================================
+// FLOTA (Módulo 3)
+// =====================================================
+
+enum BusType {
+  standard
+  executive
+  luxury
+  double_decker
+}
+
+model FuelType {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @unique @db.VarChar(60)
+  // Unidad de medida de las cargas: L, m³, kWh…
+  unit      String   @default("L") @db.VarChar(10)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  busModels BusModel[]
+
+  @@map("fuel_types")
+}
+
+// Catálogo mínimo; el Módulo 4 (Rutas) lo amplía
+model City {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(100)
+  state     String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  terminals Terminal[]
+
+  @@unique([name, state])
+  @@map("cities")
+}
+
+model Terminal {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  code      String   @unique @db.VarChar(10)
+  name      String   @db.VarChar(150)
+  cityId    String   @map("city_id") @db.Uuid
+  address   String?  @db.Text
+  /// Ubicación exacta; sin ella la terminal no se puede usar en unidades ni rutas
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  city City @relation(fields: [cityId], references: [id])
+
+  @@index([cityId])
+  @@map("terminals")
+}
+
+model BusModel {
+  id                 String   @id @default(uuid(7)) @db.Uuid
+  brand              String   @db.VarChar(100)
+  model              String   @db.VarChar(100)
+  busType            BusType  @default(standard) @map("bus_type")
+  fuelTypeId         String   @map("fuel_type_id") @db.Uuid
+  tankCapacity       Decimal? @map("tank_capacity") @db.Decimal(8, 2)
+  // Rendimiento esperado en km por unidad de combustible (km/L)
+  expectedEfficiency Decimal? @map("expected_efficiency") @db.Decimal(6, 2)
+  specifications     String?  @db.Text
+  features           String[] @default([])
+  // Plan preventivo por defecto: lo que llegue primero
+  preventiveKm       Int?     @map("preventive_km")
+  preventiveDays     Int?     @map("preventive_days")
+  // Plantilla de asientos (ver fleet/layout-rules.ts); la capacidad se deriva de ella
+  layout             Json     @db.JsonB
+  seatCount          Int      @map("seat_count")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  fuelType FuelType @relation(fields: [fuelTypeId], references: [id])
+
+  @@unique([brand, model])
+  @@index([busType])
+  @@map("bus_models")
+}

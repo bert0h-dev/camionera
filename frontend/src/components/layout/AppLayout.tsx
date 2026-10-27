@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   { to: '/personal', label: 'Personal', roles: ['hr', 'supervisor', 'coordinator'] },
   { to: '/turnos', label: 'Turnos', roles: ['hr', 'supervisor', 'coordinator'] },
   { to: '/asistencias', label: 'Asistencias', roles: ['hr', 'supervisor', 'coordinator'] },
+  { to: '/evaluaciones', label: 'Evaluaciones', roles: ['hr', 'supervisor', 'coordinator'] },
   { to: '/usuarios', label: 'Usuarios', roles: ['admin'] },
 ]
 

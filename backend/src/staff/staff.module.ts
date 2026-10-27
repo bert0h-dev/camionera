@@ -13,6 +13,12 @@ import {
 } from './schedules/schedules.controller.js';
 import { SchedulesService } from './schedules/schedules.service.js';
 import { ShiftTemplatesService } from './schedules/shift-templates.service.js';
+import {
+  EvaluationCriteriaController,
+  EvaluationsController,
+  MyEvaluationsController,
+} from './evaluations/evaluations.controller.js';
+import { EvaluationsService } from './evaluations/evaluations.service.js';
 import { StaffController } from './staff.controller.js';
 import { StaffService } from './staff.service.js';
 
@@ -26,6 +32,9 @@ import { StaffService } from './staff.service.js';
     ShiftTemplatesController,
     MyAttendanceController,
     AttendanceController,
+    EvaluationCriteriaController,
+    MyEvaluationsController,
+    EvaluationsController,
   ],
   providers: [
     StaffService,
@@ -33,6 +42,7 @@ import { StaffService } from './staff.service.js';
     SchedulesService,
     ShiftTemplatesService,
     AttendanceService,
+    EvaluationsService,
   ],
   exports: [StaffDocumentsService, SchedulesService, AttendanceService],
 })

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
-import { PrismaClient, ShiftType, UserRole } from '../src/generated/prisma/client.js';
+import { PrismaClient, ShiftType, StaffRole, UserRole } from '../src/generated/prisma/client.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -36,6 +36,24 @@ async function main() {
     await prisma.shiftTemplate.upsert({ where: { name: t.name }, update: {}, create: t });
   }
   console.log(`Plantillas de turno: ${templates.map((t) => t.name).join(', ')}`);
+
+  // Criterios de evaluación base (vacío en appliesTo = todos los puestos)
+  const criteria = [
+    { name: 'Puntualidad y asistencia', weight: 2, appliesTo: [] },
+    { name: 'Trato al pasajero', weight: 2, appliesTo: [] },
+    { name: 'Trabajo en equipo', weight: 1, appliesTo: [] },
+    { name: 'Cumplimiento de procedimientos', weight: 2, appliesTo: [] },
+    { name: 'Manejo seguro', weight: 3, appliesTo: [StaffRole.driver] },
+    { name: 'Cuidado de la unidad', weight: 2, appliesTo: [StaffRole.driver] },
+  ];
+  for (const [i, c] of criteria.entries()) {
+    await prisma.evaluationCriterion.upsert({
+      where: { name: c.name },
+      update: {},
+      create: { ...c, sortOrder: (i + 1) * 10 },
+    });
+  }
+  console.log(`Criterios de evaluación: ${criteria.length}`);
 }
 
 main()

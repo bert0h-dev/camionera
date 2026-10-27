@@ -15,18 +15,19 @@ import { Button } from '../../components/ui/Button'
 import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { StaffSchedulesTab } from './StaffSchedulesTab'
 import { StaffAttendanceTab } from './StaffAttendanceTab'
+import { StaffEvaluationsTab } from './StaffEvaluationsTab'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
 import { useCanEditStaff } from './useCanEditStaff'
 
-// Las demás pestañas se habilitan en las fases 1.2 a 1.6
+// Nómina se habilita en la fase 1.6
 const TABS = [
   { key: 'general', label: 'General', enabled: true },
   { key: 'licenses', label: 'Licencias', enabled: true },
   { key: 'schedules', label: 'Turnos', enabled: true },
   { key: 'attendance', label: 'Asistencias', enabled: true },
-  { key: 'evaluations', label: 'Evaluaciones', enabled: false },
+  { key: 'evaluations', label: 'Evaluaciones', enabled: true },
   { key: 'payroll', label: 'Nómina', enabled: false },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -175,6 +176,9 @@ function StaffDetailPage() {
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
       {tab === 'attendance' && <StaffAttendanceTab staffId={s.id} />}
+      {tab === 'evaluations' && (
+        <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />
+      )}
       {tab === 'schedules' && (
         <StaffSchedulesTab staffId={s.id} staffName={staffFullName(s)} editable={!isTerminated} />
       )}

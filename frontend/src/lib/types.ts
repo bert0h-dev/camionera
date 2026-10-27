@@ -241,3 +241,65 @@ export interface MyToday {
   schedule: ScheduleCore | null
   attendance: Attendance | null
 }
+
+// ---------- Evaluaciones ----------
+
+export const EVALUATION_STATUSES = ['draft', 'finalized', 'acknowledged'] as const
+export type EvaluationStatus = (typeof EVALUATION_STATUSES)[number]
+
+export const EVALUATION_STATUS_LABELS: Record<EvaluationStatus, string> = {
+  draft: 'Borrador',
+  finalized: 'Finalizada',
+  acknowledged: 'Enterado',
+}
+
+export interface EvaluationCriterion {
+  id: string
+  name: string
+  description: string | null
+  weight: number
+  appliesTo: StaffRole[]
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface EvaluationScore {
+  id: string
+  criterionId: string
+  criterionName: string
+  weight: number
+  score: number | null
+  comment: string | null
+  criterion: { description: string | null }
+}
+
+export interface Evaluation {
+  id: string
+  staffId: string
+  staff: Schedule['staff'] & { status: StaffStatus; userId: string | null }
+  evaluator: { id: string; fullName: string }
+  periodStart: string
+  periodEnd: string
+  status: EvaluationStatus
+  overallScore: string | null
+  strengths: string | null
+  improvements: string | null
+  comments: string | null
+  employeeComment: string | null
+  finalizedAt: string | null
+  acknowledgedAt: string | null
+  scores?: EvaluationScore[]
+}
+
+export interface EvaluationDetail extends Evaluation {
+  scores: EvaluationScore[]
+  attendance: {
+    present: number
+    late: number
+    halfDay: number
+    absent: number
+    excused: number
+    lateMinutes: number
+    overtimeMinutes: number
+  }
+}

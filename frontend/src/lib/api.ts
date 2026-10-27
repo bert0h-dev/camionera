@@ -41,11 +41,21 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+const NO_REFRESH = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/change-password',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]
+
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
-  const isAuthRoute = original?.url?.startsWith('/auth/')
+  // En estas rutas un 401 significa credenciales incorrectas, no sesión vencida
+  const isCredentialRoute = NO_REFRESH.some((path) => original?.url?.startsWith(path))
 
-  if (error.response?.status === 401 && original && !original._retry && !isAuthRoute) {
+  if (error.response?.status === 401 && original && !original._retry && !isCredentialRoute) {
     original._retry = true
     try {
       await refreshSession()

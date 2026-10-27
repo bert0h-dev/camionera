@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -25,6 +35,38 @@ export class UsersController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.findOne(id);
+  }
+
+  @Get(':id/detail')
+  detail(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.detail(id);
+  }
+
+  @Post(':id/force-password-change')
+  @HttpCode(204)
+  forcePasswordChange(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.users.forcePasswordChange(id, actor.id);
+  }
+
+  @Post(':id/revoke-sessions')
+  @HttpCode(204)
+  revokeSessions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.users.revokeSessions(id, actor.id);
+  }
+
+  @Post(':id/unlock')
+  @HttpCode(204)
+  unlock(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.users.unlock(id, actor.id);
   }
 
   @Post()

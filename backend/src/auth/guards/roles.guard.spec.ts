@@ -33,8 +33,8 @@ describe('RolesGuard', () => {
 
   it('rechaza otros roles', () => {
     vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([UserRole.hr]);
-    expect(() => guard.canActivate(contextFor({ role: UserRole.vendor }))).toThrow(
-      ForbiddenException,
-    );
+    expect(() =>
+      guard.canActivate(contextFor({ role: UserRole.vendor })),
+    ).toThrow(ForbiddenException);
   });
 });

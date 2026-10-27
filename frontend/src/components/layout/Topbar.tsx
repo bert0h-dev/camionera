@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, LogOut, Menu, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronRight, LogOut, Menu, Monitor, Moon, Sun, UserCog, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../../auth/useAuth'
 import { cn } from '../../lib/cn'
 import { useTheme, type ThemePreference } from '../../lib/theme'
@@ -89,6 +89,7 @@ function ThemeMenu() {
 
 function UserMenu() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   if (!user) return null
   return (
     <Dropdown
@@ -113,6 +114,16 @@ function UserMenu() {
             <div className="truncate text-sm font-medium text-fg">{user.fullName}</div>
             <div className="truncate text-xs text-fg-muted">{user.email}</div>
           </div>
+          <DropdownSeparator />
+          <DropdownItem
+            icon={UserCog}
+            onClick={() => {
+              close()
+              navigate('/mi-cuenta')
+            }}
+          >
+            Mi cuenta
+          </DropdownItem>
           <DropdownSeparator />
           <DropdownItem
             icon={LogOut}

@@ -86,6 +86,22 @@ export const SETTINGS = {
     description:
       'Retardos que equivalen a una falta (si el descuento está activo)',
   },
+  'security.max_failed_logins': {
+    type: 'number',
+    default: 5,
+    min: 3,
+    max: 20,
+    description:
+      'Intentos fallidos de inicio de sesión antes de bloquear la cuenta',
+  },
+  'security.lockout_minutes': {
+    type: 'number',
+    default: 15,
+    min: 1,
+    max: 1440,
+    description:
+      'Minutos que la cuenta queda bloqueada tras superar los intentos fallidos',
+  },
 } as const satisfies Record<string, SettingDefinition>;
 
 export type SettingKey = keyof typeof SETTINGS;

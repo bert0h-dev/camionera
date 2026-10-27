@@ -6,6 +6,8 @@ export interface AuthContextValue {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  /** Vuelve a leer el usuario actual (p. ej. tras cambiar la contraseña) */
+  refreshUser: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

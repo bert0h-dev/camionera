@@ -13,16 +13,26 @@ import EvaluationsPage from './pages/evaluations/EvaluationsPage'
 import EvaluationDetailPage from './pages/evaluations/EvaluationDetailPage'
 import PayrollPage from './pages/payroll/PayrollPage'
 import PayrollPeriodPage from './pages/payroll/PayrollPeriodPage'
+import AccountPage from './pages/account/AccountPage'
+import ForceChangePasswordPage from './pages/auth/ForceChangePasswordPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import UserDetailPage from './pages/users/UserDetailPage'
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/recuperar" element={<ForgotPasswordPage />} />
+      <Route path="/restablecer" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute />}>
+        <Route path="/cambiar-contrasena" element={<ForceChangePasswordPage />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/mi-cuenta" element={<AccountPage />} />
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="/usuarios" element={<UsersPage />} />
+            <Route path="/usuarios/:id" element={<UserDetailPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={['hr', 'supervisor', 'coordinator']} />}>
             <Route path="/personal" element={<StaffListPage />} />

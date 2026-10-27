@@ -8,6 +8,7 @@ import { ROLE_LABELS } from '../../lib/types'
 import { Avatar } from '../ui/Avatar'
 import { Dropdown, DropdownItem, DropdownSeparator } from '../ui/Dropdown'
 import { breadcrumbs } from './nav'
+import { TopProgress } from './TopProgress'
 
 const THEMES: { value: ThemePreference; label: string; icon: LucideIcon }[] = [
   { value: 'light', label: 'Claro', icon: Sun },
@@ -50,6 +51,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
       <ThemeMenu />
       <UserMenu />
+      <TopProgress />
     </header>
   )
 }

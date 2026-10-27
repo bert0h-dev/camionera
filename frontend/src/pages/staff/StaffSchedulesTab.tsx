@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { addDaysKey, dayLabel, formatHours, mondayOf, todayKey } from '../../lib/format'
 import { Button } from '../../components/ui/Button'
+import { LoadingBlock } from '../../components/ui/Spinner'
 import { ScheduleModal, type ScheduleTarget } from '../schedules/ScheduleModal'
 import { ShiftChip } from '../schedules/ShiftChip'
 import { useCanSchedule, useSchedules } from '../schedules/useScheduleData'
@@ -47,7 +48,7 @@ export function StaffSchedulesTab({
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-fg-muted">Cargando…</p>
+        <LoadingBlock />
       ) : (
         <div className="grid gap-2 sm:grid-cols-7">
           {days.map((d) => {

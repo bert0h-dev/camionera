@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { Button } from './Button'
 import { EmptyState } from './EmptyState'
 import { Skeleton } from './Skeleton'
+import { Spinner } from './Spinner'
 
 export interface Column<T> {
   header: string
@@ -23,6 +24,8 @@ interface TableProps<T> {
   onRowClick?: (row: T) => void
   /** Clases extra por fila (p. ej. resaltar las que piden atención) */
   rowClassName?: (row: T) => string | false | undefined
+  /** Hay datos en pantalla y se están cargando otros (cambio de filtro o página) */
+  refreshing?: boolean
 }
 
 export function Table<T>({
@@ -36,10 +39,23 @@ export function Table<T>({
   emptyAction,
   onRowClick,
   rowClassName,
+  refreshing,
 }: TableProps<T>) {
+  const updating = refreshing && !loading
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-      <div className="overflow-x-auto">
+    <div
+      className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card"
+      aria-busy={loading || refreshing}
+    >
+      {updating && (
+        <div className="absolute inset-x-0 top-12 z-20 flex justify-center">
+          <span className="flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted shadow-pop ring-1 ring-border">
+            <Spinner size="sm" className="text-primary" />
+            Actualizando…
+          </span>
+        </div>
+      )}
+      <div className={cn('overflow-x-auto transition-opacity', updating && 'opacity-50')}>
         <table className="min-w-full text-sm">
           <thead className="sticky top-0 z-10 border-b border-border bg-surface-muted">
             <tr>

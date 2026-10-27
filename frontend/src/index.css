@@ -151,3 +151,16 @@
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
 }
+
+/* Barra de progreso indeterminada (TopProgress) */
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+@utility animate-progress {
+  animation: progress 1.1s ease-in-out infinite;
+}

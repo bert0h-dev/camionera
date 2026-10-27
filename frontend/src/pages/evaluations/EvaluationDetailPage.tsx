@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/useAuth'
 import { EvaluationStatusBadge } from '../../components/EvaluationBadges'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Button } from '../../components/ui/Button'
+import { LoadingBlock } from '../../components/ui/Spinner'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { Textarea } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/toast-context'
@@ -33,7 +34,7 @@ function EvaluationDetailPage() {
     queryFn: async () => (await api.get<EvaluationDetail>(`/evaluations/${id}`)).data,
   })
 
-  if (isLoading) return <p className="text-fg-muted">Cargando…</p>
+  if (isLoading) return <LoadingBlock text="Cargando evaluación…" />
   if (!data) return <p className="text-fg-muted">Evaluación no encontrada.</p>
   return <EvaluationView key={data.id} evaluation={data} />
 }

@@ -38,7 +38,7 @@ function headline(team: Team | null | undefined, isTeamReader: boolean) {
 
 function HomePage() {
   const { user } = useAuth()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => (await api.get<DashboardSummary>('/dashboard/summary')).data,
     refetchInterval: 60_000,
@@ -63,6 +63,7 @@ function HomePage() {
           </>
         }
         aside={<LiveClock />}
+        refreshing={isFetching && !isLoading}
         stats={
           isTeamReader && (
             <>

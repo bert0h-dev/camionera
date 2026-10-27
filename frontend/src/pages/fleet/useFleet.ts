@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import type { City, FuelType, Terminal, UserRole } from '../../lib/types'
+import type { BusSummary, City, FuelType, Terminal, UserRole } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 
 export const FLEET_READERS: UserRole[] = ['coordinator', 'supervisor']
@@ -27,4 +27,10 @@ export const useTerminals = (includeInactive = false) =>
   useQuery({
     queryKey: ['fleet', 'terminals', includeInactive],
     queryFn: async () => (await api.get<Terminal[]>('/fleet/terminals', { params: { includeInactive } })).data,
+  })
+
+export const useBusSummary = () =>
+  useQuery({
+    queryKey: ['fleet', 'buses', 'summary'],
+    queryFn: async () => (await api.get<BusSummary>('/fleet/buses/summary')).data,
   })

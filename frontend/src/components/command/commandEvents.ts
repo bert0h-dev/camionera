@@ -18,7 +18,7 @@ export interface RecentItem {
   to: string
   label: string
   hint?: string
-  kind: 'page' | 'staff' | 'user'
+  kind: 'page' | 'staff' | 'user' | 'bus'
 }
 
 export function readRecent(): RecentItem[] {

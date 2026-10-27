@@ -6,6 +6,7 @@ import { HeroStat } from '../components/ui/HeroStat'
 import { LiveClock } from '../components/ui/LiveClock'
 import { PageHeader } from '../components/ui/PageHeader'
 import { ExpirationsPanel } from './home/ExpirationsPanel'
+import { BusExpirationsPanel } from './home/BusExpirationsPanel'
 import { MyEvaluationsCard } from './home/MyEvaluationsCard'
 import { MyPayslipsCard } from './home/MyPayslipsCard'
 import { MyMonthCard } from './home/MyMonthCard'
@@ -45,6 +46,7 @@ function HomePage() {
     refetchInterval: 60_000,
   })
   const isTeamReader = !!user && STAFF_READERS.includes(user.role)
+  const isFleetReader = !!user && ['admin', 'coordinator', 'supervisor'].includes(user.role)
   const t = data?.team
   const firstName = user?.fullName.split(' ')[0]
 
@@ -124,6 +126,7 @@ function HomePage() {
 
       {isTeamReader && <TeamDashboard team={t} />}
       {isTeamReader && <ExpirationsPanel />}
+      {isFleetReader && <BusExpirationsPanel />}
     </div>
   )
 }

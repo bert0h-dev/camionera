@@ -1,18 +1,5 @@
 import { useState } from 'react'
-import {
-  Armchair,
-  Bath,
-  ChevronsUp,
-  CircleDot,
-  Coffee,
-  DoorOpen,
-  ListOrdered,
-  MousePointer2,
-  MoveVertical,
-  Plus,
-  Trash2,
-  type LucideIcon,
-} from 'lucide-react'
+import { ListOrdered, MousePointer2, Plus, Trash2, type LucideIcon } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
   CELL_TYPES,
@@ -25,19 +12,10 @@ import {
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Field'
 import { Tabs } from '../../components/ui/Tabs'
+import { CELL_ICONS } from './cellIcons'
 import { CATEGORY_LABELS, CELL_LABELS, LIMITS, cellAt, paintCell, renumber, resizeFloor, setNumber } from './layout'
 
 type Brush = CellType | 'empty' | 'select'
-
-const CELL_ICONS: Record<CellType, LucideIcon> = {
-  seat: Armchair,
-  aisle: MoveVertical,
-  bathroom: Bath,
-  stairs: ChevronsUp,
-  driver: CircleDot,
-  door: DoorOpen,
-  cafe: Coffee,
-}
 
 const SEAT_TONE: Record<SeatCategory, string> = {
   normal:

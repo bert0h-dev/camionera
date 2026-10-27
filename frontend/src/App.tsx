@@ -28,6 +28,9 @@ const AuditPage = lazyPage('audit')
 const BusModelsPage = lazyPage('busModels')
 const BusModelFormPage = lazyPage('busModelForm')
 const FleetCatalogsPage = lazyPage('fleetCatalogs')
+const BusesPage = lazyPage('buses')
+const BusDetailPage = lazyPage('busDetail')
+const BusFormPage = lazyPage('busForm')
 
 function App() {
   return (
@@ -59,9 +62,13 @@ function App() {
               <Route path="/flota/modelos" element={<BusModelsPage />} />
               <Route path="/flota/modelos/:id" element={<BusModelFormPage />} />
               <Route path="/flota/catalogos" element={<FleetCatalogsPage />} />
+              <Route path="/flota/unidades" element={<BusesPage />} />
+              <Route path="/flota/unidades/:id" element={<BusDetailPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['coordinator']} />}>
               <Route path="/flota/modelos/nuevo" element={<BusModelFormPage />} />
+              <Route path="/flota/unidades/nueva" element={<BusFormPage />} />
+              <Route path="/flota/unidades/:id/editar" element={<BusFormPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['hr']} />}>
               <Route path="/configuracion" element={<SettingsPage />} />

@@ -1,4 +1,5 @@
 import {
+  Bus,
   CalendarClock,
   ClipboardCheck,
   FileBadge,
@@ -33,6 +34,12 @@ const GROUPS: { group: string; title: string; description: string; icon: LucideI
     icon: FileBadge,
   },
   { group: 'payroll', title: 'Nómina', description: 'Reglas de la prenómina', icon: Wallet },
+  {
+    group: 'fleet',
+    title: 'Flota',
+    description: 'Alertas de seguros, tarjetas de circulación, permisos y verificaciones',
+    icon: Bus,
+  },
   {
     group: 'security',
     title: 'Seguridad de acceso',

@@ -303,6 +303,18 @@ export const SETTINGS = {
     description: 'Máximo de boletos en una sola compra',
   },
 
+  // ---------- Flota ----------
+  'fleet.document_alert_days': {
+    type: 'number',
+    default: 30,
+    min: 1,
+    max: 365,
+    label: 'Aviso de vencimiento de documentos de unidades',
+    unit: 'días',
+    description:
+      'Días de anticipación para alertar el vencimiento del seguro, la tarjeta de circulación, permisos y verificaciones',
+  },
+
   // ---------- Recorridos (se usarán en el Módulo 4) ----------
   'trips.unit_turnaround_minutes': {
     type: 'number',

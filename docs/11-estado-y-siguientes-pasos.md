@@ -4,22 +4,17 @@
 
 ## Dónde nos quedamos
 - **Módulo 1, Gestión de Personal**: ✅ completo y fusionado en `main` (docs 03–09).
-- **Módulo 2, Administración del Sistema**: ✅ completo (doc 10), **pendiente de fusionar**:
-  - Rama `feat/m2-parametros` (2.3), PR abierto o por abrir.
-  - Rama `feat/m2-bitacora` (2.4). **Incluye todo 2.3**: basta fusionar esta y cerrar la de 2.3, o fusionar 2.3 primero y luego 2.4.
-  - Al fusionar: `git switch main && git pull`, luego borrar ambas ramas en local y en GitHub.
-- **Rediseño**: dirección D aplicada a todo y **D5 terminada** (rama `feat/d5-buscador`): buscador Ctrl+K y carga diferida de rutas (paquete principal de 733 kB a 74 kB).
+- **Módulo 2, Administración del Sistema**: ✅ completo y fusionado (doc 10).
+- **Rediseño**: dirección D aplicada a todo, D5 terminada (buscador Ctrl+K y carga diferida).
+- **Módulo 3, Gestión de Flota** (doc 12):
+  - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
+  - **3.1 Unidades** lista en la rama `feat/m3-unidades` (PR por fusionar).
 
 ## Lo que sigue
-1. **Módulo 3, Gestión de Rutas**, según `contexto/00-importante.md`:
-   - Rutas con origen, destino y paradas intermedias.
-   - Precios por tramo.
-   - Horarios y frecuencias.
-   - Políticas de cancelación, usando los parámetros `tickets.*` que ya existen.
-   - Temporadas y tarifas especiales.
-   - Primero: leer el contexto y el esquema original (`contexto/01-EsquemaBD.prisma`), proponer el plan y esperar aprobación.
-2. Después vienen los Módulos 4 (Recorridos), 5 (Flota), 6 (Boletos) y 7 (Reportes).
-   - Los parámetros `trips.*` y `tickets.*` ya están listos para el 4 y el 6.
+1. **Módulo 3**: 3.1 revisada en Chrome; siguen 3.2 Mantenimientos, 3.3 Incidencias y 3.4 Combustible (ver doc 12).
+2. **Módulo 4, Rutas**: origen, destino y paradas entre terminales con ubicación; precios por tramo, horarios, cancelación y temporadas.
+3. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
+   - Los parámetros `trips.*` y `tickets.*` ya están listos.
 
 ## Pendientes y decisiones abiertas
 - **Resend**: verificar un dominio propio y cambiar `MAIL_FROM`. Con `onboarding@resend.dev` solo llega a la dirección dueña de la cuenta. También corregir el typo "Cental" en `backend/.env`.
@@ -29,6 +24,7 @@
 - **Datos demo**: siguen cargados en Neon (`npm run seed:demo -w backend`) y **no se borran hasta que el usuario lo pida**.
   - `-- --clean` los borra.
   - `-- --payroll` agrega solo la nómina demo.
+  - `-- --fleet` agrega solo la flota demo (no toca al personal).
 - Del contexto, aún abiertos para módulos futuros: venta por tramos, carrito u orden, terminales y andenes, y tipo de pasajero.
 
 ## Forma de trabajo acordada
@@ -37,6 +33,6 @@
 - **Commits** con gitmoji en código y en español: `:sparkles: feat: …`.
 - **Diseño**: todo lo nuevo sigue la dirección D (`PageHeader` con banda, `HeroStat`, `font-data`, `FilterBar`, `Alert`, `LoadingBlock`).
 - **Revisión visual en Chrome** en cada fase.
-  - Antes, apagar todos los procesos node del proyecto filtrando por `Repos\camionera` (no solo por el puerto).
+  - Antes, apagar los procesos node del proyecto filtrando por `Repos\camionera` **y** por puerto (3002 y 5173): `node dist/main` no lleva la ruta en su línea de comandos.
   - Verificar que una ruta nueva responda 401 y no 404.
 - **e2e**: no correr `attendance.e2e-spec` con los datos demo cargados, porque cierra el día anterior para todos.

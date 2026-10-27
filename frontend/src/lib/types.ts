@@ -665,3 +665,118 @@ export interface BusModel {
   seatCount: number
   isActive: boolean
 }
+
+export const BUS_STATUSES = ['available', 'in_service', 'maintenance', 'out_of_service'] as const
+export type BusStatus = (typeof BUS_STATUSES)[number]
+
+export const BUS_STATUS_LABELS: Record<BusStatus, string> = {
+  available: 'Disponible',
+  in_service: 'En servicio',
+  maintenance: 'En mantenimiento',
+  out_of_service: 'Fuera de servicio',
+}
+
+export const BUS_DOCUMENT_TYPES = ['insurance', 'circulation_card', 'sict_permit', 'emissions_check', 'other'] as const
+export type BusDocumentType = (typeof BUS_DOCUMENT_TYPES)[number]
+
+export const BUS_DOCUMENT_LABELS: Record<BusDocumentType, string> = {
+  insurance: 'Seguro',
+  circulation_card: 'Tarjeta de circulación',
+  sict_permit: 'Permiso SICT',
+  emissions_check: 'Verificación',
+  other: 'Otro',
+}
+
+interface BusBase {
+  id: string
+  economicNumber: string
+  plates: string
+  vin: string
+  year: number
+  busModelId: string
+  terminalId: string
+  odometerKm: number
+  status: BusStatus
+  statusReason: string | null
+  statusChangedAt: string
+  firstServiceAt: string | null
+  preventiveKm: number | null
+  preventiveDays: number | null
+  notes: string | null
+  fit: boolean
+  reasons: string[]
+}
+
+export interface BusListItem extends BusBase {
+  busModel: { id: string; brand: string; model: string; busType: BusType; seatCount: number }
+  terminal: { id: string; code: string; name: string }
+  blockedSeats: number
+  documents: { expiring: number; expired: number }
+}
+
+export interface BusSeat {
+  id: string
+  floor: number
+  row: number
+  col: number
+  number: string
+  category: SeatCategory
+  isBlocked: boolean
+  blockReason: string | null
+  blockedAt: string | null
+}
+
+export interface BusDocument {
+  id: string
+  type: BusDocumentType
+  folio: string
+  issuer: string | null
+  issueDate: string
+  expiryDate: string | null
+  notes: string | null
+  status: 'valid' | 'expiring' | 'expired'
+  daysToExpiry: number | null
+}
+
+export interface BusDetail extends BusBase {
+  busModel: BusModel
+  terminal: Terminal & { city: { name: string; state: string } }
+  seats: BusSeat[]
+  documents: BusDocument[]
+  preventive: { km: number | null; days: number | null; fromModel: boolean }
+  canChangeModel: boolean
+}
+
+export interface BusSummary {
+  total: number
+  available: number
+  inService: number
+  maintenance: number
+  outOfService: number
+  unfit: number
+  documentsExpiring: number
+  documentsExpired: number
+  alertDays: number
+}
+
+export interface BusHistory {
+  readings: { id: string; km: number; source: string; recordedAt: string; recordedByName: string | null }[]
+  changes: {
+    id: string
+    actionType: 'insert' | 'update' | 'delete'
+    user: string | null
+    oldValues: Record<string, unknown> | null
+    newValues: Record<string, unknown> | null
+    createdAt: string
+  }[]
+}
+
+export interface BusExpiringDocument {
+  id: string
+  type: BusDocumentType
+  folio: string
+  expiryDate: string
+  status: 'expiring' | 'expired'
+  daysToExpiry: number
+  bus: { id: string; economicNumber: string }
+}

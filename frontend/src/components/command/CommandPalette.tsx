@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Bus,
   CornerDownLeft,
   History,
   Moon,
@@ -21,7 +22,15 @@ import { cn } from '../../lib/cn'
 import { staffFullName } from '../../lib/format'
 import { preloadPath } from '../../lib/pages'
 import { useTheme } from '../../lib/theme'
-import { ROLE_LABELS, STAFF_ROLE_LABELS, type Paginated, type Staff, type User } from '../../lib/types'
+import {
+  BUS_STATUS_LABELS,
+  ROLE_LABELS,
+  STAFF_ROLE_LABELS,
+  type BusListItem,
+  type Paginated,
+  type Staff,
+  type User,
+} from '../../lib/types'
 import { visibleNav } from '../layout/nav'
 import { Avatar } from '../ui/Avatar'
 import { Spinner } from '../ui/Spinner'
@@ -79,6 +88,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const canStaff = !!role && ['admin', 'hr', 'supervisor', 'coordinator'].includes(role)
   const isAdmin = role === 'admin'
   const isHr = role === 'admin' || role === 'hr'
+  const canFleet = !!role && ['admin', 'coordinator', 'supervisor'].includes(role)
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -106,6 +116,13 @@ function Palette({ onClose }: { onClose: () => void }) {
     enabled: isAdmin && searching,
     queryFn: async () =>
       (await api.get<Paginated<User>>('/users', { params: { search: debounced, limit: 4 } })).data.data,
+  })
+
+  const buses = useQuery({
+    queryKey: ['command', 'buses', debounced],
+    enabled: canFleet && searching,
+    queryFn: async () =>
+      (await api.get<Paginated<BusListItem>>('/fleet/buses', { params: { search: debounced, limit: 5 } })).data.data,
   })
 
   const commands = useMemo<Command[]>(() => {
@@ -155,6 +172,14 @@ function Palette({ onClose }: { onClose: () => void }) {
               keywords: 'flota distribucion asientos layout',
               to: '/flota/modelos/nuevo',
             },
+            {
+              id: 'action:new-bus',
+              section: 'Acciones rápidas',
+              label: 'Nueva unidad',
+              icon: Plus,
+              keywords: 'flota autobus camion alta economico placas',
+              to: '/flota/unidades/nueva',
+            },
           ]
         : []),
       {
@@ -195,6 +220,20 @@ function Palette({ onClose }: { onClose: () => void }) {
         to: `/usuarios/${u.id}`,
         recent: { to: `/usuarios/${u.id}`, label: u.fullName, hint: u.email, kind: 'user' as const },
       })),
+      ...(buses.data ?? []).map((b) => ({
+        id: `bus:${b.id}`,
+        section: 'Unidades',
+        label: `Unidad ${b.economicNumber}`,
+        hint: `${b.plates} · ${b.busModel.brand} ${b.busModel.model} · ${BUS_STATUS_LABELS[b.status]}`,
+        icon: Bus,
+        to: `/flota/unidades/${b.id}`,
+        recent: {
+          to: `/flota/unidades/${b.id}`,
+          label: `Unidad ${b.economicNumber}`,
+          hint: b.plates,
+          kind: 'bus' as const,
+        },
+      })),
     ]
 
     const recents: Command[] = q
@@ -204,13 +243,13 @@ function Palette({ onClose }: { onClose: () => void }) {
           section: 'Recientes',
           label: r.label,
           hint: r.hint,
-          icon: r.kind === 'staff' ? UserRound : r.kind === 'user' ? ShieldCheck : History,
+          icon: r.kind === 'staff' ? UserRound : r.kind === 'user' ? ShieldCheck : r.kind === 'bus' ? Bus : History,
           to: r.to,
           recent: r,
         }))
 
     return [...recents, ...pages.filter(matches), ...actions.filter(matches), ...found]
-  }, [query, role, isHr, resolved, setPreference, staff.data, users.data])
+  }, [query, role, isHr, resolved, setPreference, staff.data, users.data, buses.data])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado
   const [prevLength, setPrevLength] = useState(commands.length)

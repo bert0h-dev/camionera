@@ -315,6 +315,9 @@ function BusDetailPage() {
             </Card>
             <Card>
               <CardHeader title="Cambios de estado" />
+              {!history.data?.changes.some((c) => c.newValues && 'status' in c.newValues) && (
+                <p className="px-5 py-4 text-sm text-fg-muted">Sin cambios de estado desde el alta.</p>
+              )}
               <ul className="divide-y divide-border text-sm">
                 {history.data?.changes
                   .filter((c) => c.newValues && 'status' in c.newValues)

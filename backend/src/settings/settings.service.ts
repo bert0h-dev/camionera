@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -77,8 +78,8 @@ export class SettingsService {
     return Object.fromEntries(list.map((s) => [s.key, s.value]));
   }
 
-  async set(key: string, value: unknown, actorId: string) {
-    const [result] = await this.setMany({ [key]: value }, actorId);
+  async set(key: string, value: unknown, actorId: string, groups?: string[]) {
+    const [result] = await this.setMany({ [key]: value }, actorId, groups);
     return result;
   }
 
@@ -86,7 +87,11 @@ export class SettingsService {
    * Guarda varios parámetros a la vez. Valida todos antes de escribir: si alguno
    * es inválido no se guarda ninguno.
    */
-  async setMany(values: Record<string, unknown>, actorId: string) {
+  async setMany(
+    values: Record<string, unknown>,
+    actorId: string,
+    groups?: string[],
+  ) {
     const errors: string[] = [];
     const valid: {
       key: SettingKey;
@@ -96,6 +101,8 @@ export class SettingsService {
     for (const [key, raw] of Object.entries(values)) {
       if (!isSettingKey(key))
         throw new NotFoundException(`Parámetro desconocido: ${key}`);
+      if (groups && !groups.includes(settingGroup(key)))
+        throw new ForbiddenException(`No tienes permiso para cambiar ${key}`);
       const def: SettingDefinition = SETTINGS[key];
       const check = validateSetting(def, raw);
       if (check.ok) valid.push({ key, def, value: check.value });

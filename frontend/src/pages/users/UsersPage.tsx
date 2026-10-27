@@ -3,8 +3,14 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api, apiErrorMessage } from '../../lib/api'
 import { ROLE_LABELS, USER_ROLES, type Paginated, type User, type UserRole } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
+import { KeyRound, MoreHorizontal, Pencil, Plus, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react'
+import { Avatar } from '../../components/ui/Avatar'
+import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
+import { Dropdown, DropdownItem, DropdownSeparator } from '../../components/ui/Dropdown'
 import { Input, Select } from '../../components/ui/Field'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { Pagination, Table, type Column } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
 import { UserFormModal } from './UserFormModal'
@@ -52,74 +58,141 @@ function UsersPage() {
   })
 
   const columns: Column<User>[] = [
-    { header: 'Nombre', cell: (u) => <span className="font-medium">{u.fullName}</span> },
-    { header: 'Correo', cell: (u) => u.email },
-    { header: 'Rol', cell: (u) => ROLE_LABELS[u.role] },
+    {
+      header: 'Usuario',
+      cell: (u) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={u.fullName} size="sm" />
+          <div className="min-w-0">
+            <div className="truncate font-medium text-fg">
+              {u.fullName}
+              {u.id === me?.id && <span className="ml-1.5 text-xs font-normal text-fg-muted">(tú)</span>}
+            </div>
+            <div className="truncate text-xs text-fg-muted">{u.email}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Rol',
+      cell: (u) => <Badge tone={u.role === 'admin' ? 'primary' : 'neutral'}>{ROLE_LABELS[u.role]}</Badge>,
+    },
     {
       header: 'Estado',
       cell: (u) => (
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ${u.isActive ? 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-300' : 'bg-border text-fg-muted'}`}
-        >
+        <Badge tone={u.isActive ? 'success' : 'neutral'} dot>
           {u.isActive ? 'Activo' : 'Inactivo'}
-        </span>
+        </Badge>
       ),
     },
     {
       header: 'Último acceso',
-      cell: (u) => (u.lastLogin ? new Date(u.lastLogin).toLocaleString('es-MX') : '—'),
+      cell: (u) => (
+        <span className="tabular text-fg-muted">
+          {u.lastLogin
+            ? new Date(u.lastLogin).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+            : 'Nunca'}
+        </span>
+      ),
     },
     {
       header: 'Acciones',
-      className: 'text-right',
+      className: 'w-16 text-right',
       cell: (u) => (
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" onClick={() => setFormUser(u)}>
-            Editar
-          </Button>
-          <Button variant="ghost" onClick={() => setPasswordUser(u)}>
-            Contraseña
-          </Button>
-          {u.id !== me?.id && (
-            <Button variant="ghost" onClick={() => toggleActive.mutate(u)} disabled={toggleActive.isPending}>
-              {u.isActive ? 'Desactivar' : 'Activar'}
-            </Button>
+        <Dropdown
+          trigger={({ toggle }) => (
+            <Button variant="ghost" size="icon" icon={MoreHorizontal} onClick={toggle} aria-label="Acciones" />
           )}
-        </div>
+        >
+          {(close) => (
+            <>
+              <DropdownItem
+                icon={Pencil}
+                onClick={() => {
+                  close()
+                  setFormUser(u)
+                }}
+              >
+                Editar
+              </DropdownItem>
+              <DropdownItem
+                icon={KeyRound}
+                onClick={() => {
+                  close()
+                  setPasswordUser(u)
+                }}
+              >
+                Cambiar contraseña
+              </DropdownItem>
+              {u.id !== me?.id && (
+                <>
+                  <DropdownSeparator />
+                  <DropdownItem
+                    icon={u.isActive ? UserX : UserCheck}
+                    danger={u.isActive}
+                    onClick={() => {
+                      close()
+                      toggleActive.mutate(u)
+                    }}
+                  >
+                    {u.isActive ? 'Desactivar' : 'Activar'}
+                  </DropdownItem>
+                </>
+              )}
+            </>
+          )}
+        </Dropdown>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-fg">Usuarios</h1>
-        <Button onClick={() => setFormUser(null)}>Nuevo usuario</Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Usuarios"
+        description="Cuentas con acceso al sistema y sus permisos"
+        actions={
+          <Button icon={Plus} onClick={() => setFormUser(null)}>
+            Nuevo usuario
+          </Button>
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
-        <Input
-          placeholder="Buscar por nombre o correo…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        <Select
-          value={role}
-          onChange={(e) => {
-            setRole(e.target.value as UserRole | '')
-            setPage(1)
-          }}
-        >
-          <option value="">Todos los roles</option>
-          {USER_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {ROLE_LABELS[r]}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <FilterBar>
+        <div className="min-w-60 flex-1">
+          <Input
+            icon={Search}
+            placeholder="Buscar por nombre o correo…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <Select
+            value={role}
+            onChange={(e) => {
+              setRole(e.target.value as UserRole | '')
+              setPage(1)
+            }}
+          >
+            <option value="">Todos los roles</option>
+            {USER_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </FilterBar>
 
-      <Table columns={columns} rows={data?.data ?? []} rowKey={(u) => u.id} loading={isLoading} />
+      <Table
+        columns={columns}
+        rows={data?.data ?? []}
+        rowKey={(u) => u.id}
+        loading={isLoading}
+        emptyIcon={ShieldCheck}
+        emptyMessage="Ningún usuario coincide con la búsqueda"
+      />
       {data && <Pagination page={page} totalPages={data.meta.totalPages} total={data.meta.total} onChange={setPage} />}
 
       <UserFormModal open={formUser !== undefined} user={formUser ?? null} onClose={() => setFormUser(undefined)} />

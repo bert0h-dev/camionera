@@ -8,8 +8,11 @@ import { api, apiErrorMessage } from '../../lib/api'
 import { dateOnly } from '../../lib/format'
 import { CURP_REGEX, NSS_REGEX, PHONE_REGEX, RFC_REGEX } from '../../lib/validation'
 import { STAFF_ROLE_LABELS, STAFF_ROLES, STAFF_STATUS_LABELS, type Staff } from '../../lib/types'
+import { Briefcase, Phone, Save, User, type LucideIcon } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Field'
+import { PageHeader } from '../../components/ui/PageHeader'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/toast-context'
 
 const EDITABLE_STATUSES = ['active', 'vacation', 'sick_leave', 'suspended'] as const
@@ -91,11 +94,28 @@ function toForm(s: Staff): FormValues {
   }
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** Sección del formulario: título y descripción a la izquierda, campos a la derecha. */
+function Section({
+  title,
+  description,
+  icon: Icon,
+  children,
+}: {
+  title: string
+  description: string
+  icon: LucideIcon
+  children: ReactNode
+}) {
   return (
-    <section className="rounded-xl border border-border bg-surface shadow-card p-5">
-      <h2 className="mb-4 font-semibold text-fg">{title}</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    <section className="grid gap-6 rounded-xl border border-border bg-surface p-6 shadow-card lg:grid-cols-[16rem_1fr]">
+      <div>
+        <h2 className="flex items-center gap-2 font-semibold text-fg">
+          <Icon className="size-4 text-fg-subtle" />
+          {title}
+        </h2>
+        <p className="mt-1 text-sm text-fg-muted">{description}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   )
 }
@@ -151,19 +171,36 @@ function StaffFormPage() {
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
 
-  if (isEdit && isLoading) return <p className="text-fg-muted">Cargando…</p>
+  if (isEdit && isLoading)
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-72 w-full rounded-xl" />
+      </div>
+    )
 
   return (
-    <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
-      <h1 className="text-2xl font-bold text-fg">
-        {isEdit ? `Editar empleado ${staff?.employeeNumber ?? ''}` : 'Nuevo empleado'}
-      </h1>
+    <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-6" noValidate>
+      <PageHeader
+        title={isEdit ? 'Editar empleado' : 'Nuevo empleado'}
+        description={
+          isEdit
+            ? `${staff?.employeeNumber ?? ''} · Los cambios quedan registrados en la bitácora.`
+            : 'El número de empleado se asigna automáticamente al guardar.'
+        }
+      />
 
-      <Section title="Datos personales">
-        <Input label="Nombre(s) *" error={errors.firstName?.message} {...register('firstName')} />
-        <Input label="Apellido paterno *" error={errors.lastName?.message} {...register('lastName')} />
+      <Section title="Datos personales" icon={User} description="Identificación oficial y datos de contacto.">
+        <Input label="Nombre(s)" required error={errors.firstName?.message} {...register('firstName')} />
+        <Input label="Apellido paterno" required error={errors.lastName?.message} {...register('lastName')} />
         <Input label="Apellido materno" error={errors.secondLastName?.message} {...register('secondLastName')} />
-        <Input label="Fecha de nacimiento *" type="date" error={errors.birthDate?.message} {...register('birthDate')} />
+        <Input
+          label="Fecha de nacimiento"
+          required
+          type="date"
+          error={errors.birthDate?.message}
+          {...register('birthDate')}
+        />
         <Input label="CURP" maxLength={18} onInput={upperCase} error={errors.curp?.message} {...register('curp')} />
         <Input label="RFC" maxLength={13} onInput={upperCase} error={errors.rfc?.message} {...register('rfc')} />
         <Input
@@ -175,7 +212,8 @@ function StaffFormPage() {
           {...register('nss')}
         />
         <Input
-          label="Teléfono *"
+          label="Teléfono"
+          required
           maxLength={10}
           inputMode="numeric"
           onInput={digitsOnly}
@@ -188,15 +226,21 @@ function StaffFormPage() {
         </div>
       </Section>
 
-      <Section title="Datos laborales">
-        <Select label="Puesto *" error={errors.role?.message} {...register('role')}>
+      <Section title="Datos laborales" icon={Briefcase} description="Puesto dentro de la central y fecha de ingreso.">
+        <Select label="Puesto" required error={errors.role?.message} {...register('role')}>
           {STAFF_ROLES.map((r) => (
             <option key={r} value={r}>
               {STAFF_ROLE_LABELS[r]}
             </option>
           ))}
         </Select>
-        <Input label="Fecha de contratación *" type="date" error={errors.hireDate?.message} {...register('hireDate')} />
+        <Input
+          label="Fecha de contratación"
+          required
+          type="date"
+          error={errors.hireDate?.message}
+          {...register('hireDate')}
+        />
         {isEdit && (
           <Select label="Estado" error={errors.status?.message} {...register('status')}>
             {EDITABLE_STATUSES.map((s) => (
@@ -208,7 +252,7 @@ function StaffFormPage() {
         )}
       </Section>
 
-      <Section title="Contacto de emergencia">
+      <Section title="Contacto de emergencia" icon={Phone} description="A quién avisar en caso de un incidente.">
         <Input label="Nombre" error={errors.emergencyContact?.message} {...register('emergencyContact')} />
         <Input
           label="Teléfono"
@@ -220,13 +264,19 @@ function StaffFormPage() {
         />
       </Section>
 
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={() => navigate(isEdit ? `/personal/${id}` : '/personal')}>
-          Cancelar
-        </Button>
-        <Button type="submit" loading={mutation.isPending}>
-          Guardar
-        </Button>
+      {/* Barra de acciones fija al fondo */}
+      <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-border bg-surface/90 px-4 py-3 backdrop-blur-md md:-mx-8 md:px-8">
+        <p className="hidden text-xs text-fg-muted sm:block">
+          Los campos con <span className="text-red-500">*</span> son obligatorios.
+        </p>
+        <div className="ml-auto flex gap-2">
+          <Button variant="secondary" onClick={() => navigate(isEdit ? `/personal/${id}` : '/personal')}>
+            Cancelar
+          </Button>
+          <Button type="submit" icon={Save} loading={mutation.isPending}>
+            {isEdit ? 'Guardar cambios' : 'Crear empleado'}
+          </Button>
+        </div>
       </div>
     </form>
   )

@@ -3,11 +3,21 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMinutes, formatTime, staffFullName, todayKey } from '../../lib/format'
-import { STAFF_ROLE_LABELS, STAFF_ROLES, type AttendanceDayRow, type StaffRole } from '../../lib/types'
+import { ChevronLeft, ChevronRight, ClipboardCheck, Lock } from 'lucide-react'
+import {
+  STAFF_ROLE_LABELS,
+  STAFF_ROLES,
+  type AttendanceDayRow,
+  type AttendanceStatus,
+  type StaffRole,
+} from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 import { AttendanceStatusBadge } from '../../components/AttendanceStatusBadge'
+import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Field'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { Table, type Column } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
 import { AttendanceModal, type AttendanceTarget } from './AttendanceModal'
@@ -46,12 +56,13 @@ function AttendancePage() {
     {
       header: 'Empleado',
       cell: (r) => (
-        <div>
-          <Link to={`/personal/${r.staff.id}`} className="font-medium text-link hover:underline">
-            {staffFullName(r.staff)}
-          </Link>
-          <div className="text-xs text-fg-muted">{STAFF_ROLE_LABELS[r.staff.role]}</div>
-        </div>
+        <Link to={`/personal/${r.staff.id}`} className="flex items-center gap-2.5">
+          <Avatar name={staffFullName(r.staff)} size="sm" />
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-fg hover:text-link">{staffFullName(r.staff)}</span>
+            <span className="block text-xs text-fg-muted">{STAFF_ROLE_LABELS[r.staff.role]}</span>
+          </span>
+        </Link>
       ),
     },
     {
@@ -123,41 +134,60 @@ function AttendancePage() {
     },
   ]
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-fg">Asistencias</h1>
-        {canClose && isPast && (
-          <Button variant="secondary" loading={closeDay.isPending} onClick={() => closeDay.mutate()}>
-            Cerrar día ({pending} sin registro)
-          </Button>
-        )}
-      </div>
+  const count = (s: AttendanceStatus) => data.filter((r) => r.attendance?.status === s).length
+  const summary = [
+    { label: 'Con turno', value: data.filter((r) => r.schedule && !r.schedule.isRestDay).length, dot: 'bg-indigo-500' },
+    { label: 'Asistieron', value: count('present'), dot: 'bg-emerald-500' },
+    { label: 'Retardos', value: count('late'), dot: 'bg-amber-400' },
+    { label: 'Faltas', value: count('absent'), dot: 'bg-red-500' },
+    { label: 'Sin registro', value: pending, dot: 'bg-slate-400' },
+  ]
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex items-end gap-2">
-          <Button variant="secondary" onClick={() => setDate(addDaysKey(date, -1))} aria-label="Día anterior">
-            ←
-          </Button>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Asistencias"
+        description="Entradas y salidas del día contra el turno programado"
+        actions={
+          canClose &&
+          isPast && (
+            <Button variant="secondary" icon={Lock} loading={closeDay.isPending} onClick={() => closeDay.mutate()}>
+              Cerrar día ({pending} sin registro)
+            </Button>
+          )
+        }
+      />
+
+      <FilterBar className="justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="icon"
+            icon={ChevronLeft}
+            onClick={() => setDate(addDaysKey(date, -1))}
+            aria-label="Día anterior"
+          />
           <Input
             type="date"
             value={date}
             max={todayKey()}
             onChange={(e) => e.target.value && setDate(e.target.value)}
+            className="w-40"
           />
           <Button
             variant="secondary"
+            size="icon"
+            icon={ChevronRight}
             disabled={date >= todayKey()}
             onClick={() => setDate(addDaysKey(date, 1))}
             aria-label="Día siguiente"
-          >
-            →
-          </Button>
-          <Button variant="secondary" onClick={() => setDate(todayKey())}>
+          />
+          <Button variant="secondary" disabled={date === todayKey()} onClick={() => setDate(todayKey())}>
             Hoy
           </Button>
+          <span className="ml-2 text-sm font-semibold text-fg">{dayLabel(date)}</span>
         </div>
-        <div className="w-56">
+        <div className="w-full sm:w-52">
           <Select value={role} onChange={(e) => setRole(e.target.value as StaffRole | '')}>
             <option value="">Todos los puestos</option>
             {STAFF_ROLES.map((r) => (
@@ -167,15 +197,31 @@ function AttendancePage() {
             ))}
           </Select>
         </div>
-        <span className="text-sm text-fg-muted">{dayLabel(date)}</span>
-      </div>
+      </FilterBar>
+
+      {!isLoading && data.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {summary.map((s) => (
+            <span
+              key={s.label}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-sm shadow-card"
+            >
+              <span className={`size-2 rounded-full ${s.dot}`} />
+              <span className="text-fg-muted">{s.label}</span>
+              <span className="tabular font-semibold text-fg">{s.value}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <Table
         columns={columns}
         rows={data}
         rowKey={(r) => r.staff.id}
         loading={isLoading}
+        emptyIcon={ClipboardCheck}
         emptyMessage="Nadie tiene turno programado este día"
+        emptyDescription="Programa turnos en la sección Turnos para controlar la asistencia."
       />
 
       <AttendanceModal target={target} onClose={() => setTarget(null)} />

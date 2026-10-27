@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { CalendarClock, ChevronLeft, ChevronRight, LayoutTemplate, Plus, Users } from 'lucide-react'
 import { api } from '../../lib/api'
+import { cn } from '../../lib/cn'
 import { addDaysKey, dayLabel, formatHours, mondayOf, staffFullName, todayKey } from '../../lib/format'
 import {
   STAFF_ROLE_LABELS,
@@ -12,8 +14,13 @@ import {
   type StaffRole,
 } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
+import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { Select } from '../../components/ui/Field'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { PageHeader } from '../../components/ui/PageHeader'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { BulkScheduleModal } from './BulkScheduleModal'
 import { ScheduleModal, type ScheduleTarget } from './ScheduleModal'
 import { ShiftChip } from './ShiftChip'
@@ -37,6 +44,7 @@ function SchedulesPage() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysKey(monday, i)), [monday])
   const sunday = days[6]
   const today = todayKey()
+  const isCurrentWeek = monday === mondayOf(today)
 
   const staffQuery = useQuery({
     queryKey: ['staff', 'calendar', role],
@@ -70,35 +78,50 @@ function SchedulesPage() {
     days.reduce((sum, d) => sum + (byStaffDay.get(`${staffId}|${d}`)?.workedHours ?? 0), 0)
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-fg">Turnos</h1>
-        <div className="flex flex-wrap gap-2">
-          {canManageTemplates && (
-            <Button variant="secondary" onClick={() => setTemplatesOpen(true)}>
-              Plantillas
-            </Button>
-          )}
-          {canSchedule && <Button onClick={() => setBulkOpen(true)}>Asignar en bloque</Button>}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Turnos"
+        description="Programación semanal del personal; haz clic en un día para asignar o cambiar el turno"
+        actions={
+          <>
+            {canManageTemplates && (
+              <Button variant="secondary" icon={LayoutTemplate} onClick={() => setTemplatesOpen(true)}>
+                Plantillas
+              </Button>
+            )}
+            {canSchedule && (
+              <Button icon={CalendarClock} onClick={() => setBulkOpen(true)}>
+                Asignar en bloque
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <FilterBar className="justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setMonday(addDaysKey(monday, -7))} aria-label="Semana anterior">
-            ←
+          <Button
+            variant="secondary"
+            size="icon"
+            icon={ChevronLeft}
+            onClick={() => setMonday(addDaysKey(monday, -7))}
+            aria-label="Semana anterior"
+          />
+          <Button
+            variant="secondary"
+            size="icon"
+            icon={ChevronRight}
+            onClick={() => setMonday(addDaysKey(monday, 7))}
+            aria-label="Semana siguiente"
+          />
+          <Button variant="secondary" disabled={isCurrentWeek} onClick={() => setMonday(mondayOf(today))}>
+            Esta semana
           </Button>
-          <Button variant="secondary" onClick={() => setMonday(mondayOf(todayKey()))}>
-            Hoy
-          </Button>
-          <Button variant="secondary" onClick={() => setMonday(addDaysKey(monday, 7))} aria-label="Semana siguiente">
-            →
-          </Button>
-          <span className="text-sm font-medium text-fg">
+          <span className="tabular ml-2 text-sm font-semibold text-fg">
             {dayLabel(monday)} – {dayLabel(sunday)}
           </span>
         </div>
-        <div className="w-56">
+        <div className="w-full sm:w-52">
           <Select value={role} onChange={(e) => setRole(e.target.value as StaffRole | '')}>
             <option value="">Todos los puestos</option>
             {STAFF_ROLES.map((r) => (
@@ -108,82 +131,130 @@ function SchedulesPage() {
             ))}
           </Select>
         </div>
-      </div>
+      </FilterBar>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
-        <table className="min-w-[900px] w-full table-fixed text-sm">
-          <thead className="bg-surface-muted">
-            <tr>
-              <th className="w-52 px-3 py-2 text-left font-semibold text-fg-muted">Empleado</th>
-              {days.map((d) => (
-                <th
-                  key={d}
-                  className={`px-2 py-2 text-left font-semibold ${d === today ? 'text-link' : 'text-fg-muted'}`}
-                >
-                  {dayLabel(d)}
+      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] table-fixed text-sm">
+            <thead className="border-b border-border bg-surface-muted">
+              <tr>
+                <th className="sticky left-0 z-10 w-56 bg-surface-muted px-4 py-3 text-left text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                  Empleado
                 </th>
-              ))}
-              <th className="w-20 px-2 py-2 text-right font-semibold text-fg-muted">Horas</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {loading ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-fg-muted">
-                  Cargando…
-                </td>
+                {days.map((d) => {
+                  const [weekday, date] = dayLabel(d).split(' ')
+                  const isToday = d === today
+                  return (
+                    <th key={d} className="px-2 py-2 text-center">
+                      <div
+                        className={cn(
+                          'text-xs font-semibold uppercase',
+                          isToday ? 'text-primary-soft-fg' : 'text-fg-muted',
+                        )}
+                      >
+                        {weekday}
+                      </div>
+                      <div
+                        className={cn(
+                          'tabular mx-auto mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold',
+                          isToday ? 'bg-primary text-primary-fg' : 'text-fg',
+                        )}
+                      >
+                        {date.slice(0, 2)}
+                      </div>
+                    </th>
+                  )
+                })}
+                <th className="w-24 px-4 py-3 text-right text-xs font-semibold tracking-wide text-fg-muted uppercase">
+                  Horas
+                </th>
               </tr>
-            ) : staff.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-fg-muted">
-                  No hay empleados activos con ese puesto
-                </td>
-              </tr>
-            ) : (
-              staff.map((s) => {
-                const hours = weekHours(s.id)
-                return (
-                  <tr key={s.id}>
-                    <td className="px-3 py-2 align-top">
-                      <Link to={`/personal/${s.id}`} className="font-medium text-link hover:underline">
-                        {staffFullName(s)}
-                      </Link>
-                      <div className="text-xs text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</div>
-                    </td>
-                    {days.map((d) => {
-                      const schedule = byStaffDay.get(`${s.id}|${d}`) ?? null
-                      const open = () => setTarget({ staffId: s.id, staffName: staffFullName(s), date: d, schedule })
-                      return (
-                        <td key={d} className={`px-1 py-1 align-top ${d === today ? 'bg-primary-soft/50' : ''}`}>
-                          {canSchedule ? (
-                            <button
-                              type="button"
-                              onClick={open}
-                              className="block min-h-11 w-full rounded text-left hover:ring-2 hover:ring-ring"
-                            >
-                              {schedule ? (
-                                <ShiftChip schedule={schedule} />
-                              ) : (
-                                <span className="block px-2 py-1 text-xs text-fg-subtle">+</span>
-                              )}
-                            </button>
-                          ) : (
-                            schedule && <ShiftChip schedule={schedule} />
-                          )}
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading
+                ? Array.from({ length: 4 }, (_, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-8 w-40" />
+                      </td>
+                      {days.map((d) => (
+                        <td key={d} className="p-1.5">
+                          <Skeleton className="h-11 w-full" />
                         </td>
-                      )
-                    })}
-                    <td
-                      className={`px-2 py-2 text-right align-top font-medium ${hours > maxWeekly ? 'text-red-600 dark:text-red-300' : 'text-fg'}`}
-                    >
-                      {formatHours(hours)}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
+                      ))}
+                      <td />
+                    </tr>
+                  ))
+                : staff.map((s) => {
+                    const hours = weekHours(s.id)
+                    const over = hours > maxWeekly
+                    return (
+                      <tr key={s.id} className="group">
+                        <td className="sticky left-0 z-10 bg-surface px-4 py-2 align-middle group-hover:bg-surface-muted">
+                          <Link to={`/personal/${s.id}`} className="flex items-center gap-2.5">
+                            <Avatar name={staffFullName(s)} size="sm" />
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium text-fg hover:text-link">
+                                {staffFullName(s)}
+                              </span>
+                              <span className="block text-xs text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</span>
+                            </span>
+                          </Link>
+                        </td>
+                        {days.map((d) => {
+                          const schedule = byStaffDay.get(`${s.id}|${d}`) ?? null
+                          const open = () =>
+                            setTarget({ staffId: s.id, staffName: staffFullName(s), date: d, schedule })
+                          return (
+                            <td key={d} className={cn('p-1.5 align-top', d === today && 'bg-primary-soft/40')}>
+                              {canSchedule ? (
+                                <button
+                                  type="button"
+                                  onClick={open}
+                                  aria-label={`Turno de ${staffFullName(s)} el ${dayLabel(d)}`}
+                                  className="group/cell block min-h-12 w-full rounded-lg text-left transition-shadow hover:ring-2 hover:ring-ring"
+                                >
+                                  {schedule ? (
+                                    <ShiftChip schedule={schedule} />
+                                  ) : (
+                                    <span className="flex min-h-12 items-center justify-center rounded-lg border border-dashed border-transparent text-fg-subtle transition-colors group-hover/cell:border-border-strong">
+                                      <Plus className="size-4 opacity-0 transition-opacity group-hover/cell:opacity-100" />
+                                    </span>
+                                  )}
+                                </button>
+                              ) : (
+                                schedule && <ShiftChip schedule={schedule} />
+                              )}
+                            </td>
+                          )
+                        })}
+                        <td className="px-4 py-2 text-right align-middle">
+                          <span
+                            className={cn('tabular font-semibold', over ? 'text-red-600 dark:text-red-400' : 'text-fg')}
+                            title={over ? `Supera el máximo semanal de ${maxWeekly} h` : undefined}
+                          >
+                            {formatHours(hours)}
+                          </span>
+                          <div className="mt-1 h-1 rounded-full bg-surface-sunken">
+                            <div
+                              className={cn('h-1 rounded-full', over ? 'bg-red-500' : 'bg-primary')}
+                              style={{ width: `${Math.min(100, (hours / maxWeekly) * 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+            </tbody>
+          </table>
+        </div>
+        {!loading && staff.length === 0 && (
+          <EmptyState
+            icon={Users}
+            title="No hay empleados activos con ese puesto"
+            description="Cambia el filtro de puesto o registra personal en Empleados."
+          />
+        )}
       </div>
 
       <ScheduleModal target={target} onClose={() => setTarget(null)} />

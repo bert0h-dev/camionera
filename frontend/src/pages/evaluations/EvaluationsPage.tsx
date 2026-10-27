@@ -9,7 +9,10 @@ import {
   type Paginated,
 } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
+import { ListChecks, Plus, Search, Star } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { Input, Select } from '../../components/ui/Field'
 import { Pagination, Table } from '../../components/ui/Table'
 import { evaluationColumns } from './evaluationColumns'
@@ -38,22 +41,30 @@ function EvaluationsPage() {
   })
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-fg">Evaluaciones</h1>
-        <div className="flex gap-2">
-          {canManageCriteria && (
-            <Button variant="secondary" onClick={() => setCriteriaOpen(true)}>
-              Criterios
-            </Button>
-          )}
-          {canEvaluate && <Button onClick={() => setCreating(true)}>Nueva evaluación</Button>}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Evaluaciones"
+        description="Desempeño del personal por periodo, con criterios ponderados por puesto"
+        actions={
+          <>
+            {canManageCriteria && (
+              <Button variant="secondary" icon={ListChecks} onClick={() => setCriteriaOpen(true)}>
+                Criterios
+              </Button>
+            )}
+            {canEvaluate && (
+              <Button icon={Plus} onClick={() => setCreating(true)}>
+                Nueva evaluación
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-64">
+      <FilterBar>
+        <div className="min-w-60 flex-1">
           <Input
+            icon={Search}
             placeholder="Buscar empleado…"
             value={search}
             onChange={(e) => {
@@ -62,7 +73,7 @@ function EvaluationsPage() {
             }}
           />
         </div>
-        <div className="w-48">
+        <div className="w-full sm:w-48">
           <Select
             value={status}
             onChange={(e) => {
@@ -78,14 +89,16 @@ function EvaluationsPage() {
             ))}
           </Select>
         </div>
-      </div>
+      </FilterBar>
 
       <Table
         columns={evaluationColumns(true)}
         rows={data?.data ?? []}
         rowKey={(e) => e.id}
         loading={isLoading}
+        emptyIcon={Star}
         emptyMessage="Sin evaluaciones"
+        emptyDescription="Crea una evaluación para medir el desempeño de un empleado en un periodo."
       />
       {data && <Pagination page={page} totalPages={data.meta.totalPages} total={data.meta.total} onChange={setPage} />}
 

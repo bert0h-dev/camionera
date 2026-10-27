@@ -1,6 +1,22 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import {
+  BadgeCheck,
+  Briefcase,
+  CalendarClock,
+  CalendarDays,
+  ClipboardCheck,
+  FileBadge,
+  Hash,
+  KeyRound,
+  Pencil,
+  Phone,
+  Star,
+  User,
+  UserMinus,
+  Wallet,
+} from 'lucide-react'
 import { api } from '../../lib/api'
 import { formatDate, formatPhone, staffFullName } from '../../lib/format'
 import {
@@ -11,7 +27,13 @@ import {
   type StaffCertification,
   type StaffLicense,
 } from '../../lib/types'
+import { Alert } from '../../components/ui/Alert'
+import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Skeleton } from '../../components/ui/Skeleton'
+import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { StaffSchedulesTab } from './StaffSchedulesTab'
 import { StaffAttendanceTab } from './StaffAttendanceTab'
@@ -21,16 +43,7 @@ import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
 import { useCanEditStaff } from './useCanEditStaff'
 
-// Nómina se habilita en la fase 1.6
-const TABS = [
-  { key: 'general', label: 'General', enabled: true },
-  { key: 'licenses', label: 'Licencias', enabled: true },
-  { key: 'schedules', label: 'Turnos', enabled: true },
-  { key: 'attendance', label: 'Asistencias', enabled: true },
-  { key: 'evaluations', label: 'Evaluaciones', enabled: true },
-  { key: 'payroll', label: 'Nómina', enabled: false },
-] as const
-type TabKey = (typeof TABS)[number]['key']
+type TabKey = 'general' | 'licenses' | 'schedules' | 'attendance' | 'evaluations' | 'payroll'
 
 /** Documentos vencidos que no tienen un reemplazo vigente del mismo tipo. */
 function countExpired(licenses: StaffLicense[] = [], certs: StaffCertification[] = []) {
@@ -44,21 +57,39 @@ function countExpired(licenses: StaffLicense[] = [], certs: StaffCertification[]
   return expiredLicenses.length + expiredCerts.length
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
+function Item({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
-    <div>
-      <dt className="text-xs font-medium tracking-wide text-fg-muted uppercase">{label}</dt>
-      <dd className="mt-0.5 text-sm text-fg">{children || '—'}</dd>
+    <div className={wide ? 'sm:col-span-2 lg:col-span-3' : undefined}>
+      <dt className="text-xs font-medium text-fg-muted">{label}</dt>
+      <dd className="mt-1 text-sm text-fg">{children || <span className="text-fg-subtle">—</span>}</dd>
     </div>
   )
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: typeof User; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-surface shadow-card p-5">
-      <h2 className="mb-4 font-semibold text-fg">{title}</h2>
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
-    </section>
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Icon className="size-4 text-fg-subtle" />
+            {title}
+          </span>
+        }
+      />
+      <CardBody>
+        <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
+      </CardBody>
+    </Card>
+  )
+}
+
+function Meta({ icon: Icon, children }: { icon: typeof User; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Icon className="size-4 text-fg-subtle" />
+      {children}
+    </span>
   )
 }
 
@@ -92,129 +123,172 @@ function StaffDetailPage() {
     enabled: s?.role === 'driver' && s.status !== 'inactive',
   })
 
-  if (isLoading) return <p className="text-fg-muted">Cargando…</p>
-  if (isError || !s) return <p className="text-red-600 dark:text-red-300">No se encontró el empleado.</p>
+  if (isLoading)
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-44 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    )
+  if (isError || !s)
+    return (
+      <Card>
+        <EmptyState
+          icon={User}
+          title="No se encontró el empleado"
+          description="Puede que el enlace sea incorrecto o que el registro ya no exista."
+          action={
+            <Button variant="secondary" onClick={() => navigate('/personal')}>
+              Volver a Empleados
+            </Button>
+          }
+        />
+      </Card>
+    )
 
   const isTerminated = s.status === 'inactive'
   const expiredCount = isTerminated ? 0 : countExpired(licenses.data, certifications.data)
+  const name = staffFullName(s)
+
+  const tabs: TabItem<TabKey>[] = [
+    { key: 'general', label: 'General', icon: User },
+    { key: 'licenses', label: 'Licencias', icon: FileBadge, badge: expiredCount },
+    { key: 'schedules', label: 'Turnos', icon: CalendarClock },
+    { key: 'attendance', label: 'Asistencias', icon: ClipboardCheck },
+    { key: 'evaluations', label: 'Evaluaciones', icon: Star },
+    { key: 'payroll', label: 'Nómina', icon: Wallet, disabled: true }, // fase 1.6
+  ]
 
   return (
-    <div className="space-y-4">
-      <Link to="/personal" className="text-sm text-link hover:underline">
-        ← Personal
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-fg">{staffFullName(s)}</h1>
-            <StaffStatusBadge status={s.status} />
-          </div>
-          <p className="text-sm text-fg-muted">
-            <span className="font-mono">{s.employeeNumber}</span> · {STAFF_ROLE_LABELS[s.role]}
-          </p>
-        </div>
-        {canEdit && !isTerminated && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => navigate(`/personal/${s.id}/editar`)}>
-              Editar
-            </Button>
-            {!s.user && (
-              <Button variant="secondary" onClick={() => setModal('access')}>
-                Dar acceso al sistema
-              </Button>
+    <div className="space-y-6">
+      {/* Encabezado de la ficha */}
+      <Card className="overflow-hidden">
+        <div className="h-20 bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-500 dark:from-indigo-900 dark:via-indigo-800 dark:to-violet-900" />
+        <div className="px-6">
+          <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
+            <div className="flex items-end gap-4">
+              <Avatar name={name} size="lg" className="size-20 text-2xl ring-4 ring-surface" />
+              <div className="pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">{name}</h1>
+                  <StaffStatusBadge status={s.status} />
+                </div>
+                <p className="text-sm text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</p>
+              </div>
+            </div>
+            {canEdit && !isTerminated && (
+              <div className="flex flex-wrap gap-2 pb-1">
+                <Button variant="secondary" icon={Pencil} onClick={() => navigate(`/personal/${s.id}/editar`)}>
+                  Editar
+                </Button>
+                {!s.user && (
+                  <Button variant="secondary" icon={KeyRound} onClick={() => setModal('access')}>
+                    Dar acceso
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  icon={UserMinus}
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10"
+                  onClick={() => setModal('terminate')}
+                >
+                  Dar de baja
+                </Button>
+              </div>
             )}
-            <Button variant="danger" onClick={() => setModal('terminate')}>
-              Dar de baja
-            </Button>
           </div>
-        )}
-      </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            disabled={!t.enabled}
-            title={t.enabled ? undefined : 'Próximamente'}
-            onClick={() => setTab(t.key)}
-            className={`border-b-2 px-4 py-2 text-sm whitespace-nowrap ${
-              t.key === tab
-                ? 'border-primary font-semibold text-link'
-                : t.enabled
-                  ? 'border-transparent text-fg-muted hover:text-fg'
-                  : 'cursor-not-allowed border-transparent text-fg-subtle'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-fg-muted">
+            <Meta icon={Hash}>
+              <span className="font-mono">{s.employeeNumber}</span>
+            </Meta>
+            <Meta icon={Phone}>{formatPhone(s.phone)}</Meta>
+            <Meta icon={CalendarDays}>Desde {formatDate(s.hireDate)}</Meta>
+            <Meta icon={KeyRound}>
+              {s.user ? (s.user.isActive ? `Acceso: ${ROLE_LABELS[s.user.role]}` : 'Acceso desactivado') : 'Sin acceso'}
+            </Meta>
+            {compliance.data?.compliant && (
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <BadgeCheck className="size-4" />
+                Apto para recorridos
+              </span>
+            )}
+          </div>
+
+          <Tabs items={tabs} value={tab} onChange={setTab} className="mt-4 border-t border-border" />
+        </div>
+      </Card>
 
       {isTerminated && (
-        <div className="rounded-lg border border-border-strong bg-surface-sunken p-4 text-sm text-fg">
-          <strong>Baja el {formatDate(s.terminationDate)}.</strong> Motivo: {s.terminationReason}
-        </div>
+        <Alert tone="neutral" title={`Baja el ${formatDate(s.terminationDate)}`}>
+          Motivo: {s.terminationReason}
+        </Alert>
       )}
-
       {compliance.data && !compliance.data.compliant && (
-        <div className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-4 text-sm text-red-800 dark:text-red-300">
-          <strong>No puede asignarse a recorridos.</strong> Le falta: {compliance.data.missing.join(', ')}.
-        </div>
+        <Alert tone="danger" title="No puede asignarse a recorridos">
+          Le falta: {compliance.data.missing.join(', ')}.
+        </Alert>
       )}
       {expiredCount > 0 && (
-        <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-4 text-sm text-amber-800 dark:text-amber-300">
-          Tiene {expiredCount} documento(s) vencido(s).{' '}
-          {tab !== 'licenses' && (
-            <button type="button" className="font-semibold underline" onClick={() => setTab('licenses')}>
-              Ver documentos
-            </button>
-          )}
-        </div>
+        <Alert
+          tone="warning"
+          title={`Tiene ${expiredCount} documento(s) vencido(s)`}
+          action={
+            tab !== 'licenses' && (
+              <Button size="sm" variant="secondary" onClick={() => setTab('licenses')}>
+                Ver documentos
+              </Button>
+            )
+          }
+        />
       )}
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
       {tab === 'attendance' && <StaffAttendanceTab staffId={s.id} />}
       {tab === 'evaluations' && <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />}
-      {tab === 'schedules' && (
-        <StaffSchedulesTab staffId={s.id} staffName={staffFullName(s)} editable={!isTerminated} />
-      )}
+      {tab === 'schedules' && <StaffSchedulesTab staffId={s.id} staffName={name} editable={!isTerminated} />}
 
       {tab === 'general' && (
-        <>
-          <Card title="Datos personales">
-            <Item label="Fecha de nacimiento">{formatDate(s.birthDate)}</Item>
-            <Item label="CURP">{s.curp && <span className="font-mono">{s.curp}</span>}</Item>
-            <Item label="RFC">{s.rfc && <span className="font-mono">{s.rfc}</span>}</Item>
-            <Item label="NSS">{s.nss && <span className="font-mono">{s.nss}</span>}</Item>
-            <Item label="Teléfono">{formatPhone(s.phone)}</Item>
-            <Item label="Correo">{s.email}</Item>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Item label="Dirección">{s.address}</Item>
-            </div>
-          </Card>
-
-          <Card title="Datos laborales">
-            <Item label="Puesto">{STAFF_ROLE_LABELS[s.role]}</Item>
-            <Item label="Fecha de contratación">{formatDate(s.hireDate)}</Item>
-            <Item label="Acceso al sistema">
-              {s.user ? (
-                <>
-                  {s.user.email} · {ROLE_LABELS[s.user.role]}
-                  {!s.user.isActive && <span className="text-fg-muted"> (desactivado)</span>}
-                </>
-              ) : (
-                'Sin acceso'
-              )}
+        <div className="grid gap-6 xl:grid-cols-3">
+          <div className="space-y-6 xl:col-span-2">
+            <Section title="Datos personales" icon={User}>
+              <Item label="Fecha de nacimiento">{formatDate(s.birthDate)}</Item>
+              <Item label="CURP">{s.curp && <span className="font-mono">{s.curp}</span>}</Item>
+              <Item label="RFC">{s.rfc && <span className="font-mono">{s.rfc}</span>}</Item>
+              <Item label="NSS">{s.nss && <span className="font-mono">{s.nss}</span>}</Item>
+              <Item label="Teléfono">{formatPhone(s.phone)}</Item>
+              <Item label="Correo">{s.email}</Item>
+              <Item label="Dirección" wide>
+                {s.address}
+              </Item>
+            </Section>
+            <Section title="Datos laborales" icon={Briefcase}>
+              <Item label="Puesto">{STAFF_ROLE_LABELS[s.role]}</Item>
+              <Item label="Fecha de contratación">{formatDate(s.hireDate)}</Item>
+              <Item label="Acceso al sistema">
+                {s.user ? (
+                  <>
+                    {s.user.email}
+                    <span className="block text-xs text-fg-muted">
+                      {ROLE_LABELS[s.user.role]}
+                      {!s.user.isActive && ' · desactivado'}
+                    </span>
+                  </>
+                ) : (
+                  'Sin acceso'
+                )}
+              </Item>
+            </Section>
+          </div>
+          <Section title="Contacto de emergencia" icon={Phone}>
+            <Item label="Nombre" wide>
+              {s.emergencyContact}
             </Item>
-          </Card>
-
-          <Card title="Contacto de emergencia">
-            <Item label="Nombre">{s.emergencyContact}</Item>
-            <Item label="Teléfono">{s.emergencyPhone && formatPhone(s.emergencyPhone)}</Item>
-          </Card>
-        </>
+            <Item label="Teléfono" wide>
+              {s.emergencyPhone && formatPhone(s.emergencyPhone)}
+            </Item>
+          </Section>
+        </div>
       )}
 
       <GrantAccessModal staff={s} open={modal === 'access'} onClose={() => setModal(null)} />

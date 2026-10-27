@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Plus, Settings2, Wallet } from 'lucide-react'
 import { api } from '../../lib/api'
@@ -26,7 +26,14 @@ function PayrollPage() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<PayrollStatus | ''>('')
-  const [creating, setCreating] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const [creatingByButton, setCreatingByButton] = useState(false)
+  // El buscador global abre el modal con /nomina?nuevo=1 (también si ya estás en Nómina)
+  const creating = creatingByButton || params.get('nuevo') === '1'
+  const closeCreate = () => {
+    setCreatingByButton(false)
+    if (params.has('nuevo')) setParams({}, { replace: true })
+  }
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const { data, isLoading, isFetching } = useQuery({
@@ -96,7 +103,7 @@ function PayrollPage() {
             <Button variant="glass" icon={Settings2} onClick={() => setSettingsOpen(true)}>
               Configuración
             </Button>
-            <Button variant="accent" icon={Plus} onClick={() => setCreating(true)}>
+            <Button variant="accent" icon={Plus} onClick={() => setCreatingByButton(true)}>
               Nuevo periodo
             </Button>
           </>
@@ -172,14 +179,14 @@ function PayrollPage() {
         emptyMessage="Aún no hay periodos de nómina"
         emptyDescription="Crea un periodo y genera la prenómina a partir de las asistencias."
         emptyAction={
-          <Button icon={Plus} onClick={() => setCreating(true)}>
+          <Button icon={Plus} onClick={() => setCreatingByButton(true)}>
             Nuevo periodo
           </Button>
         }
       />
       {data && <Pagination page={page} totalPages={data.meta.totalPages} total={data.meta.total} onChange={setPage} />}
 
-      <NewPeriodModal open={creating} onClose={() => setCreating(false)} />
+      <NewPeriodModal open={creating} onClose={closeCreate} />
       <PayrollSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )

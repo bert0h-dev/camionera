@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/useAuth'
 import { cn } from '../../lib/cn'
 import { Logo } from './Logo'
 import { visibleNav } from './nav'
+import { preloadPath } from '../../lib/pages'
 
 interface SidebarProps {
   collapsed: boolean
@@ -42,6 +43,8 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
                     to={item.to}
                     end={item.to === '/'}
                     onClick={onNavigate}
+                    onMouseEnter={() => preloadPath(item.to)}
+                    onFocus={() => preloadPath(item.to)}
                     title={collapsed ? item.label : undefined}
                     className={({ isActive }) =>
                       cn(

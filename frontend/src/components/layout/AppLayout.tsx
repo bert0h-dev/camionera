@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/cn'
+import { LoadingBlock } from '../ui/Spinner'
+import { CommandPalette } from '../command/CommandPalette'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
@@ -67,8 +69,11 @@ export function AppLayout() {
         )}
       >
         <Topbar onOpenMenu={() => setMobileOpen(true)} />
+        <CommandPalette />
         <main className="w-full flex-1 p-4 md:p-8">
-          <Outlet />
+          <Suspense fallback={<LoadingBlock text="Cargando pantalla…" className="py-24" />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

@@ -18,6 +18,7 @@ import { GrantAccessDto } from './dto/grant-access.dto.js';
 import { QueryStaffDto } from './dto/query-staff.dto.js';
 import { TerminateStaffDto } from './dto/terminate-staff.dto.js';
 import { UpdateStaffDto } from './dto/update-staff.dto.js';
+import { StaffInsightsService } from './insights/staff-insights.service.js';
 import { StaffService } from './staff.service.js';
 
 const READERS = [UserRole.hr, UserRole.supervisor, UserRole.coordinator];
@@ -27,12 +28,17 @@ const READERS = [UserRole.hr, UserRole.supervisor, UserRole.coordinator];
 @Roles(UserRole.hr)
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staff: StaffService) {}
+  constructor(
+    private readonly staff: StaffService,
+    private readonly insights: StaffInsightsService,
+  ) {}
 
   @Get()
   @Roles(...READERS)
-  findAll(@Query() query: QueryStaffDto) {
-    return this.staff.findAll(query);
+  async findAll(@Query() query: QueryStaffDto) {
+    const page = await this.staff.findAll(query);
+    if (!query.insights) return page;
+    return { ...page, data: await this.insights.enrich(page.data) };
   }
 
   @Get(':id')

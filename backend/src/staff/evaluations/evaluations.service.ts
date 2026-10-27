@@ -168,7 +168,9 @@ export class EvaluationsService {
       where: { id: dto.staffId },
     });
     if (staff.status === StaffStatus.inactive)
-      throw new BadRequestException('No se puede evaluar a un empleado dado de baja');
+      throw new BadRequestException(
+        'No se puede evaluar a un empleado dado de baja',
+      );
     this.assertNotSelf(staff.userId, actor);
 
     const overlap = await this.prisma.staffEvaluation.findFirst({
@@ -353,7 +355,10 @@ export class EvaluationsService {
       recordId: id,
       actionType: ActionType.update,
       oldValues: { status: evaluation.status },
-      newValues: { status: updated.status, employeeComment: dto.employeeComment },
+      newValues: {
+        status: updated.status,
+        employeeComment: dto.employeeComment,
+      },
     });
     return updated;
   }

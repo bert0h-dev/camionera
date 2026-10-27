@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/useAuth'
 import { ListChecks, Plus, Search, Star } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { FilterBar } from '../../components/ui/FilterBar'
+import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Input, Select } from '../../components/ui/Field'
 import { Pagination, Table } from '../../components/ui/Table'
@@ -40,20 +41,65 @@ function EvaluationsPage() {
       ).data,
   })
 
+  // Conteos por estado para la banda (solo se lee el total de cada consulta)
+  const counts = useQuery({
+    queryKey: ['evaluations', 'counts'],
+    queryFn: async () => {
+      const total = (s?: EvaluationStatus) =>
+        api
+          .get<Paginated<Evaluation>>('/evaluations', { params: { limit: 1, status: s } })
+          .then((r) => r.data.meta.total)
+      const [all, draft, finalized, acknowledged] = await Promise.all([
+        total(),
+        total('draft'),
+        total('finalized'),
+        total('acknowledged'),
+      ])
+      return { all, draft, finalized, acknowledged }
+    },
+  })
+  const c = counts.data
+
   return (
     <div className="space-y-6">
       <PageHeader
+        stats={
+          <>
+            <HeroStat label="Evaluaciones" value={c?.all ?? 0} loading={counts.isLoading} hint="registradas en total" />
+            <HeroStat
+              label="En borrador"
+              value={c?.draft ?? 0}
+              tone={c?.draft ? 'warning' : 'neutral'}
+              loading={counts.isLoading}
+              hint="pendientes de finalizar"
+            />
+            <HeroStat
+              label="Sin enterado"
+              value={c?.finalized ?? 0}
+              tone="primary"
+              loading={counts.isLoading}
+              hint="finalizadas, esperando al empleado"
+            />
+            <HeroStat
+              label="Enterado"
+              value={c?.acknowledged ?? 0}
+              tone="success"
+              loading={counts.isLoading}
+              hint="ciclo completo"
+            />
+          </>
+        }
         title="Evaluaciones"
         description="Desempeño del personal por periodo, con criterios ponderados por puesto"
         actions={
           <>
             {canManageCriteria && (
-              <Button variant="secondary" icon={ListChecks} onClick={() => setCriteriaOpen(true)}>
+              <Button variant="glass" icon={ListChecks} onClick={() => setCriteriaOpen(true)}>
                 Criterios
               </Button>
             )}
             {canEvaluate && (
-              <Button icon={Plus} onClick={() => setCreating(true)}>
+              <Button variant="accent" icon={Plus} onClick={() => setCreating(true)}>
                 Nueva evaluación
               </Button>
             )}

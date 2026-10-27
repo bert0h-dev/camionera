@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import type { DashboardSummary, UserRole } from '../lib/types'
+import { HeroStat } from '../components/ui/HeroStat'
+import { LiveClock } from '../components/ui/LiveClock'
+import { PageHeader } from '../components/ui/PageHeader'
 import { ExpirationsPanel } from './home/ExpirationsPanel'
 import { MyEvaluationsCard } from './home/MyEvaluationsCard'
 import { MyMonthCard } from './home/MyMonthCard'
@@ -21,6 +24,18 @@ function greeting() {
 const todayLabel = () =>
   new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }).format(new Date())
 
+type Team = NonNullable<DashboardSummary['team']>
+
+/** Mensaje de la banda: lo más urgente del día en una frase. */
+function headline(team: Team | null | undefined, isTeamReader: boolean) {
+  if (!isTeamReader) return 'Este es tu resumen del día.'
+  if (!team) return 'Cargando el estado del personal…'
+  const n = team.today.missingCheckIn
+  if (n > 0) return `${n} ${n === 1 ? 'persona no ha' : 'personas no han'} registrado su entrada a tiempo.`
+  if (team.today.scheduled === 0) return 'No hay turnos programados para hoy.'
+  return 'Todo el personal con turno ha registrado su entrada.'
+}
+
 function HomePage() {
   const { user } = useAuth()
   const { data, isLoading } = useQuery({
@@ -29,19 +44,67 @@ function HomePage() {
     refetchInterval: 60_000,
   })
   const isTeamReader = !!user && STAFF_READERS.includes(user.role)
+  const t = data?.team
   const firstName = user?.fullName.split(' ')[0]
 
+  // Series de 7 días para las mini-gráficas
+  const attended = t?.trend.map((d) => d.present + d.late + d.half_day)
+  const lates = t?.trend.map((d) => d.late)
+  const todayTotal = t ? t.today.attendance.present + t.today.attendance.late + t.today.attendance.half_day : 0
+  const rate = t?.today.started ? Math.round((todayTotal / t.today.started) * 100) : null
+
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-sm font-medium text-fg-muted first-letter:uppercase">{todayLabel()}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-          {greeting()}, {firstName}
-        </h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          {isTeamReader ? 'Este es el estado de tu personal hoy.' : 'Este es tu resumen del día.'}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`${greeting()}, ${firstName}`}
+        description={
+          <>
+            <span className="first-letter:uppercase">{todayLabel()}</span> · {headline(t, isTeamReader)}
+          </>
+        }
+        aside={<LiveClock />}
+        stats={
+          isTeamReader && (
+            <>
+              <HeroStat
+                label="En turno ahora"
+                value={t?.today.onShiftNow ?? 0}
+                hint={t && `de ${t.today.scheduled} con turno hoy · ${t.today.working} con entrada`}
+                badge={<span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">● en vivo</span>}
+                trend={attended}
+                to="/turnos"
+                loading={isLoading}
+              />
+              <HeroStat
+                label="Sin registrar entrada"
+                value={t?.today.missingCheckIn ?? 0}
+                hint="pasaron la tolerancia de retardo"
+                tone={t?.today.missingCheckIn ? 'danger' : 'neutral'}
+                to="/asistencias"
+                loading={isLoading}
+              />
+              <HeroStat
+                label="Asistencia de hoy"
+                value={rate === null ? '—' : `${rate}%`}
+                hint={t && `de ${t.today.started} turnos iniciados · ${t.today.attendance.late} retardo(s)`}
+                tone={rate !== null && rate >= 90 ? 'success' : rate !== null ? 'warning' : 'neutral'}
+                trend={lates}
+                to="/asistencias"
+                loading={isLoading}
+              />
+              <HeroStat
+                label="Documentos por atender"
+                value={(t?.documents.expired ?? 0) + (t?.documents.expiring ?? 0)}
+                hint={
+                  t && `${t.documents.expired} vencido(s) · ${t.documents.expiring} en ${t.documents.alertDays} días`
+                }
+                tone={t?.documents.expired ? 'danger' : t?.documents.expiring ? 'warning' : 'neutral'}
+                loading={isLoading}
+              />
+            </>
+          )
+        }
+      />
 
       {/* Lo propio del empleado (solo si su usuario está ligado a un empleado) */}
       {data?.me && (
@@ -54,7 +117,7 @@ function HomePage() {
         </div>
       )}
 
-      {isTeamReader && <TeamDashboard team={data?.team} loading={isLoading} />}
+      {isTeamReader && <TeamDashboard team={t} />}
       {isTeamReader && <ExpirationsPanel />}
     </div>
   )

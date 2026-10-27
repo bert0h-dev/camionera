@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button'
 import { Dropdown, DropdownItem, DropdownSeparator } from '../../components/ui/Dropdown'
 import { Input, Select } from '../../components/ui/Field'
 import { FilterBar } from '../../components/ui/FilterBar'
+import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Pagination, Table, type Column } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
@@ -146,13 +147,48 @@ function UsersPage() {
     },
   ]
 
+  // Cifras de la banda: las cuentas son pocas, se leen todas de una vez
+  const all = useQuery({
+    queryKey: ['users', 'all'],
+    queryFn: async () => (await api.get<Paginated<User>>('/users', { params: { limit: 100 } })).data.data,
+  })
+  const users = all.data ?? []
+  const [weekAgo] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+  const stale = users.filter((u) => u.isActive && (!u.lastLogin || new Date(u.lastLogin) < weekAgo)).length
+
   return (
     <div className="space-y-6">
       <PageHeader
+        stats={
+          <>
+            <HeroStat label="Cuentas" value={users.length} loading={all.isLoading} hint="con acceso al sistema" />
+            <HeroStat
+              label="Activas"
+              value={users.filter((u) => u.isActive).length}
+              tone="success"
+              loading={all.isLoading}
+              hint={`${users.filter((u) => !u.isActive).length} desactivada(s)`}
+            />
+            <HeroStat
+              label="Administradores"
+              value={users.filter((u) => u.role === 'admin').length}
+              tone="primary"
+              loading={all.isLoading}
+              hint="acceso total"
+            />
+            <HeroStat
+              label="Sin entrar en 7 días"
+              value={stale}
+              tone={stale ? 'warning' : 'neutral'}
+              loading={all.isLoading}
+              hint="incluye las que nunca han entrado"
+            />
+          </>
+        }
         title="Usuarios"
         description="Cuentas con acceso al sistema y sus permisos"
         actions={
-          <Button icon={Plus} onClick={() => setFormUser(null)}>
+          <Button variant="accent" icon={Plus} onClick={() => setFormUser(null)}>
             Nuevo usuario
           </Button>
         }

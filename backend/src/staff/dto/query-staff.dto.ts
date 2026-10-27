@@ -22,4 +22,14 @@ export class QueryStaffDto extends PaginationQueryDto {
   )
   @IsBoolean()
   activeOnly?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'true = agrega estado de documentos y situación de hoy',
+  })
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  insights?: boolean;
 }

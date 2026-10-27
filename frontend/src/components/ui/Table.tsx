@@ -21,6 +21,8 @@ interface TableProps<T> {
   emptyIcon?: LucideIcon
   emptyAction?: ReactNode
   onRowClick?: (row: T) => void
+  /** Clases extra por fila (p. ej. resaltar las que piden atención) */
+  rowClassName?: (row: T) => string | false | undefined
 }
 
 export function Table<T>({
@@ -33,6 +35,7 @@ export function Table<T>({
   emptyIcon,
   emptyAction,
   onRowClick,
+  rowClassName,
 }: TableProps<T>) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
@@ -69,7 +72,11 @@ export function Table<T>({
                   <tr
                     key={rowKey(row)}
                     onClick={onRowClick && (() => onRowClick(row))}
-                    className={cn('transition-colors hover:bg-surface-muted', onRowClick && 'cursor-pointer')}
+                    className={cn(
+                      'transition-colors hover:bg-surface-muted',
+                      onRowClick && 'cursor-pointer',
+                      rowClassName?.(row),
+                    )}
                   >
                     {columns.map((c) => (
                       <td key={c.header} className={cn('px-4 py-3 text-fg', c.className)}>

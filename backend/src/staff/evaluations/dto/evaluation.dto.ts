@@ -158,7 +158,9 @@ export class QueryEvaluationsDto extends PaginationQueryDto {
   @IsEnum(EvaluationStatus)
   status?: EvaluationStatus;
 
-  @ApiPropertyOptional({ description: 'Periodos que terminan desde esta fecha' })
+  @ApiPropertyOptional({
+    description: 'Periodos que terminan desde esta fecha',
+  })
   @IsOptional()
   @IsDateString({ strict: true })
   from?: string;

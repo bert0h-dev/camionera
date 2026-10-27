@@ -50,7 +50,7 @@ export function ShiftChip({ schedule }: { schedule: Schedule }) {
         .join('\n')}
     >
       <span className={cn('absolute inset-y-0 left-0 w-1', style.bar)} />
-      <div className="tabular flex items-center gap-1 font-semibold">
+      <div className="font-data flex items-center gap-1 font-semibold">
         {formatTime(schedule.startAt)}–{formatTime(schedule.endAt)}
         {schedule.overrideReason && <AlertTriangle className="size-3 text-red-500" aria-label="Forzado" />}
       </div>

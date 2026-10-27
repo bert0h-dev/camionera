@@ -1,162 +1,147 @@
 import { Link } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, ClipboardCheck, FileWarning, Star, UserCheck, Users, UserX } from 'lucide-react'
+import { AlertTriangle, ArrowRight, FileWarning, Star, type LucideIcon } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { STAFF_ROLE_LABELS, type DashboardSummary } from '../../lib/types'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { AttendanceTrendChart } from './AttendanceTrendChart'
-import { StatCard } from './StatCard'
+import { EntryBoard } from './EntryBoard'
 
 type Team = NonNullable<DashboardSummary['team']>
 
-export function TeamDashboard({ team, loading }: { team: Team | null | undefined; loading: boolean }) {
-  const t = team
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+// Colores fijos por posición para la barra de puestos (de mayor a menor)
+const ROLE_COLORS = ['bg-indigo-600', 'bg-indigo-400', 'bg-amber-500', 'bg-sky-500', 'bg-emerald-500', 'bg-slate-400']
 
-  return (
-    <div className="space-y-6">
-      {/* Indicadores del día */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Personal activo"
-          icon={Users}
-          loading={loading}
-          value={t?.staff.active ?? 0}
-          hint={
-            t &&
-            [
-              t.staff.vacation && plural(t.staff.vacation, 'de vacaciones', 'de vacaciones'),
-              t.staff.sickLeave && plural(t.staff.sickLeave, 'incapacitado', 'incapacitados'),
-              t.staff.suspended && plural(t.staff.suspended, 'suspendido', 'suspendidos'),
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          }
-          to="/personal"
-        />
-        <StatCard
-          label="En turno ahora"
-          icon={UserCheck}
-          tone="success"
-          loading={loading}
-          value={t?.today.onShiftNow ?? 0}
-          hint={t && `${t.today.working} con entrada registrada · ${t.today.scheduled} con turno hoy`}
-          to="/turnos"
-        />
-        <StatCard
-          label="Sin registrar entrada"
-          icon={UserX}
-          tone={t?.today.missingCheckIn ? 'danger' : 'info'}
-          loading={loading}
-          value={t?.today.missingCheckIn ?? 0}
-          hint={t && `${t.today.attendance.late} retardo(s) · ${t.today.attendance.absent} falta(s) hoy`}
-          to="/asistencias"
-        />
-        <StatCard
-          label="Documentos por atender"
-          icon={FileWarning}
-          tone={t?.documents.expired ? 'danger' : 'accent'}
-          loading={loading}
-          value={(t?.documents.expired ?? 0) + (t?.documents.expiring ?? 0)}
-          hint={t && `${t.documents.expired} vencido(s) · ${t.documents.expiring} en ${t.documents.alertDays} días`}
-        />
-      </div>
-
+/** Cuerpo del dashboard para lectores de personal (las cifras van en la banda de HomePage). */
+export function TeamDashboard({ team }: { team: Team | null | undefined }) {
+  if (!team)
+    return (
       <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader
-            title="Asistencia de los últimos 7 días"
-            description="Registros por estado; pasa el cursor sobre un día para ver el detalle"
-            actions={
-              <Link to="/asistencias" className="text-sm font-medium text-link hover:underline">
-                Ver asistencias
-              </Link>
-            }
-          />
-          <CardBody>
-            {loading || !t ? <Skeleton className="h-56 w-full" /> : <AttendanceTrendChart rows={t.trend} />}
-          </CardBody>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Personal por puesto" description="Empleados activos" />
-            <CardBody className="space-y-3">
-              {loading || !t ? (
-                <Skeleton className="h-32 w-full" />
-              ) : t.staff.byRole.length === 0 ? (
-                <p className="text-sm text-fg-muted">Aún no hay empleados activos.</p>
-              ) : (
-                t.staff.byRole.map((r) => {
-                  const max = t.staff.byRole[0].count
-                  return (
-                    <div key={r.role}>
-                      <div className="mb-1 flex justify-between text-sm">
-                        <span className="text-fg">{STAFF_ROLE_LABELS[r.role]}</span>
-                        <span className="tabular font-medium text-fg">{r.count}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-surface-sunken">
-                        <div className="h-2 rounded-full bg-primary" style={{ width: `${(r.count / max) * 100}%` }} />
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="Pendientes" />
-            <ul className="divide-y divide-border text-sm">
-              <PendingRow
-                to="/evaluaciones"
-                icon={Star}
-                label="Evaluaciones en borrador"
-                value={t?.evaluations.drafts}
-              />
-              <PendingRow
-                to="/evaluaciones"
-                icon={ClipboardCheck}
-                label="Evaluaciones sin 'enterado'"
-                value={t?.evaluations.pendingAcknowledge}
-              />
-              <PendingRow to="/turnos" icon={CalendarClock} label="Con turno hoy" value={t?.today.scheduled} />
-              {!!t?.today.missingCheckIn && (
-                <PendingRow
-                  to="/asistencias"
-                  icon={AlertTriangle}
-                  label="Entradas por registrar"
-                  value={t.today.missingCheckIn}
-                  danger
-                />
-              )}
-            </ul>
-          </Card>
-        </div>
+        <Skeleton className="h-96 rounded-xl xl:col-span-2" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
-    </div>
-  )
-}
+    )
 
-function PendingRow({
-  to,
-  icon: Icon,
-  label,
-  value,
-  danger,
-}: {
-  to: string
-  icon: typeof Star
-  label: string
-  value: number | undefined
-  danger?: boolean
-}) {
+  const roles = team.staff.byRole
+  const topRoles = roles.slice(0, ROLE_COLORS.length - 1)
+  const others = roles.slice(ROLE_COLORS.length - 1).reduce((t, r) => t + r.count, 0)
+  const segments = [
+    ...topRoles.map((r, i) => ({ label: STAFF_ROLE_LABELS[r.role], count: r.count, color: ROLE_COLORS[i] })),
+    ...(others ? [{ label: 'Otros', count: others, color: ROLE_COLORS.at(-1)! }] : []),
+  ]
+
+  const attention: { to: string; icon: LucideIcon; count: number; text: string; tone: string }[] = [
+    {
+      to: '/asistencias',
+      icon: AlertTriangle,
+      count: team.today.missingCheckIn,
+      text: 'sin registrar entrada, pasada la tolerancia',
+      tone: 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200',
+    },
+    {
+      to: '/personal',
+      icon: FileWarning,
+      count: team.documents.expired,
+      text: 'documentos vencidos sin reemplazo',
+      tone: 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200',
+    },
+    {
+      to: '/personal',
+      icon: FileWarning,
+      count: team.documents.expiring,
+      text: `documentos vencen en ${team.documents.alertDays} días`,
+      tone: 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200',
+    },
+    {
+      to: '/evaluaciones',
+      icon: Star,
+      count: team.evaluations.drafts,
+      text: 'evaluaciones en borrador',
+      tone: 'bg-primary-soft text-primary-soft-fg',
+    },
+  ].filter((a) => a.count > 0)
+
   return (
-    <li>
-      <Link to={to} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-muted">
-        <Icon className={danger ? 'size-4 text-red-500' : 'size-4 text-fg-subtle'} />
-        <span className="flex-1 text-fg">{label}</span>
-        <span className="tabular font-semibold text-fg">{value ?? '—'}</span>
-      </Link>
-    </li>
+    <div className="grid gap-6 xl:grid-cols-3">
+      <Card className="xl:col-span-2">
+        <CardHeader
+          title="Tablero de entradas"
+          description="Turnos de hoy; primero quien debió llegar y no ha registrado entrada"
+          actions={
+            <Link
+              to="/asistencias"
+              className="inline-flex items-center gap-1 text-sm font-medium text-link hover:underline"
+            >
+              Ver asistencias <ArrowRight className="size-4" />
+            </Link>
+          }
+        />
+        <CardBody className="space-y-6">
+          <EntryBoard entries={team.board} />
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-fg">Asistencia de los últimos 7 días</h3>
+            <AttendanceTrendChart rows={team.trend} />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="flex flex-col">
+        <CardHeader title="Requiere atención" />
+        <CardBody className="flex flex-1 flex-col gap-3">
+          {attention.length === 0 ? (
+            <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+              Todo en orden por ahora.
+            </p>
+          ) : (
+            attention.map((a) => (
+              <Link
+                key={a.text}
+                to={a.to}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-opacity hover:opacity-85',
+                  a.tone,
+                )}
+              >
+                <span className="font-data w-8 text-xl font-bold">{a.count}</span>
+                <span className="flex-1">{a.text}</span>
+                <a.icon className="size-4 shrink-0 opacity-70" />
+              </Link>
+            ))
+          )}
+
+          <div className="mt-auto border-t border-border pt-4">
+            <div className="mb-2.5 flex items-baseline justify-between">
+              <h3 className="text-sm font-semibold text-fg">Personal por puesto</h3>
+              <span className="font-data text-xs text-fg-muted">{team.staff.active} activos</span>
+            </div>
+            {segments.length === 0 ? (
+              <p className="text-sm text-fg-muted">Aún no hay empleados activos.</p>
+            ) : (
+              <>
+                <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                  {segments.map((s) => (
+                    <div
+                      key={s.label}
+                      className={s.color}
+                      style={{ flexGrow: s.count }}
+                      title={`${s.label}: ${s.count}`}
+                    />
+                  ))}
+                </div>
+                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  {segments.map((s) => (
+                    <li key={s.label} className="flex items-center gap-2 text-fg-muted">
+                      <span className={cn('size-2 rounded-sm', s.color)} />
+                      <span className="flex-1 truncate">{s.label}</span>
+                      <span className="font-data font-medium text-fg">{s.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
   )
 }

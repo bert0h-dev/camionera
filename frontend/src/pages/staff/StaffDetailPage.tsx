@@ -8,7 +8,6 @@ import {
   CalendarDays,
   ClipboardCheck,
   FileBadge,
-  Hash,
   KeyRound,
   Pencil,
   Phone,
@@ -32,12 +31,14 @@ import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { StaffSchedulesTab } from './StaffSchedulesTab'
 import { StaffAttendanceTab } from './StaffAttendanceTab'
 import { StaffEvaluationsTab } from './StaffEvaluationsTab'
+import { NextShiftsCard, StaffQuickStats } from './StaffQuickSummary'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
@@ -87,7 +88,7 @@ function Section({ title, icon: Icon, children }: { title: string; icon: typeof 
 function Meta({ icon: Icon, children }: { icon: typeof User; children: ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Icon className="size-4 text-fg-subtle" />
+      <Icon className="size-4 text-indigo-300" />
       {children}
     </span>
   )
@@ -161,63 +162,58 @@ function StaffDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Encabezado de la ficha */}
-      <Card className="overflow-hidden">
-        <div className="h-20 bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-500 dark:from-indigo-900 dark:via-indigo-800 dark:to-violet-900" />
-        <div className="px-6">
-          <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
-            <div className="flex items-end gap-4">
-              <Avatar name={name} size="lg" className="size-20 text-2xl ring-4 ring-surface" />
-              <div className="pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">{name}</h1>
-                  <StaffStatusBadge status={s.status} />
-                </div>
-                <p className="text-sm text-fg-muted">{STAFF_ROLE_LABELS[s.role]}</p>
-              </div>
-            </div>
-            {canEdit && !isTerminated && (
-              <div className="flex flex-wrap gap-2 pb-1">
-                <Button variant="secondary" icon={Pencil} onClick={() => navigate(`/personal/${s.id}/editar`)}>
-                  Editar
-                </Button>
-                {!s.user && (
-                  <Button variant="secondary" icon={KeyRound} onClick={() => setModal('access')}>
-                    Dar acceso
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  icon={UserMinus}
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10"
-                  onClick={() => setModal('terminate')}
-                >
-                  Dar de baja
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-fg-muted">
-            <Meta icon={Hash}>
-              <span className="font-mono">{s.employeeNumber}</span>
-            </Meta>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-4">
+            <Avatar name={name} size="lg" className="size-16 text-xl ring-4 ring-amber-400/90" />
+            <span className="flex flex-wrap items-center gap-3">
+              {name}
+              <StaffStatusBadge status={s.status} />
+            </span>
+          </span>
+        }
+        meta={
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-indigo-200 sm:pl-20">
+            <span className="font-data font-semibold text-amber-400">{s.employeeNumber}</span>
+            <Meta icon={Briefcase}>{STAFF_ROLE_LABELS[s.role]}</Meta>
             <Meta icon={Phone}>{formatPhone(s.phone)}</Meta>
             <Meta icon={CalendarDays}>Desde {formatDate(s.hireDate)}</Meta>
             <Meta icon={KeyRound}>
               {s.user ? (s.user.isActive ? `Acceso: ${ROLE_LABELS[s.user.role]}` : 'Acceso desactivado') : 'Sin acceso'}
             </Meta>
             {compliance.data?.compliant && (
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 text-emerald-300">
                 <BadgeCheck className="size-4" />
                 Apto para recorridos
               </span>
             )}
           </div>
-
-          <Tabs items={tabs} value={tab} onChange={setTab} className="mt-4 border-t border-border" />
-        </div>
-      </Card>
+        }
+        actions={
+          canEdit &&
+          !isTerminated && (
+            <>
+              <Button variant="glass" icon={Pencil} onClick={() => navigate(`/personal/${s.id}/editar`)}>
+                Editar
+              </Button>
+              {!s.user && (
+                <Button variant="glass" icon={KeyRound} onClick={() => setModal('access')}>
+                  Dar acceso
+                </Button>
+              )}
+              <Button
+                variant="glass"
+                icon={UserMinus}
+                className="hover:border-red-300/50 hover:bg-red-500/20"
+                onClick={() => setModal('terminate')}
+              >
+                Dar de baja
+              </Button>
+            </>
+          )
+        }
+        bottom={<Tabs items={tabs} value={tab} onChange={setTab} variant="band" />}
+      />
 
       {isTerminated && (
         <Alert tone="neutral" title={`Baja el ${formatDate(s.terminationDate)}`}>
@@ -248,6 +244,7 @@ function StaffDetailPage() {
       {tab === 'evaluations' && <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />}
       {tab === 'schedules' && <StaffSchedulesTab staffId={s.id} staffName={name} editable={!isTerminated} />}
 
+      {tab === 'general' && !isTerminated && <StaffQuickStats staffId={s.id} />}
       {tab === 'general' && (
         <div className="grid gap-6 xl:grid-cols-3">
           <div className="space-y-6 xl:col-span-2">
@@ -280,14 +277,17 @@ function StaffDetailPage() {
               </Item>
             </Section>
           </div>
-          <Section title="Contacto de emergencia" icon={Phone}>
-            <Item label="Nombre" wide>
-              {s.emergencyContact}
-            </Item>
-            <Item label="Teléfono" wide>
-              {s.emergencyPhone && formatPhone(s.emergencyPhone)}
-            </Item>
-          </Section>
+          <div className="space-y-6">
+            {!isTerminated && <NextShiftsCard staffId={s.id} />}
+            <Section title="Contacto de emergencia" icon={Phone}>
+              <Item label="Nombre" wide>
+                {s.emergencyContact}
+              </Item>
+              <Item label="Teléfono" wide>
+                {s.emergencyPhone && formatPhone(s.emergencyPhone)}
+              </Item>
+            </Section>
+          </div>
         </div>
       )}
 

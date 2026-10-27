@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { UserRole } from '../lib/types'
+import { AppSplash } from '../components/layout/AppSplash'
 import { useAuth } from './useAuth'
 
 /** Exige sesión; si se indican roles, también exige uno de ellos (admin siempre pasa). */
@@ -8,7 +9,7 @@ export function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
   const location = useLocation()
 
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center text-slate-500">Cargando…</div>
+    return <AppSplash />
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />
   if (roles && user.role !== 'admin' && !roles.includes(user.role)) {

@@ -38,7 +38,7 @@ function UsersPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['users', { page, search, role }],
     queryFn: async () =>
       (
@@ -226,6 +226,7 @@ function UsersPage() {
         rows={data?.data ?? []}
         rowKey={(u) => u.id}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         emptyIcon={ShieldCheck}
         emptyMessage="Ningún usuario coincide con la búsqueda"
       />

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
+import { Spinner } from './Spinner'
 
 interface PageHeaderProps {
   title: ReactNode
@@ -16,6 +17,8 @@ interface PageHeaderProps {
   bottom?: ReactNode
   /** Columnas de las cifras en pantallas anchas */
   statsColumns?: 4 | 5
+  /** Muestra "Actualizando…" junto al título mientras se refrescan los datos ya visibles */
+  refreshing?: boolean
 }
 
 /**
@@ -31,6 +34,7 @@ export function PageHeader({
   stats,
   bottom,
   statsColumns = 4,
+  refreshing,
 }: PageHeaderProps) {
   return (
     <div className={cn(stats && 'mb-2')}>
@@ -42,7 +46,15 @@ export function PageHeader({
       >
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
+              {refreshing && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs text-indigo-100 ring-1 ring-white/15">
+                  <Spinner size="sm" className="size-3 text-amber-400" />
+                  Actualizando…
+                </span>
+              )}
+            </div>
             {description && <p className="mt-1 text-sm text-indigo-200">{description}</p>}
             {meta && <div className="mt-3">{meta}</div>}
           </div>

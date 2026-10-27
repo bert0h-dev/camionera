@@ -38,7 +38,11 @@ function AttendancePage() {
   // Instante de referencia para atrasos; se renueva al cambiar de día o al recargar
   const [nowMs] = useState(() => Date.now())
 
-  const { data = [], isLoading } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isFetching,
+  } = useQuery({
     queryKey: ['attendance', 'day', date, role],
     queryFn: async () =>
       (await api.get<AttendanceDayRow[]>('/attendance/day', { params: { date, role: role || undefined } })).data,
@@ -248,6 +252,7 @@ function AttendancePage() {
         rowClassName={(r) => isMissing(r) && 'bg-red-50/70 dark:bg-red-500/10'}
         rowKey={(r) => r.staff.id}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         emptyIcon={ClipboardCheck}
         emptyMessage="Nadie tiene turno programado este día"
         emptyDescription="Programa turnos en la sección Turnos para controlar la asistencia."

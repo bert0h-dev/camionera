@@ -31,7 +31,7 @@ function EvaluationsPage() {
   const [creating, setCreating] = useState(false)
   const [criteriaOpen, setCriteriaOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['evaluations', { page, search, status }],
     queryFn: async () =>
       (
@@ -142,6 +142,7 @@ function EvaluationsPage() {
         rows={data?.data ?? []}
         rowKey={(e) => e.id}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         emptyIcon={Star}
         emptyMessage="Sin evaluaciones"
         emptyDescription="Crea una evaluación para medir el desempeño de un empleado en un periodo."

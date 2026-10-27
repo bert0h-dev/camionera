@@ -7,6 +7,7 @@ import { STAFF_ROLE_LABELS, type ExpirationItem } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 import { DocumentStatusBadge } from '../../components/DocumentStatusBadge'
 import { Button } from '../../components/ui/Button'
+import { LoadingBlock } from '../../components/ui/Spinner'
 import { Input } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/toast-context'
 
@@ -89,7 +90,7 @@ export function ExpirationsPanel() {
       </div>
 
       {isLoading ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">Cargando…</p>
+        <LoadingBlock className="py-6" />
       ) : !data?.items.length ? (
         <p className="px-5 py-6 text-sm text-fg-muted">Todo en orden: no hay documentos vencidos ni por vencer.</p>
       ) : (

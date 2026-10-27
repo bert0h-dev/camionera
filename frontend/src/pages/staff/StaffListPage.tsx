@@ -70,7 +70,7 @@ function StaffListPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['staff', { page, search, role, status, insights: true }],
     queryFn: async () =>
       (
@@ -233,6 +233,7 @@ function StaffListPage() {
         rows={data?.data ?? []}
         rowKey={(r) => r.id}
         loading={isLoading}
+        refreshing={isFetching && !isLoading}
         onRowClick={(r) => navigate(`/personal/${r.id}`)}
         emptyIcon={Users}
         emptyMessage={filtered ? 'Ningún empleado coincide con los filtros' : 'Aún no hay empleados'}

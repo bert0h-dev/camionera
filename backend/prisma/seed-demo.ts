@@ -9,6 +9,9 @@ import {
   AttendanceStatus,
   CertificationType,
   EvaluationStatus,
+  PaymentFrequency,
+  PaymentType,
+  PayrollStatus,
   LicenseType,
   PrismaClient,
   ShiftType,
@@ -17,6 +20,7 @@ import {
   UserRole,
 } from '../src/generated/prisma/client.js';
 import { addDays, dateKey, today, weekStart, zonedDateTime } from '../src/common/dates.js';
+import { computePayroll, totals } from '../src/payroll/payroll-rules.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -70,6 +74,7 @@ async function clean() {
     select: { id: true },
   });
   const ids = staff.map((s) => s.id);
+  await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: 'DEMO · ' } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
   await prisma.auditLog.deleteMany({ where: { recordId: { in: ids } } });
   console.log(`Demo eliminada: ${ids.length} empleados`);
@@ -231,9 +236,94 @@ async function load() {
   console.log(`Demo cargada: ${PEOPLE.length} empleados con turnos, asistencias, documentos y evaluaciones`);
 }
 
+// Salario diario de ejemplo por puesto
+const DAILY_SALARY: Record<StaffRole, number> = {
+  [StaffRole.driver]: 650,
+  [StaffRole.collector]: 380,
+  [StaffRole.vendor]: 360,
+  [StaffRole.mechanic]: 520,
+  [StaffRole.supervisor]: 700,
+  [StaffRole.hr]: 600,
+  [StaffRole.admin_staff]: 420,
+};
+const DEMO_PERIOD_PREFIX = 'DEMO · ';
+
+/**
+ * Salarios para los empleados demo y una prenómina cerrada de la semana pasada.
+ * No toca los demás datos demo; se puede correr sobre una demo ya cargada.
+ */
+async function loadPayroll() {
+  const admin = await prisma.user.findFirst({ where: { role: UserRole.admin }, orderBy: { createdAt: 'asc' } });
+  if (!admin) throw new Error('Primero corre el seed base (npx prisma db seed)');
+  const staff = await prisma.staff.findMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
+  if (staff.length === 0) throw new Error('No hay datos demo: corre primero npm run seed:demo');
+
+  await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: DEMO_PERIOD_PREFIX } } });
+  await prisma.staffCompensation.deleteMany({ where: { staffId: { in: staff.map((s) => s.id) } } });
+
+  const day0 = today();
+  const periodStart = addDays(weekStart(day0), -7);
+  const periodEnd = addDays(periodStart, 6);
+  // Dos empleados quedan sin salario para que se vea el aviso
+  const paid = staff.filter((_, i) => i % 9 !== 8);
+  for (const s of paid) {
+    await prisma.staffCompensation.create({
+      data: {
+        staffId: s.id,
+        paymentType: PaymentType.daily,
+        baseSalary: DAILY_SALARY[s.role],
+        paymentFrequency: PaymentFrequency.weekly,
+        effectiveFrom: s.hireDate,
+        createdById: admin.id,
+      },
+    });
+  }
+
+  const period = await prisma.payrollPeriod.create({
+    data: {
+      name: `${DEMO_PERIOD_PREFIX}Semana ${dateKey(periodStart)}`,
+      frequency: PaymentFrequency.weekly,
+      periodStart,
+      periodEnd,
+      status: PayrollStatus.closed,
+      generatedAt: new Date(),
+      closedAt: new Date(),
+      createdById: admin.id,
+    },
+  });
+  for (const s of paid.filter((x) => x.status !== StaffStatus.inactive)) {
+    const records = await prisma.staffAttendance.findMany({
+      where: { staffId: s.id, attendanceDate: { gte: periodStart, lte: periodEnd } },
+    });
+    const result = computePayroll({
+      paymentType: 'daily',
+      baseSalary: DAILY_SALARY[s.role],
+      periodStart,
+      periodEnd,
+      records: records.map((r) => ({ date: r.attendanceDate, status: r.status, overtimeMinutes: r.overtimeMinutes })),
+      latePolicy: { enabled: false, latesPerAbsence: 3 },
+    });
+    await prisma.payrollEntry.create({
+      data: {
+        periodId: period.id,
+        staffId: s.id,
+        paymentType: PaymentType.daily,
+        baseSalary: DAILY_SALARY[s.role],
+        ...result,
+        ...totals(result, []),
+      },
+    });
+  }
+  console.log(`Nómina demo: ${paid.length} salarios y el periodo "${period.name}" cerrado`);
+}
+
 async function main() {
+  if (process.argv.includes('--payroll')) return loadPayroll();
   await clean();
-  if (!process.argv.includes('--clean')) await load();
+  if (!process.argv.includes('--clean')) {
+    await load();
+    await loadPayroll();
+  }
 }
 
 main()

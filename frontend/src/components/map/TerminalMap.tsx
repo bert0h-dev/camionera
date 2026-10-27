@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Search, X } from 'lucide-react'
@@ -132,19 +132,64 @@ function AddressSearch({ initial, onPick }: { initial: string; onPick: (p: LatLn
   )
 }
 
+interface ReverseResult {
+  address?: Record<string, string>
+}
+
+/** Dirección corta y legible del punto: calle y número, colonia, CP, ciudad, estado. Null si no se pudo. */
+async function reverseGeocode({ lat, lng }: LatLng): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lng), format: 'jsonv2', zoom: '18' })
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+      headers: { 'Accept-Language': 'es' },
+    })
+    if (!res.ok) return null
+    const a = ((await res.json()) as ReverseResult).address
+    if (!a) return null
+    const street = [a.road ?? a.pedestrian, a.house_number].filter(Boolean).join(' ')
+    const parts = [
+      street,
+      a.neighbourhood ?? a.suburb ?? a.quarter,
+      a.postcode,
+      a.city ?? a.town ?? a.village ?? a.municipality,
+      a.state,
+    ]
+    return [...new Set(parts.filter(Boolean))].join(', ') || null
+  } catch {
+    return null
+  }
+}
+
 /** Selector de ubicación: clic en el mapa o arrastrar el marcador; también se puede buscar una dirección. */
 export function LocationPicker({
   value,
   onChange,
+  onAddress,
   searchHint,
 }: {
   value: LatLng | null
   onChange: (p: LatLng | null) => void
+  /** Dirección del punto fijado (búsqueda inversa); no se llama si la consulta falla. */
+  onAddress?: (address: string) => void
   searchHint: string
 }) {
   const [target, setTarget] = useState<LatLng | null>(null)
-  const pick = (p: LatLng) => {
+  const [resolving, setResolving] = useState(false)
+  const lastRequest = useRef(0)
+
+  // Cada punto fijado (clic, soltar el marcador o resultado del buscador) consulta su dirección;
+  // solo se usa la respuesta del último para que una lenta no pise a una más nueva
+  const place = (p: LatLng) => {
     onChange(p)
+    if (!onAddress) return
+    const request = ++lastRequest.current
+    setResolving(true)
+    void reverseGeocode(p)
+      .then((address) => request === lastRequest.current && address && onAddress(address))
+      .finally(() => request === lastRequest.current && setResolving(false))
+  }
+  const pick = (p: LatLng) => {
+    place(p)
     setTarget(p)
   }
 
@@ -159,7 +204,7 @@ export function LocationPicker({
           scrollWheelZoom
         >
           <TileLayer url={TILES} attribution={ATTRIBUTION} maxZoom={19} />
-          <ClickToPlace onPick={onChange} />
+          <ClickToPlace onPick={place} />
           <FlyTo target={target} />
           {value && (
             <Marker
@@ -169,7 +214,7 @@ export function LocationPicker({
               eventHandlers={{
                 dragend: (e) => {
                   const { lat, lng } = (e.target as L.Marker).getLatLng()
-                  onChange({ lat: round(lat), lng: round(lng) })
+                  place({ lat: round(lat), lng: round(lng) })
                 },
               }}
             />
@@ -179,8 +224,11 @@ export function LocationPicker({
       <div className="flex items-center justify-between gap-2 text-xs text-fg-muted">
         {value ? (
           <>
-            <span className="font-data">
-              {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+            <span className="flex items-center gap-2">
+              <span className="font-data">
+                {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+              </span>
+              {resolving && <span>Buscando dirección…</span>}
             </span>
             <Button variant="ghost" size="sm" icon={X} onClick={() => onChange(null)}>
               Quitar ubicación

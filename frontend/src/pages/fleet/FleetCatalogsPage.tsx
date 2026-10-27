@@ -49,6 +49,8 @@ type Draft =
       cityId: string
       address: string
       location: LatLng | null
+      /** Dirección del punto marcado cuando el campo ya tenía texto (no se envía) */
+      suggestion?: string
     }
 
 type DraftKind = Draft['kind']
@@ -381,12 +383,34 @@ function FleetCatalogsPage() {
                   value={draft.address}
                   onChange={(e) => setDraft({ ...draft, address: e.target.value })}
                 />
+                {draft.suggestion && draft.suggestion !== draft.address.trim() && (
+                  <p className="-mt-2 text-xs text-fg-muted">
+                    Dirección del punto: <span className="text-fg">{draft.suggestion}</span> ·{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-primary hover:underline"
+                      onClick={() => setDraft({ ...draft, address: draft.suggestion ?? '', suggestion: undefined })}
+                    >
+                      Usar esta
+                    </button>
+                  </p>
+                )}
                 <div className="space-y-1.5">
                   <span className="text-sm font-medium text-fg">Ubicación en el mapa</span>
                   <Suspense fallback={<LoadingBlock text="Cargando mapa…" />}>
                     <LocationPicker
                       value={draft.location}
                       onChange={(location) => setDraft((d) => (d?.kind === 'terminals' ? { ...d, location } : d))}
+                      // Llena la dirección solo si está vacía; si ya hay texto queda como sugerencia
+                      onAddress={(address) =>
+                        setDraft((d) =>
+                          d?.kind !== 'terminals'
+                            ? d
+                            : d.address.trim()
+                              ? { ...d, suggestion: address }
+                              : { ...d, address, suggestion: undefined },
+                        )
+                      }
                       searchHint={[
                         draft.name,
                         activeCities.find((c) => c.id === draft.cityId)?.name,

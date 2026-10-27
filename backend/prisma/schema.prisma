@@ -1,0 +1,12 @@
+// Esquema de la central camionera.
+// Los modelos se agregarán conforme se defina el dominio en /contexto.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -1,0 +1,23 @@
+{
+  "name": "camionera",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n back,front -c blue,green \"npm:dev:back\" \"npm:dev:front\"",
+    "dev:back": "npm run start:dev -w backend",
+    "dev:front": "npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "allowScripts": {
+    "prisma@7.10.1": true,
+    "@prisma/engines@7.10.1": true,
+    "@scarf/scarf": false
+  }
+}

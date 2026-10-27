@@ -1,0 +1,703 @@
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserRole {
+  admin
+  coordinator
+  driver
+  collector
+  vendor
+  viewer
+}
+
+enum DocumentType {
+  dni
+  passport
+  license
+  other
+}
+
+enum TripStatus {
+  scheduled
+  boarding
+  in_transit
+  completed
+  cancelled
+  delayed
+}
+
+enum BusStatus {
+  available
+  in_service
+  maintenance
+  out_of_service
+}
+
+enum BusType {
+  standard
+  executive
+  luxury
+  double_decker
+}
+
+enum SeatType {
+  window
+  aisle
+  front
+  back
+  special_needs
+}
+
+enum MaintenanceType {
+  preventive
+  corrective
+  inspection
+  emergency
+}
+
+enum StaffRole {
+  driver
+  collector
+  mechanic
+  supervisor
+}
+
+enum StaffStatus {
+  active
+  inactive
+  vacation
+  sick_leave
+  suspended
+}
+
+enum LicenseType {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum ShiftType {
+  morning
+  afternoon
+  night
+  split
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  half_day
+  overtime
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  checked_in
+  completed
+  cancelled
+  no_show
+}
+
+enum PaymentMethod {
+  cash
+  card
+  transfer
+  paypal
+  other
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+  partial_refund
+}
+
+enum IncidentType {
+  mechanical
+  accident
+  delay
+  passenger_issue
+  other
+}
+
+enum SeverityLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum SeasonType {
+  low
+  normal
+  high
+  holiday
+}
+
+enum DiscountType {
+  percentage
+  fixed_amount
+}
+
+enum ActionType {
+  insert
+  update
+  delete
+}
+
+// =====================================================
+// MODELS
+// =====================================================
+
+model User {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email            String    @unique @db.VarChar(255)
+  passwordHash     String    @map("password_hash") @db.VarChar(255)
+  role             UserRole  @default(viewer)
+  fullName         String    @map("full_name") @db.VarChar(255)
+  isActive         Boolean   @default(true) @map("is_active")
+  lastLogin        DateTime? @map("last_login") @db.Timestamp()
+  resetToken       String?   @map("reset_token") @db.VarChar(255)
+  resetTokenExpiry DateTime? @map("reset_token_expiry") @db.Timestamp()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  staff                Staff?
+  bookings             Booking[]
+  payments             Payment[]
+  maintenancePerformed BusMaintenance[] @relation("MaintenancePerformedBy")
+  auditLogs            AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Customer {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email         String?       @db.VarChar(255)
+  phone         String?       @db.VarChar(20)
+  fullName      String        @map("full_name") @db.VarChar(255)
+  idDocument    String?       @map("id_document") @db.VarChar(50)
+  documentType  DocumentType? @default(dni) @map("document_type")
+  dateOfBirth   DateTime?     @map("date_of_birth") @db.Date
+  preferences   String?       @db.Text
+  loyaltyPoints Int           @default(0) @map("loyalty_points")
+  totalTrips    Int           @default(0) @map("total_trips")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  bookings Booking[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([idDocument])
+  @@map("customers")
+}
+
+model City {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  state     String   @db.VarChar(100)
+  country   String   @default("México") @db.VarChar(100)
+  code      String   @unique @db.VarChar(10)
+  latitude  Decimal? @db.Decimal(10, 8)
+  longitude Decimal? @db.Decimal(11, 8)
+  timezone  String   @default("America/Mexico_City") @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  routesAsOrigin      Route[]     @relation("OriginCity")
+  routesAsDestination Route[]     @relation("DestinationCity")
+  routeStops          RouteStop[]
+
+  @@index([code])
+  @@index([state])
+  @@index([isActive])
+  @@map("cities")
+}
+
+model Route {
+  id                       String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                     String   @unique @db.VarChar(20)
+  name                     String   @db.VarChar(255)
+  originCityId             String   @map("origin_city_id") @db.Uuid
+  destinationCityId        String   @map("destination_city_id") @db.Uuid
+  basePrice                Decimal  @map("base_price") @db.Decimal(10, 2)
+  estimatedDurationMinutes Int      @map("estimated_duration_minutes")
+  distanceKm               Decimal  @map("distance_km") @db.Decimal(8, 2)
+  description              String?  @db.Text
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  originCity      City            @relation("OriginCity", fields: [originCityId], references: [id])
+  destinationCity City            @relation("DestinationCity", fields: [destinationCityId], references: [id])
+  trips           Trip[]
+  routeStops      RouteStop[]
+  routeSchedules  RouteSchedule[]
+  routePricing    RoutePricing[]
+
+  @@index([originCityId])
+  @@index([destinationCityId])
+  @@index([originCityId, destinationCityId])
+  @@index([isActive])
+  @@index([code])
+  @@map("routes")
+}
+
+model RouteStop {
+  id                        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  routeId                   String   @map("route_id") @db.Uuid
+  cityId                    String   @map("city_id") @db.Uuid
+  stopOrder                 Int      @map("stop_order")
+  durationFromOriginMinutes Int      @map("duration_from_origin_minutes")
+  additionalPrice           Decimal  @default(0) @map("additional_price") @db.Decimal(10, 2)
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  city  City  @relation(fields: [cityId], references: [id])
+
+  @@index([routeId])
+  @@index([cityId])
+  @@index([routeId, stopOrder])
+  @@map("route_stops")
+}
+
+model RouteSchedule {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  routeId       String    @map("route_id") @db.Uuid
+  departureTime DateTime  @map("departure_time") @db.Time()
+  daysOfWeek    String    @map("days_of_week") @db.VarChar(20)
+  isActive      Boolean   @default(true) @map("is_active")
+  validFrom     DateTime  @map("valid_from") @db.Date
+  validUntil    DateTime? @map("valid_until") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@index([departureTime])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@map("route_schedules")
+}
+
+model BusModel {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  brand          String   @db.VarChar(100)
+  model          String   @db.VarChar(100)
+  defaultSeats   Int      @map("default_seats")
+  busType        BusType  @default(standard) @map("bus_type")
+  specifications String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  buses Bus[]
+
+  @@index([busType])
+  @@map("bus_models")
+}
+
+model Bus {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  economicNumber  String    @unique @map("economic_number") @db.VarChar(20)
+  licensePlate    String    @unique @map("license_plate") @db.VarChar(20)
+  modelId         String    @map("model_id") @db.Uuid
+  totalSeats      Int       @map("total_seats")
+  year            Int
+  vin             String?   @db.VarChar(50)
+  status          BusStatus @default(available)
+  lastMaintenance DateTime? @map("last_maintenance") @db.Date
+  nextMaintenance DateTime? @map("next_maintenance") @db.Date
+  odometerKm      Decimal   @default(0) @map("odometer_km") @db.Decimal(10, 2)
+  features        String?   @db.Text
+  insurancePolicy String?   @map("insurance_policy") @db.VarChar(100)
+  insuranceExpiry DateTime? @map("insurance_expiry") @db.Date
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  model       BusModel         @relation(fields: [modelId], references: [id])
+  trips       Trip[]
+  seats       BusSeat[]
+  maintenance BusMaintenance[]
+
+  @@index([economicNumber])
+  @@index([licensePlate])
+  @@index([status])
+  @@index([modelId])
+  @@index([isActive])
+  @@index([nextMaintenance])
+  @@map("buses")
+}
+
+model BusSeat {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  busId         String   @map("bus_id") @db.Uuid
+  seatNumber    String   @map("seat_number") @db.VarChar(10)
+  rowNumber     Int      @map("row_number")
+  columnNumber  Int      @map("column_number")
+  seatType      SeatType @default(aisle) @map("seat_type")
+  isAvailable   Boolean  @default(true) @map("is_available")
+  priceModifier Decimal  @default(0) @map("price_modifier") @db.Decimal(5, 2)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  bus      Bus       @relation(fields: [busId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([busId, seatNumber])
+  @@unique([busId, rowNumber, columnNumber])
+  @@index([busId])
+  @@index([busId, seatNumber])
+  @@index([busId, isAvailable])
+  @@map("bus_seats")
+}
+
+model BusMaintenance {
+  id                    String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  busId                 String          @map("bus_id") @db.Uuid
+  maintenanceDate       DateTime        @map("maintenance_date") @db.Date
+  maintenanceType       MaintenanceType @map("maintenance_type")
+  provider              String?         @db.VarChar(255)
+  cost                  Decimal?        @db.Decimal(10, 2)
+  description           String          @db.Text
+  partsReplaced         String?         @map("parts_replaced") @db.Text
+  odometerAtMaintenance Decimal?        @map("odometer_at_maintenance") @db.Decimal(10, 2)
+  nextScheduled         DateTime?       @map("next_scheduled") @db.Date
+  performedById         String?         @map("performed_by") @db.Uuid
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  bus         Bus   @relation(fields: [busId], references: [id])
+  performedBy User? @relation("MaintenancePerformedBy", fields: [performedById], references: [id])
+
+  @@index([busId])
+  @@index([maintenanceDate])
+  @@index([maintenanceType])
+  @@index([nextScheduled])
+  @@map("bus_maintenance")
+}
+
+model Staff {
+  id               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String?      @unique @map("user_id") @db.Uuid
+  employeeNumber   String       @unique @map("employee_number") @db.VarChar(20)
+  fullName         String       @map("full_name") @db.VarChar(255)
+  email            String?      @db.VarChar(255)
+  phone            String       @db.VarChar(20)
+  role             StaffRole
+  licenseNumber    String?      @map("license_number") @db.VarChar(50)
+  licenseType      LicenseType? @map("license_type")
+  licenseExpiry    DateTime?    @map("license_expiry") @db.Date
+  hireDate         DateTime     @map("hire_date") @db.Date
+  birthDate        DateTime     @map("birth_date") @db.Date
+  emergencyContact String?      @map("emergency_contact") @db.VarChar(255)
+  emergencyPhone   String?      @map("emergency_phone") @db.VarChar(20)
+  address          String?      @db.Text
+  status           StaffStatus  @default(active)
+  isActive         Boolean      @default(true) @map("is_active")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  user              User?             @relation(fields: [userId], references: [id])
+  tripsAsDriver     Trip[]            @relation("TripDriver")
+  tripsAsCollector  Trip[]            @relation("TripCollector")
+  schedules         StaffSchedule[]
+  attendance        StaffAttendance[]
+  incidentsReported TripIncident[]
+
+  @@index([employeeNumber])
+  @@index([role])
+  @@index([status])
+  @@index([userId])
+  @@index([licenseExpiry])
+  @@index([isActive])
+  @@map("staff")
+}
+
+model StaffSchedule {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  staffId      String    @map("staff_id") @db.Uuid
+  scheduleDate DateTime  @map("schedule_date") @db.Date
+  shiftStart   DateTime  @map("shift_start") @db.Time()
+  shiftEnd     DateTime  @map("shift_end") @db.Time()
+  shiftType    ShiftType @map("shift_type")
+  isRestDay    Boolean   @default(false) @map("is_rest_day")
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, scheduleDate])
+  @@index([staffId])
+  @@index([scheduleDate])
+  @@index([shiftType])
+  @@map("staff_schedules")
+}
+
+model StaffAttendance {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  staffId        String           @map("staff_id") @db.Uuid
+  attendanceDate DateTime         @map("attendance_date") @db.Date
+  checkIn        DateTime?        @map("check_in") @db.Time()
+  checkOut       DateTime?        @map("check_out") @db.Time()
+  status         AttendanceStatus
+  notes          String?          @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, attendanceDate])
+  @@index([staffId])
+  @@index([attendanceDate])
+  @@index([status])
+  @@map("staff_attendance")
+}
+
+model Trip {
+  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tripNumber         String     @unique @map("trip_number") @db.VarChar(20)
+  routeId            String     @map("route_id") @db.Uuid
+  busId              String?    @map("bus_id") @db.Uuid
+  driverId           String?    @map("driver_id") @db.Uuid
+  collectorId        String?    @map("collector_id") @db.Uuid
+  tripDate           DateTime   @map("trip_date") @db.Date
+  scheduledDeparture DateTime   @map("scheduled_departure") @db.Time()
+  scheduledArrival   DateTime   @map("scheduled_arrival") @db.Time()
+  actualDeparture    DateTime?  @map("actual_departure") @db.Time()
+  actualArrival      DateTime?  @map("actual_arrival") @db.Time()
+  status             TripStatus @default(scheduled)
+  availableSeats     Int        @map("available_seats")
+  currentPrice       Decimal    @map("current_price") @db.Decimal(10, 2)
+  notes              String?    @db.Text
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  route     Route          @relation(fields: [routeId], references: [id])
+  bus       Bus?           @relation(fields: [busId], references: [id])
+  driver    Staff?         @relation("TripDriver", fields: [driverId], references: [id])
+  collector Staff?         @relation("TripCollector", fields: [collectorId], references: [id])
+  bookings  Booking[]
+  incidents TripIncident[]
+
+  @@index([routeId])
+  @@index([busId])
+  @@index([driverId])
+  @@index([tripDate])
+  @@index([status])
+  @@index([tripNumber])
+  @@index([routeId, tripDate])
+  @@index([routeId, tripDate, status])
+  @@map("trips")
+}
+
+model Booking {
+  id                 String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  bookingNumber      String        @unique @map("booking_number") @db.VarChar(20)
+  tripId             String        @map("trip_id") @db.Uuid
+  customerId         String        @map("customer_id") @db.Uuid
+  seatId             String        @map("seat_id") @db.Uuid
+  userId             String?       @map("user_id") @db.Uuid
+  price              Decimal       @db.Decimal(10, 2)
+  discount           Decimal       @default(0) @db.Decimal(10, 2)
+  tax                Decimal       @default(0) @db.Decimal(10, 2)
+  totalAmount        Decimal       @map("total_amount") @db.Decimal(10, 2)
+  status             BookingStatus @default(pending)
+  qrCode             String?       @unique @map("qr_code") @db.VarChar(255)
+  checkedInAt        DateTime?     @map("checked_in_at") @db.Timestamp()
+  cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamp()
+  cancellationReason String?       @map("cancellation_reason") @db.Text
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  trip              Trip               @relation(fields: [tripId], references: [id])
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  seat              BusSeat            @relation(fields: [seatId], references: [id])
+  user              User?              @relation(fields: [userId], references: [id])
+  payment           Payment?
+  bookingPromotions BookingPromotion[]
+
+  @@index([bookingNumber])
+  @@index([tripId])
+  @@index([customerId])
+  @@index([seatId])
+  @@index([status])
+  @@index([qrCode])
+  @@index([createdAt])
+  @@index([tripId, status])
+  @@map("bookings")
+}
+
+model Payment {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  paymentNumber   String        @unique @map("payment_number") @db.VarChar(20)
+  bookingId       String        @unique @map("booking_id") @db.Uuid
+  userId          String?       @map("user_id") @db.Uuid
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  paymentStatus   PaymentStatus @default(pending) @map("payment_status")
+  transactionId   String?       @map("transaction_id") @db.VarChar(255)
+  paymentGateway  String?       @map("payment_gateway") @db.VarChar(100)
+  gatewayResponse String?       @map("gateway_response") @db.Text
+  paidAt          DateTime?     @map("paid_at") @db.Timestamp()
+  refundedAt      DateTime?     @map("refunded_at") @db.Timestamp()
+  refundAmount    Decimal       @default(0) @map("refund_amount") @db.Decimal(10, 2)
+  refundReason    String?       @map("refund_reason") @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([paymentNumber])
+  @@index([bookingId])
+  @@index([paymentStatus])
+  @@index([paymentMethod])
+  @@index([transactionId])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+model TripIncident {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tripId          String        @map("trip_id") @db.Uuid
+  reportedById    String?       @map("reported_by") @db.Uuid
+  incidentType    IncidentType  @map("incident_type")
+  description     String        @db.Text
+  severity        SeverityLevel @default(medium)
+  incidentTime    DateTime      @map("incident_time") @db.Timestamp()
+  reportedAt      DateTime      @default(now()) @map("reported_at") @db.Timestamp()
+  resolvedAt      DateTime?     @map("resolved_at") @db.Timestamp()
+  resolutionNotes String?       @map("resolution_notes") @db.Text
+
+  // Relations
+  trip       Trip   @relation(fields: [tripId], references: [id])
+  reportedBy Staff? @relation(fields: [reportedById], references: [id])
+
+  @@index([tripId])
+  @@index([incidentType])
+  @@index([severity])
+  @@index([resolvedAt])
+  @@map("trip_incidents")
+}
+
+model RoutePricing {
+  id                   String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  routeId              String     @map("route_id") @db.Uuid
+  seasonType           SeasonType @map("season_type")
+  validFrom            DateTime   @map("valid_from") @db.Date
+  validUntil           DateTime   @map("valid_until") @db.Date
+  priceModifierPercent Decimal    @map("price_modifier_percent") @db.Decimal(5, 2)
+  description          String?    @db.Text
+  isActive             Boolean    @default(true) @map("is_active")
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@index([validFrom, validUntil])
+  @@index([isActive])
+  @@map("route_pricing")
+}
+
+model Promotion {
+  id                String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code              String       @unique @db.VarChar(50)
+  name              String       @db.VarChar(255)
+  description       String?      @db.Text
+  discountType      DiscountType @map("discount_type")
+  discountValue     Decimal      @map("discount_value") @db.Decimal(10, 2)
+  maxDiscount       Decimal?     @map("max_discount") @db.Decimal(10, 2)
+  maxUses           Int?         @map("max_uses")
+  currentUses       Int          @default(0) @map("current_uses")
+  validFrom         DateTime     @map("valid_from") @db.Date
+  validUntil        DateTime     @map("valid_until") @db.Date
+  minPurchaseAmount Decimal      @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
+  isActive          Boolean      @default(true) @map("is_active")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  bookingPromotions BookingPromotion[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@map("promotions")
+}
+
+model BookingPromotion {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  bookingId       String   @map("booking_id") @db.Uuid
+  promotionId     String   @map("promotion_id") @db.Uuid
+  discountApplied Decimal  @map("discount_applied") @db.Decimal(10, 2)
+  appliedAt       DateTime @default(now()) @map("applied_at") @db.Timestamp()
+
+  // Relations
+  booking   Booking   @relation(fields: [bookingId], references: [id])
+  promotion Promotion @relation(fields: [promotionId], references: [id])
+
+  @@index([bookingId])
+  @@index([promotionId])
+  @@map("booking_promotions")
+}
+
+model SystemSetting {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String   @map("setting_value") @db.Text
+  settingType  String   @map("setting_type") @db.VarChar(50)
+  description  String?  @db.Text
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp()
+  updatedBy    String?  @map("updated_by") @db.VarChar(255)
+
+  @@index([settingKey])
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String?    @map("user_id") @db.Uuid
+  tableName  String     @map("table_name") @db.VarChar(100)
+  recordId   String     @map("record_id") @db.Uuid
+  actionType ActionType @map("action_type")
+  oldValues  Json?      @map("old_values") @db.JsonB
+  newValues  Json?      @map("new_values") @db.JsonB
+  ipAddress  String?    @map("ip_address") @db.Inet
+  userAgent  String?    @map("user_agent") @db.Text
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamp()
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tableName])
+  @@index([recordId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

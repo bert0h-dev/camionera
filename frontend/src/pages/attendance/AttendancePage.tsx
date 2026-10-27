@@ -151,7 +151,7 @@ function AttendancePage() {
         actions={
           canClose &&
           isPast && (
-            <Button variant="secondary" icon={Lock} loading={closeDay.isPending} onClick={() => closeDay.mutate()}>
+            <Button variant="glass" icon={Lock} loading={closeDay.isPending} onClick={() => closeDay.mutate()}>
               Cerrar día ({pending} sin registro)
             </Button>
           )

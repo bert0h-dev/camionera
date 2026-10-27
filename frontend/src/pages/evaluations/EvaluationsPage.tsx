@@ -48,12 +48,12 @@ function EvaluationsPage() {
         actions={
           <>
             {canManageCriteria && (
-              <Button variant="secondary" icon={ListChecks} onClick={() => setCriteriaOpen(true)}>
+              <Button variant="glass" icon={ListChecks} onClick={() => setCriteriaOpen(true)}>
                 Criterios
               </Button>
             )}
             {canEvaluate && (
-              <Button icon={Plus} onClick={() => setCreating(true)}>
+              <Button variant="accent" icon={Plus} onClick={() => setCreating(true)}>
                 Nueva evaluación
               </Button>
             )}

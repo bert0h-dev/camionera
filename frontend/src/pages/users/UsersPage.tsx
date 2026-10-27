@@ -152,7 +152,7 @@ function UsersPage() {
         title="Usuarios"
         description="Cuentas con acceso al sistema y sus permisos"
         actions={
-          <Button icon={Plus} onClick={() => setFormUser(null)}>
+          <Button variant="accent" icon={Plus} onClick={() => setFormUser(null)}>
             Nuevo usuario
           </Button>
         }

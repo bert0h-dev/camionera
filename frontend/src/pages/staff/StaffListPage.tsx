@@ -111,7 +111,7 @@ function StaffListPage() {
         description="Expedientes del personal de la central"
         actions={
           canEdit && (
-            <Button icon={Plus} onClick={() => navigate('/personal/nuevo')}>
+            <Button variant="accent" icon={Plus} onClick={() => navigate('/personal/nuevo')}>
               Nuevo empleado
             </Button>
           )

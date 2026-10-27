@@ -85,12 +85,12 @@ function SchedulesPage() {
         actions={
           <>
             {canManageTemplates && (
-              <Button variant="secondary" icon={LayoutTemplate} onClick={() => setTemplatesOpen(true)}>
+              <Button variant="glass" icon={LayoutTemplate} onClick={() => setTemplatesOpen(true)}>
                 Plantillas
               </Button>
             )}
             {canSchedule && (
-              <Button icon={CalendarClock} onClick={() => setBulkOpen(true)}>
+              <Button variant="accent" icon={CalendarClock} onClick={() => setBulkOpen(true)}>
                 Asignar en bloque
               </Button>
             )}

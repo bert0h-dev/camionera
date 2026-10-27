@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
 
 /* Modo oscuro por clase en <html> (ver lib/theme.ts) */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -10,7 +11,8 @@
  */
 :root {
   color-scheme: light;
-  --app: #f6f7fb;
+  --font-data: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --app: #eceff8;
   --surface: #ffffff;
   --surface-muted: #f8fafc;
   --surface-sunken: #f1f5f9;
@@ -134,4 +136,18 @@
   ::selection {
     background: var(--primary-soft);
   }
+}
+
+/* Banda de encabezado (topbar + hero): igual en ambos temas, más profunda en oscuro */
+@utility bg-band {
+  background-image: linear-gradient(90deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+  .dark & {
+    background-image: linear-gradient(90deg, #0b0a2a 0%, #1e1b4b 60%, #312e81 100%);
+  }
+}
+
+/* Datos operativos (horas, cifras, números de empleado): mono con dígitos tabulares */
+@utility font-data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
 }

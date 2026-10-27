@@ -2,12 +2,14 @@ import type { ButtonHTMLAttributes } from 'react'
 import { Loader2, type LucideIcon } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent'
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent' | 'glass'
 type Size = 'sm' | 'md' | 'icon'
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-primary text-primary-fg shadow-sm hover:bg-primary-hover',
-  accent: 'bg-accent text-slate-950 shadow-sm hover:brightness-105',
+  accent: 'bg-amber-400 font-semibold text-indigo-950 shadow-sm hover:bg-amber-300',
+  // Sobre la banda índigo del encabezado
+  glass: 'border border-white/25 bg-white/10 text-white hover:bg-white/20',
   secondary: 'border border-border-strong bg-surface text-fg shadow-sm hover:bg-surface-muted',
   danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
   ghost: 'text-fg-muted hover:bg-surface-sunken hover:text-fg',

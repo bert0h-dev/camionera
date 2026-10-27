@@ -12,7 +12,9 @@ export class QueryUsersDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
   @IsBoolean()
   isActive?: boolean;
 }

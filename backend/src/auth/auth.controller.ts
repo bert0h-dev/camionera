@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -8,9 +19,17 @@ import { AuthService, SessionMeta } from './auth.service.js';
 import type { AuthUser } from './auth.types.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import {
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/password-reset.dto.js';
 
 const REFRESH_COOKIE = 'refresh_token';
 
+const cookieOf = (req: Request) =>
+  req.cookies?.[REFRESH_COOKIE] as string | undefined;
+
+// Las rutas de sesiones viven bajo /auth porque la cookie del refresh token solo se envía ahí
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -39,11 +58,13 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(200)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const token = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
       const { user, accessToken, refreshToken } = await this.auth.refresh(
-        token ?? '',
+        cookieOf(req) ?? '',
         this.meta(req),
       );
       res.cookie(REFRESH_COOKIE, refreshToken, this.cookieOptions());
@@ -58,26 +79,73 @@ export class AuthController {
   @Post('logout')
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    await this.auth.logout(req.cookies?.[REFRESH_COOKIE] as string | undefined);
+    await this.auth.logout(cookieOf(req));
     res.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(204)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.auth.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(204)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.auth.resetPassword(dto.token, dto.newPassword);
   }
 
   @ApiBearerAuth()
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
-    return this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      include: {
+        staff: { select: { id: true, employeeNumber: true, role: true } },
+      },
+    });
   }
 
+  /** Cambia la contraseña propia; la sesión actual sigue abierta y las demás se cierran. */
   @ApiBearerAuth()
   @Post('change-password')
   @HttpCode(204)
   async changePassword(
     @CurrentUser() user: AuthUser,
     @Body() dto: ChangePasswordDto,
-    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
-    await this.auth.changePassword(user.id, dto.currentPassword, dto.newPassword);
-    res.clearCookie(REFRESH_COOKIE, this.cookieOptions());
+    await this.auth.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+      cookieOf(req),
+    );
+  }
+
+  @ApiBearerAuth()
+  @Get('sessions')
+  sessions(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    return this.auth.sessions(user.id, cookieOf(req));
+  }
+
+  @ApiBearerAuth()
+  @Post('sessions/revoke-others')
+  @HttpCode(204)
+  async revokeOthers(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    await this.auth.revokeOtherSessions(user.id, cookieOf(req));
+  }
+
+  @ApiBearerAuth()
+  @Delete('sessions/:id')
+  @HttpCode(204)
+  revokeSession(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.auth.revokeSession(user.id, id);
   }
 
   private meta(req: Request): SessionMeta {

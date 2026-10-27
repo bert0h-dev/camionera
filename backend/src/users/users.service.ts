@@ -64,8 +64,13 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto, actorId: string) {
-    if (id === actorId && (dto.isActive === false || (dto.role && dto.role !== 'admin'))) {
-      throw new BadRequestException('No puedes desactivarte ni quitarte el rol de administrador');
+    if (
+      id === actorId &&
+      (dto.isActive === false || (dto.role && dto.role !== 'admin'))
+    ) {
+      throw new BadRequestException(
+        'No puedes desactivarte ni quitarte el rol de administrador',
+      );
     }
 
     const before = await this.findOne(id);
@@ -85,10 +90,82 @@ export class UsersService {
     return user;
   }
 
+  /** Ficha del usuario: empleado ligado, sesiones abiertas y su actividad reciente. */
+  async detail(id: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id },
+      include: {
+        staff: {
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstName: true,
+            lastName: true,
+            secondLastName: true,
+            role: true,
+          },
+        },
+      },
+    });
+    const [sessions, activity] = await Promise.all([
+      this.auth.sessions(id),
+      this.prisma.auditLog.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 15,
+        select: {
+          id: true,
+          tableName: true,
+          recordId: true,
+          actionType: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+    return { ...user, sessions, activity };
+  }
+
+  async forcePasswordChange(id: string, actorId: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { mustChangePassword: true },
+    });
+    await this.logAction(id, actorId, { mustChangePassword: true });
+  }
+
+  async revokeSessions(id: string, actorId: string) {
+    await this.auth.revokeAllForUser(id);
+    await this.logAction(id, actorId, { sessionsRevoked: true });
+  }
+
+  async unlock(id: string, actorId: string) {
+    await this.prisma.user.update({
+      where: { id },
+      data: { lockedUntil: null, failedLoginAttempts: 0 },
+    });
+    await this.logAction(id, actorId, { unlocked: true });
+  }
+
+  private logAction(id: string, actorId: string, newValues: object) {
+    return this.audit.log({
+      userId: actorId,
+      tableName: TABLE,
+      recordId: id,
+      actionType: ActionType.update,
+      newValues,
+    });
+  }
+
+  /** El admin asigna una contraseña temporal: el usuario deberá cambiarla al entrar. */
   async resetPassword(id: string, password: string, actorId: string) {
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash: await argon2.hash(password) },
+      data: {
+        passwordHash: await argon2.hash(password),
+        mustChangePassword: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
     await this.auth.revokeAllForUser(id);
     await this.audit.log({

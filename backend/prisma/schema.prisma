@@ -120,15 +120,19 @@ enum ActionType {
 // =====================================================
 
 model User {
-  id           String    @id @default(uuid(7)) @db.Uuid
-  email        String    @unique @db.VarChar(255)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  role         UserRole  @default(viewer)
-  fullName     String    @map("full_name") @db.VarChar(255)
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLogin    DateTime? @map("last_login") @db.Timestamptz()
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  id                  String    @id @default(uuid(7)) @db.Uuid
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String    @map("password_hash") @db.VarChar(255)
+  role                UserRole  @default(viewer)
+  fullName            String    @map("full_name") @db.VarChar(255)
+  isActive            Boolean   @default(true) @map("is_active")
+  lastLogin           DateTime? @map("last_login") @db.Timestamptz()
+  // Seguridad de acceso
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz()
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
   staff              Staff?
@@ -149,14 +153,16 @@ model User {
 }
 
 model RefreshToken {
-  id        String    @id @default(uuid(7)) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
-  revokedAt DateTime? @map("revoked_at") @db.Timestamptz()
-  userAgent String?   @map("user_agent") @db.Text
-  ipAddress String?   @map("ip_address") @db.VarChar(45)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  tokenHash        String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz()
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz()
+  userAgent        String?   @map("user_agent") @db.Text
+  ipAddress        String?   @map("ip_address") @db.VarChar(45)
+  // Hereda el valor del token anterior al rotar: identifica la sesión aunque cambie el token
+  sessionStartedAt DateTime  @default(now()) @map("session_started_at") @db.Timestamptz()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

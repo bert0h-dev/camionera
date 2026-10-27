@@ -38,6 +38,8 @@ import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { StaffSchedulesTab } from './StaffSchedulesTab'
 import { StaffAttendanceTab } from './StaffAttendanceTab'
 import { StaffEvaluationsTab } from './StaffEvaluationsTab'
+import { StaffPayrollTab } from './StaffPayrollTab'
+import { useAuth } from '../../auth/useAuth'
 import { NextShiftsCard, StaffQuickStats } from './StaffQuickSummary'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
@@ -98,6 +100,8 @@ function StaffDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const canEdit = useCanEditStaff()
+  const { user } = useAuth()
+  const canSeePayroll = user?.role === 'admin' || user?.role === 'hr'
   const [modal, setModal] = useState<'access' | 'terminate' | null>(null)
   const [tab, setTab] = useState<TabKey>('general')
 
@@ -157,7 +161,8 @@ function StaffDetailPage() {
     { key: 'schedules', label: 'Turnos', icon: CalendarClock },
     { key: 'attendance', label: 'Asistencias', icon: ClipboardCheck },
     { key: 'evaluations', label: 'Evaluaciones', icon: Star },
-    { key: 'payroll', label: 'Nómina', icon: Wallet, disabled: true }, // fase 1.6
+    // Salarios: solo RRHH y admin
+    { key: 'payroll', label: 'Nómina', icon: Wallet, disabled: !canSeePayroll },
   ]
 
   return (
@@ -241,6 +246,7 @@ function StaffDetailPage() {
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
       {tab === 'attendance' && <StaffAttendanceTab staffId={s.id} />}
+      {tab === 'payroll' && canSeePayroll && <StaffPayrollTab staffId={s.id} editable={!isTerminated} />}
       {tab === 'evaluations' && <StaffEvaluationsTab staffId={s.id} staffUserId={s.userId} editable={!isTerminated} />}
       {tab === 'schedules' && <StaffSchedulesTab staffId={s.id} staffName={name} editable={!isTerminated} />}
 

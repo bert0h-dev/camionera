@@ -68,3 +68,9 @@ export function formatMinutes(minutes: number) {
   const m = minutes % 60
   return [h && `${h} h`, m && `${m} min`].filter(Boolean).join(' ')
 }
+
+const MONEY = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' })
+
+/** 1234.5 → '$1,234.50' */
+export const formatMoney = (value: number | string | null | undefined) =>
+  value == null || value === '' ? '—' : MONEY.format(Number(value))

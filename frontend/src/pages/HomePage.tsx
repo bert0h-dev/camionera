@@ -7,6 +7,7 @@ import { LiveClock } from '../components/ui/LiveClock'
 import { PageHeader } from '../components/ui/PageHeader'
 import { ExpirationsPanel } from './home/ExpirationsPanel'
 import { MyEvaluationsCard } from './home/MyEvaluationsCard'
+import { MyPayslipsCard } from './home/MyPayslipsCard'
 import { MyMonthCard } from './home/MyMonthCard'
 import { MyShiftCard } from './home/MyShiftCard'
 import { TeamDashboard } from './home/TeamDashboard'
@@ -114,6 +115,9 @@ function HomePage() {
           <MyMonthCard me={data.me} />
           <div className="lg:col-span-2">
             <MyEvaluationsCard />
+          </div>
+          <div className="lg:col-span-2">
+            <MyPayslipsCard />
           </div>
         </div>
       )}

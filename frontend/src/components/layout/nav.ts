@@ -1,4 +1,13 @@
-import { CalendarClock, ClipboardCheck, LayoutDashboard, ShieldCheck, Star, Users, type LucideIcon } from 'lucide-react'
+import {
+  CalendarClock,
+  ClipboardCheck,
+  LayoutDashboard,
+  ShieldCheck,
+  Star,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import type { UserRole } from '../../lib/types'
 
 export interface NavItem {
@@ -25,6 +34,7 @@ export const NAV: NavGroup[] = [
       { to: '/turnos', label: 'Turnos', icon: CalendarClock, roles: STAFF_READERS },
       { to: '/asistencias', label: 'Asistencias', icon: ClipboardCheck, roles: STAFF_READERS },
       { to: '/evaluaciones', label: 'Evaluaciones', icon: Star, roles: STAFF_READERS },
+      { to: '/nomina', label: 'Nómina', icon: Wallet, roles: ['hr'] },
     ],
   },
   {
@@ -49,6 +59,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   asistencias: 'Asistencias',
   evaluaciones: 'Evaluaciones',
   usuarios: 'Usuarios',
+  nomina: 'Nómina',
   nuevo: 'Nuevo',
   editar: 'Editar',
 }

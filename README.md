@@ -42,7 +42,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 
 |  #  | Módulo                     |          Estado          |
 | :-: | -------------------------- | :----------------------: |
-|  1  | **Gestión de Personal**    | 🚧 En curso (1.0–1.5 ✅) |
+|  1  | **Gestión de Personal**    | ✅ Completado            |
 |  2  | Administración del Sistema |       ⏳ Pendiente       |
 |  3  | Gestión de Rutas           |       ⏳ Pendiente       |
 |  4  | Gestión de Recorridos      |       ⏳ Pendiente       |
@@ -60,7 +60,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 | 1.3 | **Turnos**: plantillas, programación semanal y masiva, validación NOM-087 / LFT | ✅ |
 | 1.4 | **Asistencias**: autoregistro, retardos, horas extra, cierre diario automático | ✅ |
 | 1.5 | **Evaluaciones de desempeño**: criterios ponderados por puesto, flujo con "enterado" | ✅ |
-| 1.6 | **Nómina base** a partir de asistencias | ⏳ |
+| 1.6 | **Prenómina**: salarios con historial, cálculo LFT (extras, prima dominical), retardos configurables, exportación CSV/Excel | ✅ |
 
 ---
 
@@ -220,6 +220,7 @@ Inicia sesión con el admin definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWOR
 | `prisma:migrate`  | Crea o aplica migraciones en desarrollo       |
 | `prisma:generate` | Regenera el cliente de Prisma                 |
 | `prisma:seed`     | Carga los datos base                          |
+| `seed:demo`       | Datos de demostración (`-- --clean` los borra, `-- --payroll` solo agrega la nómina demo) |
 | `start:prod`      | Ejecuta la build de producción                |
 
 > ⚠️ Después de cada `prisma migrate dev` ejecuta `npx prisma generate`; no se regenera solo.
@@ -258,6 +259,7 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | Personal | `staff`, `staff_licenses`, `staff_certifications` |
 | Turnos y asistencia | `shift_templates`, `staff_schedules`, `staff_attendance` |
 | Evaluaciones | `evaluation_criteria`, `staff_evaluations`, `staff_evaluation_scores` |
+| Nómina | `staff_compensations`, `payroll_periods`, `payroll_entries`, `payroll_adjustments` |
 | Sistema | `system_settings`, `audit_logs` |
 
 ---

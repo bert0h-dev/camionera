@@ -1,6 +1,6 @@
 # Módulo 1 — Gestión de Personal (plan propuesto)
 
-**Estado:** 🚧 En curso — 1.0–1.5 ✅ (docs 03–08); siguiente: 1.6 Nómina
+**Estado:** ✅ Completado — 1.0–1.6 (docs 03–09)
 **Fuente:** `contexto/00-importante.md`
 
 ## Observación clave

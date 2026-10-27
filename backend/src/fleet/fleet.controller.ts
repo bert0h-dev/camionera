@@ -17,6 +17,7 @@ import { BusModelsService } from './bus-models.service.js';
 import { CatalogsService } from './catalogs.service.js';
 import {
   CatalogQueryDto,
+  TerminalQueryDto,
   CreateBusModelDto,
   CreateCityDto,
   CreateFuelTypeDto,
@@ -85,8 +86,8 @@ export class FleetCatalogsController {
 
   @Get('terminals')
   @Roles(...FLEET_READERS)
-  terminals(@Query() q: CatalogQueryDto) {
-    return this.catalogs.terminals(q.includeInactive);
+  terminals(@Query() q: TerminalQueryDto) {
+    return this.catalogs.terminals(q.includeInactive, q.located);
   }
 
   @Post('terminals')

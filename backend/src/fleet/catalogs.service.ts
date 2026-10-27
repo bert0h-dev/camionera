@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { ActionType } from '../generated/prisma/enums.js';
@@ -88,15 +88,32 @@ export class CatalogsService {
 
   // ---------- Terminales ----------
 
-  terminals(includeInactive = false) {
+  /** `located` = solo las que tienen ubicación, que son las únicas que se pueden usar en unidades y rutas. */
+  terminals(includeInactive = false, located = false) {
     return this.prisma.terminal.findMany({
-      where: includeInactive ? undefined : { isActive: true },
+      where: {
+        isActive: includeInactive ? undefined : true,
+        ...(located && { latitude: { not: null }, longitude: { not: null } }),
+      },
       include: { city: { select: { id: true, name: true, state: true } } },
       orderBy: { code: 'asc' },
     });
   }
 
+  /** Para los módulos que asignan terminales: debe existir, estar activa y tener ubicación. */
+  async assertUsableTerminal(id: string) {
+    const t = await this.prisma.terminal.findUnique({ where: { id } });
+    if (!t || !t.isActive)
+      throw new BadRequestException('La terminal no existe o está desactivada');
+    if (t.latitude === null || t.longitude === null)
+      throw new BadRequestException(
+        `La terminal ${t.code} no tiene ubicación; márcala en el mapa antes de usarla`,
+      );
+    return t;
+  }
+
   async createTerminal(dto: CreateTerminalDto, actor: AuthUser) {
+    checkCoordinates(dto.latitude, dto.longitude);
     const row = await this.prisma.terminal.create({ data: dto });
     await this.log(actor, 'terminals', row.id, ActionType.insert, null, row);
     return row;
@@ -106,8 +123,19 @@ export class CatalogsService {
     const before = await this.prisma.terminal.findUniqueOrThrow({
       where: { id },
     });
+    if (dto.latitude !== undefined || dto.longitude !== undefined)
+      checkCoordinates(dto.latitude, dto.longitude);
     const row = await this.prisma.terminal.update({ where: { id }, data: dto });
     await this.log(actor, 'terminals', id, ActionType.update, before, row);
     return row;
   }
+}
+
+/** Latitud y longitud van juntas: las dos o ninguna. */
+function checkCoordinates(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+) {
+  if (((lat ?? null) === null) !== ((lng ?? null) === null))
+    throw new BadRequestException('La ubicación necesita latitud y longitud');
 }

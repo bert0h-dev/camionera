@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Building2, Fuel, MapPin, Plus } from 'lucide-react'
+import { Building2, Fuel, Map as MapIcon, MapPin, Plus } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import type { City, FuelType, Terminal } from '../../lib/types'
 import { Badge } from '../../components/ui/Badge'
@@ -10,20 +10,30 @@ import { HeroStat } from '../../components/ui/HeroStat'
 import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Table, type Column } from '../../components/ui/Table'
+import { LoadingBlock } from '../../components/ui/Spinner'
+import type { LatLng, MapPoint } from '../../components/map/TerminalMap'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { useCanEditFleet, useCities, useFuelTypes, useTerminals } from './useFleet'
 
-type TabKey = 'terminals' | 'cities' | 'fuel'
+// El mapa (Leaflet) se descarga solo cuando se abre
+const LocationPicker = lazy(() =>
+  import('../../components/map/TerminalMap').then((m) => ({ default: m.LocationPicker })),
+)
+const PointsMap = lazy(() => import('../../components/map/TerminalMap').then((m) => ({ default: m.PointsMap })))
+
+type TabKey = 'terminals' | 'map' | 'cities' | 'fuel'
 
 const TABS: TabItem<TabKey>[] = [
   { key: 'terminals', label: 'Terminales', icon: Building2 },
+  { key: 'map', label: 'Mapa', icon: MapIcon },
   { key: 'cities', label: 'Ciudades', icon: MapPin },
   { key: 'fuel', label: 'Combustibles', icon: Fuel },
 ]
 
 const NEW_LABEL: Record<TabKey, string> = {
   terminals: 'Nueva terminal',
+  map: 'Nueva terminal',
   cities: 'Nueva ciudad',
   fuel: 'Nuevo combustible',
 }
@@ -31,20 +41,33 @@ const NEW_LABEL: Record<TabKey, string> = {
 type Draft =
   | { kind: 'fuel'; id?: string; name: string; unit: string }
   | { kind: 'cities'; id?: string; name: string; state: string }
-  | { kind: 'terminals'; id?: string; code: string; name: string; cityId: string; address: string }
+  | {
+      kind: 'terminals'
+      id?: string
+      code: string
+      name: string
+      cityId: string
+      address: string
+      location: LatLng | null
+    }
 
-const URL: Record<TabKey, string> = {
+type DraftKind = Draft['kind']
+
+const URL: Record<DraftKind, string> = {
   fuel: '/fleet/fuel-types',
   cities: '/fleet/cities',
   terminals: '/fleet/terminals',
 }
 
-const empty = (kind: TabKey): Draft =>
-  kind === 'fuel'
-    ? { kind, name: '', unit: 'L' }
-    : kind === 'cities'
-      ? { kind, name: '', state: '' }
-      : { kind, code: '', name: '', cityId: '', address: '' }
+const empty = (tab: TabKey): Draft =>
+  tab === 'fuel'
+    ? { kind: 'fuel', name: '', unit: 'L' }
+    : tab === 'cities'
+      ? { kind: 'cities', name: '', state: '' }
+      : { kind: 'terminals', code: '', name: '', cityId: '', address: '', location: null }
+
+const locationOf = (t: Terminal): LatLng | null =>
+  t.latitude != null && t.longitude != null ? { lat: Number(t.latitude), lng: Number(t.longitude) } : null
 
 const activeBadge = (active: boolean) => (
   <Badge tone={active ? 'success' : 'neutral'} dot>
@@ -64,8 +87,23 @@ function FleetCatalogsPage() {
   const terminals = useTerminals(true)
 
   const save = useMutation({
-    mutationFn: async ({ kind, id, ...data }: Draft) => {
-      const body = 'address' in data ? { ...data, address: data.address || null } : data
+    mutationFn: async (draft: Draft) => {
+      const { kind, id } = draft
+      let body: object
+      if (draft.kind === 'terminals') {
+        const { location, address, code, name, cityId } = draft
+        body = {
+          code,
+          name,
+          cityId,
+          address: address || null,
+          latitude: location?.lat ?? null,
+          longitude: location?.lng ?? null,
+        }
+      } else {
+        const { kind: _k, id: _i, ...rest } = draft
+        body = rest
+      }
       if (id) await api.patch(`${URL[kind]}/${id}`, body)
       else await api.post(URL[kind], body)
     },
@@ -78,13 +116,13 @@ function FleetCatalogsPage() {
   })
 
   const toggle = useMutation({
-    mutationFn: ({ kind, id, isActive }: { kind: TabKey; id: string; isActive: boolean }) =>
+    mutationFn: ({ kind, id, isActive }: { kind: DraftKind; id: string; isActive: boolean }) =>
       api.patch(`${URL[kind]}/${id}`, { isActive: !isActive }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fleet'] }),
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
 
-  const actions = (kind: TabKey, row: { id: string; isActive: boolean }, edit: Draft) =>
+  const actions = (kind: DraftKind, row: { id: string; isActive: boolean }, edit: Draft) =>
     canEdit && (
       <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
         <Button variant="ghost" size="sm" onClick={() => setDraft(edit)}>
@@ -101,6 +139,19 @@ function FleetCatalogsPage() {
     { header: 'Terminal', cell: (t) => <span className="font-medium">{t.name}</span> },
     { header: 'Ciudad', cell: (t) => `${t.city.name}, ${t.city.state}` },
     { header: 'Dirección', cell: (t) => t.address ?? <span className="text-fg-subtle">—</span> },
+    {
+      header: 'Ubicación',
+      cell: (t) =>
+        locationOf(t) ? (
+          <Badge tone="success" dot>
+            Marcada
+          </Badge>
+        ) : (
+          <Badge tone="warning" dot>
+            Sin ubicación
+          </Badge>
+        ),
+    },
     { header: 'Estado', cell: (t) => activeBadge(t.isActive) },
     {
       header: '',
@@ -112,6 +163,7 @@ function FleetCatalogsPage() {
           name: t.name,
           cityId: t.cityId,
           address: t.address ?? '',
+          location: locationOf(t),
         }),
     },
   ]
@@ -135,6 +187,19 @@ function FleetCatalogsPage() {
   const activeCities = (cities.data ?? []).filter((c) => c.isActive)
   const loading = fuels.isLoading || cities.isLoading || terminals.isLoading
   const count = (rows: { isActive: boolean }[] | undefined) => (rows ?? []).filter((r) => r.isActive).length
+  const activeTerminals = (terminals.data ?? []).filter((t) => t.isActive)
+  const unlocated = activeTerminals.filter((t) => !locationOf(t)).length
+
+  const points = useMemo<MapPoint[]>(
+    () =>
+      (terminals.data ?? []).flatMap((t) => {
+        const loc = t.isActive && locationOf(t)
+        return loc
+          ? [{ id: t.id, ...loc, title: `${t.code} · ${t.name}`, subtitle: `${t.city.name}, ${t.city.state}` }]
+          : []
+      }),
+    [terminals.data],
+  )
 
   return (
     <div className="space-y-6">
@@ -171,8 +236,16 @@ function FleetCatalogsPage() {
               loading={loading}
               hint="aún no tienen dónde operar"
             />
+            <HeroStat
+              label="Terminales sin ubicación"
+              value={unlocated}
+              tone={unlocated ? 'warning' : 'neutral'}
+              loading={loading}
+              hint="no se podrán usar hasta marcarlas"
+            />
           </>
         }
+        statsColumns={5}
         bottom={<Tabs variant="band" items={TABS} value={tab} onChange={setTab} />}
       />
 
@@ -187,6 +260,18 @@ function FleetCatalogsPage() {
           emptyMessage="Aún no hay terminales"
           emptyDescription="Primero registra la ciudad y después su terminal"
         />
+      )}
+      {tab === 'map' && (
+        <div className="space-y-2">
+          <Suspense fallback={<LoadingBlock text="Cargando mapa…" />}>
+            <PointsMap points={points} />
+          </Suspense>
+          {unlocated > 0 && (
+            <p className="text-sm text-fg-muted">
+              {unlocated} terminal(es) activa(s) sin ubicación no aparecen en el mapa; edítalas para marcarlas.
+            </p>
+          )}
+        </div>
       )}
       {tab === 'cities' && (
         <Table
@@ -214,6 +299,7 @@ function FleetCatalogsPage() {
       <Modal
         open={!!draft}
         title={draft ? (draft.id ? 'Editar' : NEW_LABEL[draft.kind]) : ''}
+        size={draft?.kind === 'terminals' ? 'lg' : 'md'}
         onClose={() => setDraft(null)}
       >
         {draft && (
@@ -295,6 +381,27 @@ function FleetCatalogsPage() {
                   value={draft.address}
                   onChange={(e) => setDraft({ ...draft, address: e.target.value })}
                 />
+                <div className="space-y-1.5">
+                  <span className="text-sm font-medium text-fg">Ubicación en el mapa</span>
+                  <Suspense fallback={<LoadingBlock text="Cargando mapa…" />}>
+                    <LocationPicker
+                      value={draft.location}
+                      onChange={(location) => setDraft((d) => (d?.kind === 'terminals' ? { ...d, location } : d))}
+                      searchHint={[
+                        draft.name,
+                        activeCities.find((c) => c.id === draft.cityId)?.name,
+                        activeCities.find((c) => c.id === draft.cityId)?.state,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    />
+                  </Suspense>
+                  {!draft.location && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Puedes guardarla sin ubicación, pero no se podrá asignar a unidades ni rutas hasta marcarla.
+                    </p>
+                  )}
+                </div>
               </>
             )}
             <div className="flex justify-end gap-2">

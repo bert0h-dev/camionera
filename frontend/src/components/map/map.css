@@ -1,0 +1,28 @@
+/* Mapas OSM: en tema oscuro se invierten los mosaicos para no deslumbrar */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
+
+/* Las capas de Leaflet usan z-index 400+; se encierran para que no tapen modales ni menús */
+.leaflet-container {
+  isolation: isolate;
+  z-index: 0;
+  font: inherit;
+  background: var(--color-surface-sunken, #e5e7eb);
+}
+
+.map-pin {
+  background: transparent;
+  border: 0;
+}
+
+.map-pin span {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #4f46e5;
+  border: 3px solid #fbbf24;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+}

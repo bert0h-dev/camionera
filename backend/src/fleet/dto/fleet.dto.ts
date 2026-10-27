@@ -117,6 +117,34 @@ export class CreateTerminalDto {
   @IsOptional()
   @IsString()
   address?: string | null;
+
+  @ApiPropertyOptional({
+    example: 20.6597,
+    description: 'Se envía junto con la longitud; null quita la ubicación',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(-90)
+  @Max(90)
+  latitude?: number | null;
+
+  @ApiPropertyOptional({ example: -103.3496 })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 6 })
+  @Min(-180)
+  @Max(180)
+  longitude?: number | null;
+}
+
+export class TerminalQueryDto extends CatalogQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'true = solo terminales con ubicación (las que se pueden usar)',
+  })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  located?: boolean;
 }
 
 export class UpdateTerminalDto extends PartialType(CreateTerminalDto) {

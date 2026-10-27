@@ -328,10 +328,10 @@ async function loadFleet() {
   if (!diesel) throw new Error('Primero corre el seed base (npx prisma db seed)');
 
   const places = [
-    { city: 'Guadalajara', state: 'Jalisco', code: 'GDL', name: 'Nueva Central Camionera de Guadalajara' },
-    { city: 'Ciudad de México', state: 'Ciudad de México', code: 'CDMXN', name: 'Central de Autobuses del Norte' },
-    { city: 'León', state: 'Guanajuato', code: 'LEO', name: 'Central de Autobuses de León' },
-    { city: 'Querétaro', state: 'Querétaro', code: 'QRO', name: 'Terminal de Autobuses de Querétaro' },
+    { city: 'Guadalajara', state: 'Jalisco', code: 'GDL', name: 'Nueva Central Camionera de Guadalajara', lat: 20.6283, lng: -103.2853 },
+    { city: 'Ciudad de México', state: 'Ciudad de México', code: 'CDMXN', name: 'Central de Autobuses del Norte', lat: 19.4794, lng: -99.1405 },
+    { city: 'León', state: 'Guanajuato', code: 'LEO', name: 'Central de Autobuses de León', lat: 21.1035, lng: -101.6602 },
+    { city: 'Querétaro', state: 'Querétaro', code: 'QRO', name: 'Terminal de Autobuses de Querétaro', lat: 20.5768, lng: -100.3739 },
   ];
   for (const p of places) {
     const city = await prisma.city.upsert({
@@ -341,8 +341,8 @@ async function loadFleet() {
     });
     await prisma.terminal.upsert({
       where: { code: p.code },
-      update: {},
-      create: { code: p.code, name: p.name, cityId: city.id },
+      update: { latitude: p.lat, longitude: p.lng },
+      create: { code: p.code, name: p.name, cityId: city.id, latitude: p.lat, longitude: p.lng },
     });
   }
 

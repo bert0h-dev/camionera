@@ -119,6 +119,28 @@ describe('Flota: catálogos y modelos (e2e)', () => {
       list.body.find((t: { id: string }) => t.id === terminal.body.id).city
         .name,
     ).toBe(`Ciudad ${stamp}`);
+
+    // Sin ubicación no aparece entre las terminales utilizables
+    const located = () =>
+      call('get', '/fleet/terminals?located=true', supervisorToken).expect(200);
+    expect(
+      (await located()).body.some(
+        (t: { id: string }) => t.id === terminal.body.id,
+      ),
+    ).toBe(false);
+
+    // Latitud y longitud van juntas
+    await call('patch', `/fleet/terminals/${terminal.body.id}`, adminToken)
+      .send({ latitude: 20.6 })
+      .expect(400);
+    await call('patch', `/fleet/terminals/${terminal.body.id}`, adminToken)
+      .send({ latitude: 20.628312, longitude: -103.285301 })
+      .expect(200);
+    expect(
+      (await located()).body.some(
+        (t: { id: string }) => t.id === terminal.body.id,
+      ),
+    ).toBe(true);
   });
 
   it('crea un modelo con capacidad derivada del layout y rechaza layouts inválidos', async () => {

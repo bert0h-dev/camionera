@@ -9,6 +9,7 @@ const VENDOR_GROUPS: Record<string, RegExp> = {
   data: /node_modules[\\/](@tanstack|axios)[\\/]/,
   forms: /node_modules[\\/](react-hook-form|@hookform|zod)[\\/]/,
   icons: /node_modules[\\/]lucide-react[\\/]/,
+  maps: /node_modules[\\/](leaflet|react-leaflet|@react-leaflet)[\\/]/,
 };
 
 // https://vite.dev/config/

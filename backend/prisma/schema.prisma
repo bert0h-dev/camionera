@@ -633,6 +633,9 @@ model Terminal {
   name      String   @db.VarChar(150)
   cityId    String   @map("city_id") @db.Uuid
   address   String?  @db.Text
+  /// Ubicación exacta; sin ella la terminal no se puede usar en unidades ni rutas
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()

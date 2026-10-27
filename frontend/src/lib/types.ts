@@ -618,6 +618,8 @@ export interface Terminal {
   name: string
   cityId: string
   address: string | null
+  latitude: string | null
+  longitude: string | null
   isActive: boolean
   city: { id: string; name: string; state: string }
 }

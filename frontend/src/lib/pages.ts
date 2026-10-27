@@ -22,6 +22,9 @@ export const loaders = {
   payrollPeriod: () => import('../pages/payroll/PayrollPeriodPage'),
   settings: () => import('../pages/settings/SettingsPage'),
   audit: () => import('../pages/audit/AuditPage'),
+  busModels: () => import('../pages/fleet/BusModelsPage'),
+  busModelForm: () => import('../pages/fleet/BusModelFormPage'),
+  fleetCatalogs: () => import('../pages/fleet/FleetCatalogsPage'),
 } satisfies Record<string, Loader>
 
 export type PageKey = keyof typeof loaders
@@ -40,13 +43,17 @@ const BY_SEGMENT: Record<string, PageKey> = {
   nomina: 'payroll',
   configuracion: 'settings',
   bitacora: 'audit',
+  'flota/modelos': 'busModels',
+  'flota/catalogos': 'fleetCatalogs',
 }
 
 const requested = new Set<PageKey>()
 
 /** Descarga por adelantado el código de la pantalla de `path`; no hace nada si ya se pidió. */
 export function preloadPath(path: string) {
-  const key = BY_SEGMENT[path.split('/')[1] ?? '']
+  // Los módulos con submenú (flota/…) se identifican por sus dos primeros segmentos
+  const [, first = '', second] = path.split('/')
+  const key = BY_SEGMENT[`${first}/${second}`] ?? BY_SEGMENT[first]
   if (!key || requested.has(key)) return
   requested.add(key)
   void loaders[key]().catch(() => requested.delete(key))

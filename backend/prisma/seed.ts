@@ -54,6 +54,18 @@ async function main() {
     });
   }
   console.log(`Criterios de evaluación: ${criteria.length}`);
+
+  // Catálogo de combustibles (se configura en cada modelo de bus)
+  const fuels = [
+    { name: 'Diésel', unit: 'L' },
+    { name: 'Gasolina', unit: 'L' },
+    { name: 'Gas LP', unit: 'L' },
+    { name: 'Gas natural', unit: 'm³' },
+  ];
+  for (const f of fuels) {
+    await prisma.fuelType.upsert({ where: { name: f.name }, update: {}, create: f });
+  }
+  console.log(`Combustibles: ${fuels.length}`);
 }
 
 main()

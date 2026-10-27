@@ -1,12 +1,14 @@
 // Datos de demostración para revisar la interfaz con información realista.
 //   npm run seed:demo -w backend            → carga (reemplaza los demo anteriores)
 //   npm run seed:demo -w backend -- --clean → solo borra
+//   npm run seed:demo -w backend -- --fleet → solo agrega la flota demo (no toca al personal)
 // Todo lo demo se identifica por el correo @demo.camionera.mx de los empleados.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   AttendanceSource,
   AttendanceStatus,
+  BusType,
   CertificationType,
   EvaluationStatus,
   PaymentFrequency,
@@ -21,6 +23,7 @@ import {
 } from '../src/generated/prisma/client.js';
 import { addDays, dateKey, today, weekStart, zonedDateTime } from '../src/common/dates.js';
 import { computePayroll, totals } from '../src/payroll/payroll-rules.js';
+import { defaultLayout, seatCount } from '../src/fleet/layout-rules.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -317,12 +320,74 @@ async function loadPayroll() {
   console.log(`Nómina demo: ${paid.length} salarios y el periodo "${period.name}" cerrado`);
 }
 
+const DEMO_SPEC = 'Modelo de demostración';
+
+/** Flota demo: ciudades, terminales y modelos. Se puede correr sola (--fleet) sin tocar al personal demo. */
+async function loadFleet() {
+  const diesel = await prisma.fuelType.findUnique({ where: { name: 'Diésel' } });
+  if (!diesel) throw new Error('Primero corre el seed base (npx prisma db seed)');
+
+  const places = [
+    { city: 'Guadalajara', state: 'Jalisco', code: 'GDL', name: 'Nueva Central Camionera de Guadalajara' },
+    { city: 'Ciudad de México', state: 'Ciudad de México', code: 'CDMXN', name: 'Central de Autobuses del Norte' },
+    { city: 'León', state: 'Guanajuato', code: 'LEO', name: 'Central de Autobuses de León' },
+    { city: 'Querétaro', state: 'Querétaro', code: 'QRO', name: 'Terminal de Autobuses de Querétaro' },
+  ];
+  for (const p of places) {
+    const city = await prisma.city.upsert({
+      where: { name_state: { name: p.city, state: p.state } },
+      update: {},
+      create: { name: p.city, state: p.state },
+    });
+    await prisma.terminal.upsert({
+      where: { code: p.code },
+      update: {},
+      create: { code: p.code, name: p.name, cityId: city.id },
+    });
+  }
+
+  const models = [
+    { brand: 'Volvo', model: '9700', busType: BusType.executive, rows: 11, floors: 1 as const, eff: 3.2, tank: 450 },
+    { brand: 'Irizar', model: 'i8', busType: BusType.luxury, rows: 9, floors: 1 as const, eff: 3.0, tank: 500 },
+    { brand: 'Mercedes-Benz', model: 'Multego', busType: BusType.standard, rows: 12, floors: 1 as const, eff: 3.5, tank: 400 },
+    { brand: 'Volvo', model: '9800 DD', busType: BusType.double_decker, rows: 10, floors: 2 as const, eff: 2.6, tank: 600 },
+  ];
+  for (const m of models) {
+    const layout = defaultLayout(m.rows, m.floors);
+    // Primeras filas preferentes y una accesible junto a la puerta
+    for (const cell of layout.floors[0].cells)
+      if (cell.type === 'seat')
+        cell.category = cell.r === 1 && cell.c === 0 ? 'accessible' : cell.r <= 2 ? 'preferred' : 'normal';
+    await prisma.busModel.upsert({
+      where: { brand_model: { brand: m.brand, model: m.model } },
+      update: {},
+      create: {
+        brand: m.brand,
+        model: m.model,
+        busType: m.busType,
+        fuelTypeId: diesel.id,
+        tankCapacity: m.tank,
+        expectedEfficiency: m.eff,
+        specifications: DEMO_SPEC,
+        features: m.busType === BusType.standard ? ['A/C', 'Baño'] : ['A/C', 'Baño', 'WiFi', 'Pantallas', 'USB'],
+        preventiveKm: 15000,
+        preventiveDays: 90,
+        layout: layout as unknown as object,
+        seatCount: seatCount(layout),
+      },
+    });
+  }
+  console.log(`Flota demo: ${places.length} terminales y ${models.length} modelos`);
+}
+
 async function main() {
   if (process.argv.includes('--payroll')) return loadPayroll();
+  if (process.argv.includes('--fleet')) return loadFleet();
   await clean();
   if (!process.argv.includes('--clean')) {
     await load();
     await loadPayroll();
+    await loadFleet();
   }
 }
 

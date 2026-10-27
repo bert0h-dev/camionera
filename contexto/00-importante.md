@@ -85,15 +85,43 @@ Un sistema integral de gestión de autobuses que permita administrar toda la ope
 - Parámetros operacionales
 - Respaldos y logs
 
-#### **MÓDULO 3: Gestión de Rutas**
+#### **MÓDULO 3: Gestión de Flota**
+
+- CRUD de unidades (autobuses)
+- Configuración de asientos (layout)
+- Calendario de servicios preventivos
+- Estados y disponibilidad
+- Documentación vehicular (seguros, permisos)
+
+#### **MÓDULO 3.0: Gestión de Modelos de Bus**
+
+- Gestión de modelos de bus
+- Especificaciones técnicas (capacidad, tipo, modelo, año)
+
+#### **MÓDULO 3.1: Gestión de Mantenimientos**
+
+- Registro de mantenimientos preventivos y correctivos
+- Alertas de vencimiento de mantenimientos
+- Historial de mantenimientos
+
+#### **MÓDULO 3.2: Gestión de Incidencias**
+
+- Registro de incidencias por unidad
+
+#### **MÓDULO 3.3: Gestión de Combustible**
+
+- Registro de consumos y costos
+
+#### **MÓDULO 4: Gestión de Rutas**
 
 - CRUD de rutas (origen, destino, paradas intermedias)
+- Catalogo de ciudades y terminales.
 - Definición de precios por tramo
 - Gestión de horarios y frecuencias
 - Configuración de políticas de cancelación
 - Temporadas y tarifas especiales
 
-#### **MÓDULO 4: Gestión de Recorridos**
+#### **MÓDULO 5: Gestión de Recorridos**
 
 - Generación automática de recorridos
 - Asignación de unidades
@@ -101,16 +129,6 @@ Un sistema integral de gestión de autobuses que permita administrar toda la ope
 - Estados del recorrido (programado, en curso, completado, cancelado)
 - Tracking en tiempo real (opcional)
 - Registro de incidencias
-
-#### **MÓDULO 5: Gestión de Flota**
-
-- CRUD de unidades (autobuses)
-- Especificaciones técnicas (capacidad, tipo, modelo, año)
-- Configuración de asientos (layout)
-- Historial de mantenimientos
-- Calendario de servicios preventivos
-- Estados y disponibilidad
-- Documentación vehicular (seguros, permisos)
 
 #### **MÓDULO 6: Gestión de Boletos**
 

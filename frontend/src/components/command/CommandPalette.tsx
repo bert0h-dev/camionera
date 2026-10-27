@@ -145,6 +145,18 @@ function Palette({ onClose }: { onClose: () => void }) {
             },
           ]
         : []),
+      ...(role === 'admin' || role === 'coordinator'
+        ? [
+            {
+              id: 'action:new-bus-model',
+              section: 'Acciones rápidas',
+              label: 'Nuevo modelo de autobús',
+              icon: Plus,
+              keywords: 'flota distribucion asientos layout',
+              to: '/flota/modelos/nuevo',
+            },
+          ]
+        : []),
       {
         id: 'action:account',
         section: 'Acciones rápidas',

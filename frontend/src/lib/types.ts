@@ -583,3 +583,83 @@ export interface AuditFilters {
   tables: { name: string; count: number }[]
   users: { id: string; fullName: string; email: string }[]
 }
+
+// ---------- Flota ----------
+
+export const BUS_TYPES = ['standard', 'executive', 'luxury', 'double_decker'] as const
+export type BusType = (typeof BUS_TYPES)[number]
+
+export const BUS_TYPE_LABELS: Record<BusType, string> = {
+  standard: 'Estándar',
+  executive: 'Ejecutivo',
+  luxury: 'Lujo',
+  double_decker: 'Doble piso',
+}
+
+export interface FuelType {
+  id: string
+  name: string
+  unit: string
+  isActive: boolean
+  _count?: { busModels: number }
+}
+
+export interface City {
+  id: string
+  name: string
+  state: string
+  isActive: boolean
+  _count?: { terminals: number }
+}
+
+export interface Terminal {
+  id: string
+  code: string
+  name: string
+  cityId: string
+  address: string | null
+  isActive: boolean
+  city: { id: string; name: string; state: string }
+}
+
+export const CELL_TYPES = ['seat', 'aisle', 'bathroom', 'stairs', 'driver', 'door', 'cafe'] as const
+export type CellType = (typeof CELL_TYPES)[number]
+
+export const SEAT_CATEGORIES = ['normal', 'preferred', 'accessible'] as const
+export type SeatCategory = (typeof SEAT_CATEGORIES)[number]
+
+export interface LayoutCell {
+  r: number
+  c: number
+  type: CellType
+  number?: string
+  category?: SeatCategory
+}
+
+export interface LayoutFloor {
+  rows: number
+  cols: number
+  cells: LayoutCell[]
+}
+
+export interface BusLayout {
+  floors: LayoutFloor[]
+}
+
+export interface BusModel {
+  id: string
+  brand: string
+  model: string
+  busType: BusType
+  fuelTypeId: string
+  fuelType: { id: string; name: string; unit: string }
+  tankCapacity: string | null
+  expectedEfficiency: string | null
+  specifications: string | null
+  features: string[]
+  preventiveKm: number | null
+  preventiveDays: number | null
+  layout: BusLayout
+  seatCount: number
+  isActive: boolean
+}

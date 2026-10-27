@@ -14,6 +14,7 @@ import {
 import { Button } from '../../components/ui/Button'
 import { StaffDocumentsTab } from './documents/StaffDocumentsTab'
 import { StaffSchedulesTab } from './StaffSchedulesTab'
+import { StaffAttendanceTab } from './StaffAttendanceTab'
 import { GrantAccessModal } from './GrantAccessModal'
 import { StaffStatusBadge } from './StaffStatusBadge'
 import { TerminateModal } from './TerminateModal'
@@ -24,7 +25,7 @@ const TABS = [
   { key: 'general', label: 'General', enabled: true },
   { key: 'licenses', label: 'Licencias', enabled: true },
   { key: 'schedules', label: 'Turnos', enabled: true },
-  { key: 'attendance', label: 'Asistencias', enabled: false },
+  { key: 'attendance', label: 'Asistencias', enabled: true },
   { key: 'evaluations', label: 'Evaluaciones', enabled: false },
   { key: 'payroll', label: 'Nómina', enabled: false },
 ] as const
@@ -173,6 +174,7 @@ function StaffDetailPage() {
       )}
 
       {tab === 'licenses' && <StaffDocumentsTab staffId={s.id} canEdit={canEdit && !isTerminated} />}
+      {tab === 'attendance' && <StaffAttendanceTab staffId={s.id} />}
       {tab === 'schedules' && (
         <StaffSchedulesTab staffId={s.id} staffName={staffFullName(s)} editable={!isTerminated} />
       )}

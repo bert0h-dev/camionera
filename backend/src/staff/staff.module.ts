@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import {
+  AttendanceController,
+  MyAttendanceController,
+} from './attendance/attendance.controller.js';
+import { AttendanceService } from './attendance/attendance.service.js';
 import { StaffDocumentsController } from './documents/staff-documents.controller.js';
 import { StaffDocumentsService } from './documents/staff-documents.service.js';
 import {
@@ -19,13 +24,16 @@ import { StaffService } from './staff.service.js';
     StaffController,
     SchedulesController,
     ShiftTemplatesController,
+    MyAttendanceController,
+    AttendanceController,
   ],
   providers: [
     StaffService,
     StaffDocumentsService,
     SchedulesService,
     ShiftTemplatesService,
+    AttendanceService,
   ],
-  exports: [StaffDocumentsService, SchedulesService],
+  exports: [StaffDocumentsService, SchedulesService, AttendanceService],
 })
 export class StaffModule {}

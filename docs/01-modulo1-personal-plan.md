@@ -1,6 +1,6 @@
 # Módulo 1 — Gestión de Personal (plan propuesto)
 
-**Estado:** 🚧 En curso — 1.0–1.3 ✅ (docs 03–06); siguiente: 1.4 Asistencias
+**Estado:** 🚧 En curso — 1.0–1.4 ✅ (docs 03–07); siguiente: 1.5 Evaluaciones de desempeño
 **Fuente:** `contexto/00-importante.md`
 
 ## Observación clave

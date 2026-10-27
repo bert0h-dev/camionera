@@ -68,6 +68,20 @@ enum ShiftType {
   split
 }
 
+enum AttendanceStatus {
+  present
+  late
+  half_day
+  absent
+  excused
+}
+
+enum AttendanceSource {
+  manual
+  self
+  system
+}
+
 enum ActionType {
   insert
   update
@@ -96,6 +110,7 @@ model User {
   auditLogs      AuditLog[]
   settings       SystemSetting[]
   schedules      StaffSchedule[]
+  attendance     StaffAttendance[]
 
   @@index([role])
   @@index([isActive])
@@ -169,6 +184,7 @@ model Staff {
   licenses       StaffLicense[]
   certifications StaffCertification[]
   schedules      StaffSchedule[]
+  attendance     StaffAttendance[]
 
   @@index([role])
   @@index([status])
@@ -255,14 +271,46 @@ model StaffSchedule {
   updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  staff     Staff          @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  template  ShiftTemplate? @relation(fields: [templateId], references: [id])
-  createdBy User           @relation(fields: [createdById], references: [id])
+  staff      Staff             @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  template   ShiftTemplate?    @relation(fields: [templateId], references: [id])
+  createdBy  User              @relation(fields: [createdById], references: [id])
+  attendance StaffAttendance[]
 
   @@unique([staffId, scheduleDate])
   @@index([scheduleDate])
   @@index([staffId, startAt])
   @@map("staff_schedules")
+}
+
+model StaffAttendance {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  staffId         String           @map("staff_id") @db.Uuid
+  // Día del turno (un turno nocturno cuenta para el día en que inicia)
+  attendanceDate  DateTime         @map("attendance_date") @db.Date
+  // Turno contra el que se calculan retardos y extras; null si no tenía turno
+  scheduleId      String?          @map("schedule_id") @db.Uuid
+  checkInAt       DateTime?        @map("check_in_at") @db.Timestamptz()
+  checkOutAt      DateTime?        @map("check_out_at") @db.Timestamptz()
+  status          AttendanceStatus
+  lateMinutes     Int              @default(0) @map("late_minutes")
+  workedMinutes   Int              @default(0) @map("worked_minutes")
+  overtimeMinutes Int              @default(0) @map("overtime_minutes")
+  source          AttendanceSource
+  // null = registrado por el sistema (cierre del día)
+  recordedById    String?          @map("recorded_by") @db.Uuid
+  notes           String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  staff      Staff          @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  schedule   StaffSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  recordedBy User?          @relation(fields: [recordedById], references: [id])
+
+  @@unique([staffId, attendanceDate])
+  @@index([attendanceDate])
+  @@index([status])
+  @@map("staff_attendance")
 }
 
 // =====================================================

@@ -1,6 +1,7 @@
 import { useAuth } from '../auth/useAuth'
 import { ROLE_LABELS, type UserRole } from '../lib/types'
 import { ExpirationsPanel } from './home/ExpirationsPanel'
+import { MyShiftCard } from './home/MyShiftCard'
 
 const STAFF_READERS: UserRole[] = ['admin', 'hr', 'supervisor', 'coordinator']
 
@@ -15,6 +16,7 @@ function HomePage() {
           Rol: <span className="font-medium">{user && ROLE_LABELS[user.role]}</span>
         </p>
       </div>
+      <MyShiftCard />
       {user && STAFF_READERS.includes(user.role) && <ExpirationsPanel />}
     </div>
   )

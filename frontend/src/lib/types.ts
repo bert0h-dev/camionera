@@ -201,3 +201,43 @@ export interface Schedule {
   workedHours: number
   staff: Pick<Staff, 'id' | 'employeeNumber' | 'firstName' | 'lastName' | 'secondLastName' | 'role'>
 }
+
+export const ATTENDANCE_STATUSES = ['present', 'late', 'half_day', 'absent', 'excused'] as const
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number]
+
+export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  present: 'Asistió',
+  late: 'Retardo',
+  half_day: 'Medio día',
+  absent: 'Falta',
+  excused: 'Justificada',
+}
+
+export interface Attendance {
+  id: string
+  staffId: string
+  attendanceDate: string
+  scheduleId: string | null
+  checkInAt: string | null
+  checkOutAt: string | null
+  status: AttendanceStatus
+  lateMinutes: number
+  workedMinutes: number
+  overtimeMinutes: number
+  source: 'manual' | 'self' | 'system'
+  notes: string | null
+}
+
+type ScheduleCore = Omit<Schedule, 'staff' | 'template'>
+
+export interface AttendanceDayRow {
+  staff: Schedule['staff'] & { status: StaffStatus }
+  schedule: ScheduleCore | null
+  attendance: Attendance | null
+}
+
+export interface MyToday {
+  staff: Staff
+  schedule: ScheduleCore | null
+  attendance: Attendance | null
+}

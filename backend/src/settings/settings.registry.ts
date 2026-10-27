@@ -41,6 +41,38 @@ export const SETTINGS = {
     description:
       'Horas máximas trabajadas por semana, de lunes a domingo (LFT)',
   },
+  'attendance.late_tolerance_minutes': {
+    type: 'number',
+    default: 10,
+    min: 0,
+    max: 120,
+    description:
+      'Minutos de tolerancia después del inicio del turno antes de contar retardo',
+  },
+  'attendance.half_day_percent': {
+    type: 'number',
+    default: 50,
+    min: 1,
+    max: 100,
+    description:
+      'Porcentaje mínimo del turno trabajado; por debajo cuenta como medio día',
+  },
+  'attendance.overtime_threshold_minutes': {
+    type: 'number',
+    default: 30,
+    min: 0,
+    max: 240,
+    description:
+      'Minutos después del fin del turno a partir de los cuales se cuentan horas extra',
+  },
+  'attendance.early_check_in_minutes': {
+    type: 'number',
+    default: 60,
+    min: 0,
+    max: 240,
+    description:
+      'Minutos antes del inicio del turno en que el empleado ya puede registrar su entrada',
+  },
 } as const satisfies Record<string, SettingDefinition>;
 
 export type SettingKey = keyof typeof SETTINGS;

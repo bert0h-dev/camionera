@@ -57,3 +57,11 @@ export function dayLabel(key: string) {
 }
 
 export const formatHours = (h: number) => `${Math.round(h * 10) / 10} h`
+
+/** 135 → '2 h 15 min' */
+export function formatMinutes(minutes: number) {
+  if (!minutes) return '0 min'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return [h && `${h} h`, m && `${m} min`].filter(Boolean).join(' ')
+}

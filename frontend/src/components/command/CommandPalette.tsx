@@ -12,6 +12,7 @@ import {
   Search,
   ShieldCheck,
   Sun,
+  TriangleAlert,
   UserCog,
   UserRound,
   Wallet,
@@ -28,6 +29,7 @@ import {
   ROLE_LABELS,
   STAFF_ROLE_LABELS,
   type BusListItem,
+  type Incident,
   type MaintenanceOrderListItem,
   type Paginated,
   type Staff,
@@ -92,6 +94,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const isHr = role === 'admin' || role === 'hr'
   const canFleet = !!role && ['admin', 'coordinator', 'supervisor'].includes(role)
   const canOrders = !!role && ['admin', 'coordinator', 'supervisor', 'mechanic'].includes(role)
+  const canIncidents = canOrders || role === 'driver'
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -137,6 +140,19 @@ function Palette({ onClose }: { onClose: () => void }) {
       (
         await api.get<Paginated<MaintenanceOrderListItem>>('/fleet/maintenance/orders', {
           params: { search: orderTerm, limit: 4 },
+        })
+      ).data.data,
+  })
+
+  // Incidencias por folio (INC-123 o solo el número)
+  const incidentTerm = debounced.replace(/^INC-?/i, '')
+  const incidents = useQuery({
+    queryKey: ['command', 'incidents', incidentTerm],
+    enabled: canIncidents && /^\d+$/.test(incidentTerm),
+    queryFn: async () =>
+      (
+        await api.get<Paginated<Incident>>('/fleet/incidents', {
+          params: { search: incidentTerm, limit: 4 },
         })
       ).data.data,
   })
@@ -206,6 +222,18 @@ function Palette({ onClose }: { onClose: () => void }) {
             },
           ]
         : []),
+      ...(canIncidents
+        ? [
+            {
+              id: 'action:new-incident',
+              section: 'Acciones rápidas',
+              label: 'Reportar incidencia',
+              icon: TriangleAlert,
+              keywords: 'falla dano accidente unidad reporte averia',
+              to: '/flota/incidencias?nueva=1',
+            },
+          ]
+        : []),
       {
         id: 'action:account',
         section: 'Acciones rápidas',
@@ -266,6 +294,14 @@ function Palette({ onClose }: { onClose: () => void }) {
         icon: Wrench,
         to: `/flota/mantenimiento/${o.id}`,
       })),
+      ...(incidents.data ?? []).map((i) => ({
+        id: `incident:${i.id}`,
+        section: 'Incidencias',
+        label: `INC-${String(i.folio).padStart(6, '0')} · Unidad ${i.bus.economicNumber}`,
+        hint: i.description,
+        icon: TriangleAlert,
+        to: `/flota/incidencias/${i.id}`,
+      })),
     ]
 
     const recents: Command[] = q
@@ -281,7 +317,19 @@ function Palette({ onClose }: { onClose: () => void }) {
         }))
 
     return [...recents, ...pages.filter(matches), ...actions.filter(matches), ...found]
-  }, [query, role, isHr, resolved, setPreference, staff.data, users.data, buses.data, orders.data])
+  }, [
+    query,
+    role,
+    isHr,
+    resolved,
+    setPreference,
+    staff.data,
+    users.data,
+    buses.data,
+    orders.data,
+    incidents.data,
+    canIncidents,
+  ])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado
   const [prevLength, setPrevLength] = useState(commands.length)

@@ -82,6 +82,7 @@ async function clean() {
   const ids = staff.map((s) => s.id);
   await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: 'DEMO · ' } } });
   await prisma.maintenanceOrder.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
+  await prisma.busIncident.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
@@ -439,6 +440,121 @@ async function loadFleet() {
   }
   console.log(`Unidades demo: ${created} nuevas`);
   await loadMaintenance();
+  await loadIncidents();
+}
+
+/**
+ * Incidencias demo: una crítica que saca de servicio a una unidad, una en revisión ligada
+ * a la orden de aire acondicionado y dos cerradas (una de ellas, accidente con siniestro).
+ */
+async function loadIncidents() {
+  if (await prisma.busIncident.count({ where: { bus: { plates: { startsWith: 'DEM' } } } })) return;
+  const categories = Object.fromEntries((await prisma.incidentCategory.findMany()).map((c) => [c.name, c.id]));
+  if (!categories['Mecánica']) return console.log('Incidencias demo: corre primero el seed base (categorías)');
+
+  // Reporta un conductor demo si existe; si no, el primer coordinador o admin
+  const reporter =
+    (await prisma.user.findFirst({ where: { role: UserRole.driver, email: { endsWith: DEMO_DOMAIN } } })) ??
+    (await prisma.user.findFirstOrThrow({ where: { role: { in: [UserRole.coordinator, UserRole.admin] } } }));
+  const reviewer = await prisma.user.findFirst({ where: { role: { in: [UserRole.coordinator, UserRole.admin] } } });
+  const buses = await prisma.bus.findMany({ where: { plates: { startsWith: 'DEM' } }, orderBy: { economicNumber: 'asc' } });
+  const available = buses.filter((b) => b.status === 'available');
+  const day0 = today();
+  const at = (days: number, hour: number) => new Date(addDays(day0, days).getTime() + (hour + 6) * 3_600_000);
+  let count = 0;
+
+  // Crítica sin revisar: la unidad queda fuera de servicio
+  const critical = available.at(-1);
+  if (critical) {
+    const inc = await prisma.busIncident.create({
+      data: {
+        busId: critical.id,
+        categoryId: categories['Mecánica'],
+        severity: 'critical',
+        description: 'Fuga de aceite en motor, se enciende el testigo de presión',
+        location: 'Terminal, andén 3',
+        occurredAt: at(0, 7),
+        odometerKm: critical.odometerKm,
+        reportedBy: reporter.id,
+        tookBusOut: true,
+      },
+    });
+    await prisma.bus.update({
+      where: { id: critical.id },
+      data: {
+        status: 'out_of_service',
+        statusReason: `INC-${String(inc.folio).padStart(6, '0')}: ${inc.description}`,
+        statusChangedAt: new Date(),
+      },
+    });
+    count++;
+  }
+
+  // En revisión con su orden correctiva (la de aire acondicionado)
+  const acOrder = await prisma.maintenanceOrder.findFirst({
+    where: { bus: { plates: { startsWith: 'DEM' } }, type: 'corrective', status: 'scheduled' },
+  });
+  if (acOrder) {
+    const inc = await prisma.busIncident.create({
+      data: {
+        busId: acOrder.busId,
+        categoryId: categories['Eléctrica'],
+        severity: 'medium',
+        status: 'in_review',
+        description: 'El aire acondicionado no enfría en la parte trasera',
+        occurredAt: at(-2, 15),
+        reportedBy: reporter.id,
+        reviewedBy: reviewer?.id,
+        reviewedAt: at(-1, 9),
+      },
+    });
+    await prisma.maintenanceOrder.update({ where: { id: acOrder.id }, data: { incidentId: inc.id } });
+    count++;
+  }
+
+  // Cerradas: una resuelta sin orden y un accidente leve con siniestro
+  if (available[0]) {
+    await prisma.busIncident.create({
+      data: {
+        busId: available[0].id,
+        categoryId: categories['Interiores y limpieza'],
+        severity: 'low',
+        status: 'resolved',
+        description: 'Asiento 14 con la palanca de reclinado rota',
+        occurredAt: at(-9, 18),
+        reportedBy: reporter.id,
+        reviewedBy: reviewer?.id,
+        reviewedAt: at(-8, 10),
+        closedAt: at(-8, 12),
+        resolution: 'Se cambió la palanca en patio',
+      },
+    });
+    count++;
+  }
+  if (available[1]) {
+    await prisma.busIncident.create({
+      data: {
+        busId: available[1].id,
+        categoryId: categories['Accidente'],
+        severity: 'high',
+        status: 'resolved',
+        description: 'Alcance leve en caseta; espejo lateral derecho roto',
+        location: 'Caseta de cobro Mazatlán',
+        occurredAt: at(-15, 11),
+        reportedBy: reporter.id,
+        claimNumber: 'SIN-2026-08815',
+        insurer: 'Qualitas · ajustador Ramírez',
+        thirdParties: true,
+        injuries: false,
+        reviewedBy: reviewer?.id,
+        reviewedAt: at(-15, 13),
+        closedAt: at(-12, 17),
+        resolution: 'Espejo cambiado; el seguro del tercero cubrió el daño',
+      },
+    });
+    count++;
+  }
+  console.log(`Incidencias demo: ${count}`);
 }
 
 /**

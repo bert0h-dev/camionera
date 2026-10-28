@@ -84,6 +84,21 @@ async function main() {
     await prisma.maintenanceTaskTemplate.upsert({ where: { description }, update: {}, create: { description, sortOrder: (i + 1) * 10 } });
   }
   console.log(`Tareas de preventivo: ${tasks.length}`);
+
+  // Categorías de incidencia (editables desde Flota → Incidencias)
+  const categories: [string, boolean][] = [
+    ['Mecánica', false],
+    ['Eléctrica', false],
+    ['Llantas', false],
+    ['Carrocería', false],
+    ['Interiores y limpieza', false],
+    ['Accidente', true],
+    ['Otro', false],
+  ];
+  for (const [i, [name, isAccident]] of categories.entries()) {
+    await prisma.incidentCategory.upsert({ where: { name }, update: {}, create: { name, isAccident, sortOrder: (i + 1) * 10 } });
+  }
+  console.log(`Categorías de incidencia: ${categories.length}`);
 }
 
 main()

@@ -37,13 +37,14 @@ function OrderForm({ preset, onClose }: { preset: NewOrderPreset; onClose: () =>
   const [mechanicId, setMechanicId] = useState('')
   const [externalShop, setExternalShop] = useState('')
 
-  const buses = useQuery({
+  const allBuses = useQuery({
     queryKey: ['fleet', 'buses', 'options'],
-    queryFn: async () =>
-      (await api.get<Paginated<BusListItem>>('/fleet/buses', { params: { limit: 100 } })).data.data.filter(
-        (b) => b.status !== 'out_of_service',
-      ),
+    queryFn: async () => (await api.get<Paginated<BusListItem>>('/fleet/buses', { params: { limit: 100 } })).data.data,
   })
+  // Una unidad fuera de servicio solo admite correctivos (p. ej. por una incidencia crítica)
+  const buses = {
+    data: allBuses.data?.filter((b) => type === 'corrective' || b.status !== 'out_of_service'),
+  }
   const mechanics = useQuery({
     queryKey: ['fleet', 'maintenance', 'mechanics'],
     queryFn: async () => (await api.get<{ id: string; fullName: string }[]>('/fleet/maintenance/mechanics')).data,

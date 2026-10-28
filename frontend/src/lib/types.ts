@@ -833,6 +833,8 @@ export interface MaintenanceOrder {
   total: number
   bus: { id: string; economicNumber: string; plates: string; status: BusStatus; odometerKm: number }
   mechanic: { id: string; fullName: string } | null
+  /** Incidencia que originó la orden */
+  incident: { id: string; folio: number; status: IncidentStatus; severity: IncidentSeverity } | null
 }
 
 export interface MaintenanceOrderListItem extends MaintenanceOrder {
@@ -882,4 +884,81 @@ export interface MaintenanceTaskTemplate {
   description: string
   sortOrder: number
   isActive: boolean
+}
+
+// ---------- Flota: incidencias (3.3) ----------
+
+export const INCIDENT_SEVERITIES = ['critical', 'high', 'medium', 'low'] as const
+export type IncidentSeverity = (typeof INCIDENT_SEVERITIES)[number]
+export const INCIDENT_SEVERITY_LABELS: Record<IncidentSeverity, string> = {
+  critical: 'Crítica',
+  high: 'Alta',
+  medium: 'Media',
+  low: 'Baja',
+}
+export const INCIDENT_SEVERITY_HINTS: Record<IncidentSeverity, string> = {
+  critical: 'No puede circular: la unidad sale de servicio',
+  high: 'Hay que atenderla hoy',
+  medium: 'Se puede programar en los próximos días',
+  low: 'Detalle menor',
+}
+
+export const INCIDENT_STATUSES = ['reported', 'in_review', 'resolved', 'dismissed'] as const
+export type IncidentStatus = (typeof INCIDENT_STATUSES)[number]
+export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
+  reported: 'Reportada',
+  in_review: 'En revisión',
+  resolved: 'Resuelta',
+  dismissed: 'Descartada',
+}
+
+export interface IncidentCategory {
+  id: string
+  name: string
+  isAccident: boolean
+  sortOrder: number
+  isActive: boolean
+}
+
+export interface Incident {
+  id: string
+  folio: number
+  busId: string
+  categoryId: string
+  severity: IncidentSeverity
+  status: IncidentStatus
+  description: string
+  location: string | null
+  occurredAt: string
+  odometerKm: number | null
+  reportedBy: string
+  claimNumber: string | null
+  insurer: string | null
+  thirdParties: boolean | null
+  injuries: boolean | null
+  reviewedAt: string | null
+  closedAt: string | null
+  resolution: string | null
+  tookBusOut: boolean
+  createdAt: string
+  bus: { id: string; economicNumber: string; plates: string; status: BusStatus; odometerKm: number }
+  category: { id: string; name: string; isAccident: boolean }
+  reporter: { id: string; fullName: string; role: UserRole }
+  reviewer: { id: string; fullName: string } | null
+  orders: { id: string; folio: number; status: MaintenanceStatus; scheduledDate: string; completedAt: string | null }[]
+}
+
+export interface IncidentSummary {
+  open: number
+  reported: number
+  inReview: number
+  critical: number
+  resolvedThisMonth: number
+}
+
+export interface IncidentBusOption {
+  id: string
+  economicNumber: string
+  plates: string
+  status: BusStatus
 }

@@ -33,6 +33,8 @@ const BusDetailPage = lazyPage('busDetail')
 const BusFormPage = lazyPage('busForm')
 const MaintenancePage = lazyPage('maintenance')
 const MaintenanceOrderPage = lazyPage('maintenanceOrder')
+const IncidentsPage = lazyPage('incidents')
+const IncidentDetailPage = lazyPage('incidentDetail')
 
 function App() {
   return (
@@ -70,6 +72,10 @@ function App() {
             <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'mechanic']} />}>
               <Route path="/flota/mantenimiento" element={<MaintenancePage />} />
               <Route path="/flota/mantenimiento/:id" element={<MaintenanceOrderPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'mechanic', 'driver']} />}>
+              <Route path="/flota/incidencias" element={<IncidentsPage />} />
+              <Route path="/flota/incidencias/:id" element={<IncidentDetailPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['coordinator']} />}>
               <Route path="/flota/modelos/nuevo" element={<BusModelFormPage />} />

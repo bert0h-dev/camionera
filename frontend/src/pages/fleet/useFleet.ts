@@ -4,6 +4,8 @@ import type {
   BusSummary,
   City,
   FuelType,
+  IncidentCategory,
+  IncidentSummary,
   MaintenanceSummary,
   ServicePlanRow,
   Terminal,
@@ -60,6 +62,35 @@ export const useMaintenanceSummary = (enabled = true) =>
     queryKey: ['fleet', 'maintenance', 'summary'],
     enabled,
     queryFn: async () => (await api.get<MaintenanceSummary>('/fleet/maintenance/summary')).data,
+  })
+
+/** Folio legible de una incidencia: INC-000123 */
+export const incidentFolio = (n: number) => `INC-${String(n).padStart(6, '0')}`
+
+/**
+ * Coordinación, supervisión y admin revisan y cierran todas las incidencias;
+ * solo coordinación (y admin) crea la orden correctiva y edita categorías.
+ * El conductor y el mecánico reportan y ven solo las suyas.
+ */
+export function useIncidentRole() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'admin' || user?.role === 'coordinator'
+  const canReview = canManage || user?.role === 'supervisor'
+  return { canManage, canReview, isReporterOnly: !canReview }
+}
+
+export const useIncidentCategories = (includeInactive = false) =>
+  useQuery({
+    queryKey: ['fleet', 'incidents', 'categories', includeInactive],
+    queryFn: async () =>
+      (await api.get<IncidentCategory[]>('/fleet/incidents/categories', { params: { includeInactive } })).data,
+  })
+
+export const useIncidentSummary = (enabled = true) =>
+  useQuery({
+    queryKey: ['fleet', 'incidents', 'summary'],
+    enabled,
+    queryFn: async () => (await api.get<IncidentSummary>('/fleet/incidents/summary')).data,
   })
 
 export const useServicePlan = (enabled = true) =>

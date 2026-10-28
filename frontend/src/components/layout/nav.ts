@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Star,
+  TriangleAlert,
   Users,
   Wallet,
   Wrench,
@@ -49,6 +50,12 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/flota/unidades', label: 'Unidades', icon: Bus, roles: FLEET_READERS },
       { to: '/flota/mantenimiento', label: 'Mantenimiento', icon: Wrench, roles: [...FLEET_READERS, 'mechanic'] },
+      {
+        to: '/flota/incidencias',
+        label: 'Incidencias',
+        icon: TriangleAlert,
+        roles: [...FLEET_READERS, 'mechanic', 'driver'],
+      },
       { to: '/flota/modelos', label: 'Modelos', icon: LayoutGrid, roles: FLEET_READERS },
       { to: '/flota/catalogos', label: 'Catálogos', icon: Building2, roles: FLEET_READERS },
     ],
@@ -88,6 +95,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   catalogos: 'Catálogos',
   unidades: 'Unidades',
   mantenimiento: 'Mantenimiento',
+  incidencias: 'Incidencias',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

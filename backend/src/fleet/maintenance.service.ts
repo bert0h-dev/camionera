@@ -11,6 +11,8 @@ import { Prisma } from '../generated/prisma/client.js';
 import {
   ActionType,
   BusStatus,
+  IncidentSeverity,
+  IncidentStatus,
   MaintenanceStatus,
   MaintenanceType,
   OdometerSource,
@@ -30,7 +32,12 @@ import {
   UpdateMaintenanceOrderDto,
   UpdateTaskTemplateDto,
 } from './dto/maintenance.dto.js';
-import { nextService } from './maintenance-rules.js';
+import {
+  incidentFolio,
+  OPEN_INCIDENT,
+  releasedStatus,
+} from './incident-rules.js';
+import { nextService, orderFolio } from './maintenance-rules.js';
 
 const TABLE = 'maintenance_orders';
 const OPEN: MaintenanceStatus[] = [
@@ -50,6 +57,7 @@ const orderInclude = {
   },
   mechanic: { select: { id: true, fullName: true } },
   tasks: { orderBy: { sortOrder: 'asc' } },
+  incident: { select: { id: true, folio: true, status: true, severity: true } },
 } satisfies Prisma.MaintenanceOrderInclude;
 
 const isMechanic = (actor: AuthUser) => actor.role === UserRole.mechanic;
@@ -306,12 +314,23 @@ export class MaintenanceService {
     });
   }
 
-  async create(dto: CreateMaintenanceOrderDto, actor: AuthUser) {
+  /** `incidentId` liga la orden con la incidencia que la originó (ver IncidentsService). */
+  async create(
+    dto: CreateMaintenanceOrderDto,
+    actor: AuthUser,
+    incidentId?: string,
+  ) {
     const bus = await this.prisma.bus.findUniqueOrThrow({
       where: { id: dto.busId },
     });
-    if (bus.status === BusStatus.out_of_service)
-      throw new BadRequestException('La unidad está fuera de servicio');
+    // Una unidad fuera de servicio solo recibe correctivos (p. ej. por una incidencia crítica)
+    if (
+      bus.status === BusStatus.out_of_service &&
+      dto.type !== MaintenanceType.corrective
+    )
+      throw new BadRequestException(
+        'La unidad está fuera de servicio; solo admite órdenes correctivas',
+      );
     await this.assertMechanic(dto.mechanicId);
     if (dto.type === MaintenanceType.preventive) {
       const open = await this.prisma.maintenanceOrder.findFirst({
@@ -342,6 +361,7 @@ export class MaintenanceService {
       data: {
         ...data,
         scheduledDate: toDate(scheduledDate),
+        incidentId,
         createdBy: actor.id,
         tasks: {
           create: tasks.map((description, i) => ({
@@ -395,7 +415,10 @@ export class MaintenanceService {
       throw new BadRequestException(
         'La unidad está en servicio; espera a que regrese para iniciar',
       );
-    if (bus.status === BusStatus.out_of_service)
+    if (
+      bus.status === BusStatus.out_of_service &&
+      order.type !== MaintenanceType.corrective
+    )
       throw new BadRequestException('La unidad está fuera de servicio');
 
     await this.buses.recordOdometer(
@@ -483,6 +506,28 @@ export class MaintenanceService {
         where: { id: order.busId },
         data: { lastServiceAt: now, lastServiceKm: dto.km },
       });
+    // La incidencia que originó la orden se resuelve con el trabajo realizado
+    if (order.incidentId) {
+      const closed = await this.prisma.busIncident.updateMany({
+        where: { id: order.incidentId, status: { in: OPEN_INCIDENT } },
+        data: {
+          status: IncidentStatus.resolved,
+          resolution: `${orderFolio(order.folio)}: ${dto.workPerformed}`,
+          closedAt: now,
+        },
+      });
+      if (closed.count)
+        await this.audit.log({
+          userId: actor.id,
+          tableName: 'bus_incidents',
+          recordId: order.incidentId,
+          actionType: ActionType.update,
+          newValues: {
+            status: IncidentStatus.resolved,
+            order: orderFolio(order.folio),
+          },
+        });
+    }
     await this.releaseBus(order.busId, id, actor);
     await this.log(
       actor,
@@ -520,13 +565,16 @@ export class MaintenanceService {
     return updated;
   }
 
-  /** Regresa la unidad a disponible si sigue en mantenimiento y no tiene otra orden en proceso. */
+  /**
+   * Libera la unidad si sigue en mantenimiento y no tiene otra orden en proceso:
+   * vuelve a disponible, o a fuera de servicio si le quedan incidencias críticas abiertas.
+   */
   private async releaseBus(
     busId: string,
     closedOrderId: string,
     actor: AuthUser,
   ) {
-    const [bus, other] = await Promise.all([
+    const [bus, other, criticals] = await Promise.all([
       this.prisma.bus.findUniqueOrThrow({ where: { id: busId } }),
       this.prisma.maintenanceOrder.count({
         where: {
@@ -535,23 +583,38 @@ export class MaintenanceService {
           id: { not: closedOrderId },
         },
       }),
+      this.prisma.busIncident.findMany({
+        where: {
+          busId,
+          severity: IncidentSeverity.critical,
+          status: { in: OPEN_INCIDENT },
+        },
+        select: { id: true, folio: true, description: true },
+        orderBy: { folio: 'asc' },
+      }),
     ]);
     if (bus.status !== BusStatus.maintenance || other > 0) return;
+    const status = releasedStatus(criticals.length);
+    const statusReason = criticals.length
+      ? `${incidentFolio(criticals[0].folio)}: ${criticals[0].description}`
+      : null;
     await this.prisma.bus.update({
       where: { id: busId },
-      data: {
-        status: BusStatus.available,
-        statusReason: null,
-        statusChangedAt: new Date(),
-      },
+      data: { status, statusReason, statusChangedAt: new Date() },
     });
+    // Esas incidencias ahora mantienen la unidad fuera; al cerrarse la liberan
+    if (criticals.length)
+      await this.prisma.busIncident.updateMany({
+        where: { id: { in: criticals.map((c) => c.id) } },
+        data: { tookBusOut: true },
+      });
     await this.audit.log({
       userId: actor.id,
       tableName: 'buses',
       recordId: busId,
       actionType: ActionType.update,
       oldValues: { status: bus.status, statusReason: bus.statusReason },
-      newValues: { status: BusStatus.available, statusReason: null },
+      newValues: { status, statusReason },
     });
   }
 

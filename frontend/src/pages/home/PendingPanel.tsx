@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bus, CheckCircle2, ChevronDown, FileText, Wrench, type LucideIcon } from 'lucide-react'
+import { Bus, CheckCircle2, ChevronDown, FileText, TriangleAlert, Wrench, type LucideIcon } from 'lucide-react'
 import { api } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { daysLabel, formatDate } from '../../lib/format'
@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 
-type Area = 'staff' | 'fleet' | 'maintenance'
+type Area = 'staff' | 'fleet' | 'maintenance' | 'incident'
 
 interface PendingItem {
   id: string
@@ -22,8 +22,24 @@ interface PendingItem {
   link: string
 }
 
-const AREA_ICON: Record<Area, LucideIcon> = { staff: FileText, fleet: Bus, maintenance: Wrench }
-const AREA_LABEL: Record<Area, string> = { staff: 'Personal', fleet: 'Unidad', maintenance: 'Taller' }
+const AREA_ICON: Record<Area, LucideIcon> = {
+  staff: FileText,
+  fleet: Bus,
+  maintenance: Wrench,
+  incident: TriangleAlert,
+}
+const AREA_LABEL: Record<Area, string> = {
+  staff: 'Personal',
+  fleet: 'Unidad',
+  maintenance: 'Taller',
+  incident: 'Incidencia',
+}
+
+/** Las incidencias no vencen: se cuenta cuánto llevan abiertas. */
+function ageLabel(daysOpen: number) {
+  if (daysOpen === 0) return 'Abierta hoy'
+  return daysOpen === 1 ? 'Abierta desde ayer' : `Abierta hace ${daysOpen} días`
+}
 
 type Filter = 'all' | 'staff' | 'fleet'
 const FILTERS: { key: Filter; label: string; match: (a: Area) => boolean }[] = [
@@ -47,7 +63,7 @@ export function PendingPanel() {
   const all = data ?? []
   const areas = new Set(all.map((i) => i.area))
   // Los filtros solo aparecen si hay pendientes de más de un área
-  const showFilters = areas.has('staff') && (areas.has('fleet') || areas.has('maintenance'))
+  const showFilters = areas.has('staff') && [...areas].some((a) => a !== 'staff')
   const items = all.filter((i) => FILTERS.find((f) => f.key === filter)!.match(i.area))
   const shown = expanded ? items : items.slice(0, VISIBLE)
   const overdue = all.filter((i) => i.severity === 'overdue').length
@@ -120,10 +136,18 @@ export function PendingPanel() {
                     </div>
                     <div className="hidden text-right text-xs text-fg-muted sm:block">
                       {i.date && <div>{formatDate(i.date)}</div>}
-                      {i.daysLeft !== null && <div>{daysLabel(i.daysLeft)}</div>}
+                      {i.daysLeft !== null && (
+                        <div>{i.area === 'incident' ? ageLabel(-i.daysLeft) : daysLabel(i.daysLeft)}</div>
+                      )}
                     </div>
                     <Badge tone={i.severity === 'overdue' ? 'danger' : 'warning'} dot>
-                      {i.severity === 'overdue' ? 'Vencido' : 'Por vencer'}
+                      {i.area === 'incident'
+                        ? i.severity === 'overdue'
+                          ? 'Urgente'
+                          : 'Abierta'
+                        : i.severity === 'overdue'
+                          ? 'Vencido'
+                          : 'Por vencer'}
                     </Badge>
                   </Link>
                 </li>

@@ -180,3 +180,44 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
   - Aislamiento entre mecánicos.
   - El correctivo no reinicia el conteo; cancelación en proceso.
   - Costos del mes.
+
+## 3.3 Incidencias (rama `feat/m3-incidencias`)
+### Decisiones del usuario
+- **Categorías**: catálogo editable (`incident_categories`, 7 en el seed base). La casilla "Es accidente" pide los datos del siniestro.
+- **Gravedad crítica**: la unidad sale de servicio en automático.
+- **Fotos**: se agregan cuando exista el almacenamiento de archivos (Módulo 6).
+- **Accidentes**: número de siniestro, aseguradora o ajustador, si hubo terceros y si hubo lesionados.
+
+### Datos
+- **`bus_incidents`** (folio INC-000123):
+  - Unidad, categoría, gravedad (baja, media, alta, crítica), descripción, lugar, fecha y hora del suceso, odómetro opcional y quién reporta.
+  - Estado: reportada → en revisión → resuelta o descartada.
+  - Atención: revisor y fecha, fecha de cierre y nota de resolución.
+  - `took_bus_out`: la incidencia es la que mantiene la unidad fuera de servicio.
+- **`maintenance_orders.incident_id`**: la incidencia de la que nació la orden.
+
+### Reglas (`incident-rules.ts`, con pruebas)
+- **Quién**: reportan coordinación, supervisión, conductor y mecánico. El conductor y el mecánico solo ven lo suyo y pueden corregir su reporte mientras nadie lo revise. Supervisión y coordinación toman, resuelven y descartan; solo coordinación crea la orden y edita categorías.
+- **Crítica**: una unidad disponible o en servicio pasa a fuera de servicio. Si se baja la gravedad, se regresa.
+- **Orden correctiva** desde la incidencia: con la unidad, la descripción y prioridad urgente si es alta o crítica. La incidencia pasa a en revisión. Mientras la orden esté abierta, la incidencia no se cierra a mano.
+- **Al terminar la orden**: la incidencia se resuelve sola con el trabajo realizado.
+- **Liberar la unidad** (orden terminada o incidencia cerrada): vuelve a disponible solo si no le queda otra crítica abierta; si le queda, sigue fuera de servicio a nombre de esa otra incidencia.
+- **Cambio en 3.2**: una unidad fuera de servicio ya admite órdenes **correctivas** (crearlas e iniciarlas); los preventivos siguen bloqueados.
+
+### API (`/fleet/incidents`)
+- `GET|POST /`, `GET|PATCH /:id`, `GET summary`, `GET buses` (unidades para elegir al reportar).
+- `POST /:id/review|resolve|dismiss|order`.
+- `GET|POST categories`, `PATCH categories/:id`.
+
+### Pantallas
+- **`/flota/incidencias`**: banda con abiertas, críticas, en revisión y resueltas del mes; pestañas **Incidencias** (abiertas por defecto, filtros por estado, gravedad y categoría) y **Categorías**. El conductor y el mecánico ven "Mis incidencias".
+- **Detalle** (`/flota/incidencias/:id`): reporte, datos del siniestro, órdenes ligadas y seguimiento; botones Editar, Tomar, Crear orden correctiva, Resolver y Descartar según el rol y el estado.
+- **Unidad**: pestaña **Incidencias** con el historial y "Reportar incidencia".
+- **Orden de trabajo**: muestra la incidencia de origen.
+- **Inicio**: las abiertas entran en Pendientes ("Urgente" si son altas o críticas) con cuánto llevan abiertas.
+- **Ctrl+K**: acción "Reportar incidencia" (`?nueva=1`) y búsqueda por folio (INC-12 o 12).
+
+### Demo y pruebas
+- **Demo**: `--fleet` agrega 4 incidencias: una crítica sin revisar (unidad fuera de servicio), una en revisión ligada a la orden de aire acondicionado y dos cerradas (una, accidente con siniestro).
+- **Unitarias**: `incident-rules.spec.ts`.
+- **E2E**: `test/incidents.e2e-spec.ts`: alcance del conductor, datos de siniestro, crítica → orden → resuelta y disponible, dos críticas abiertas y bajar la gravedad.

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Building2, Fuel, Map as MapIcon, MapPin, Plus } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import type { City, FuelType, Terminal } from '../../lib/types'
+import { DEFAULT_TIMEZONE, localClock, MX_TIMEZONES, utcOffsetLabel } from '../../lib/timezones'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Field'
@@ -40,7 +41,7 @@ const NEW_LABEL: Record<TabKey, string> = {
 
 type Draft =
   | { kind: 'fuel'; id?: string; name: string; unit: string }
-  | { kind: 'cities'; id?: string; name: string; state: string }
+  | { kind: 'cities'; id?: string; name: string; state: string; timezone: string }
   | {
       kind: 'terminals'
       id?: string
@@ -65,7 +66,7 @@ const empty = (tab: TabKey): Draft =>
   tab === 'fuel'
     ? { kind: 'fuel', name: '', unit: 'L' }
     : tab === 'cities'
-      ? { kind: 'cities', name: '', state: '' }
+      ? { kind: 'cities', name: '', state: '', timezone: DEFAULT_TIMEZONE }
       : { kind: 'terminals', code: '', name: '', cityId: '', address: '', location: null }
 
 const locationOf = (t: Terminal): LatLng | null =>
@@ -173,9 +174,24 @@ function FleetCatalogsPage() {
   const cityColumns: Column<City>[] = [
     { header: 'Ciudad', cell: (c) => <span className="font-medium">{c.name}</span> },
     { header: 'Estado', cell: (c) => c.state },
+    {
+      header: 'Zona horaria',
+      cell: (c) => (
+        <div>
+          <div className="font-data">
+            {localClock(c.timezone)} <span className="text-xs text-fg-muted">{utcOffsetLabel(c.timezone)}</span>
+          </div>
+          <div className="text-xs text-fg-muted">{c.timezone.replace('America/', '').replace('_', ' ')}</div>
+        </div>
+      ),
+    },
     { header: 'Terminales', cell: (c) => <span className="font-data">{c._count?.terminals ?? 0}</span> },
     { header: 'Situación', cell: (c) => activeBadge(c.isActive) },
-    { header: '', cell: (c) => actions('cities', c, { kind: 'cities', id: c.id, name: c.name, state: c.state }) },
+    {
+      header: '',
+      cell: (c) =>
+        actions('cities', c, { kind: 'cities', id: c.id, name: c.name, state: c.state, timezone: c.timezone }),
+    },
   ]
 
   const fuelColumns: Column<FuelType>[] = [
@@ -343,6 +359,20 @@ function FleetCatalogsPage() {
                   value={draft.state}
                   onChange={(e) => setDraft({ ...draft, state: e.target.value })}
                 />
+                <div className="sm:col-span-2">
+                  <Select
+                    label="Zona horaria"
+                    hint={`Hora local ahora: ${localClock(draft.timezone)} (${utcOffsetLabel(draft.timezone)}). Las salidas y llegadas de las rutas se calculan con ella.`}
+                    value={draft.timezone}
+                    onChange={(e) => setDraft({ ...draft, timezone: e.target.value })}
+                  >
+                    {MX_TIMEZONES.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               </div>
             )}
             {draft.kind === 'terminals' && (

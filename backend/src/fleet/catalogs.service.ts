@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { ActionType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
@@ -81,6 +82,8 @@ export class CatalogsService {
 
   async updateCity(id: string, dto: UpdateCityDto, actor: AuthUser) {
     const before = await this.prisma.city.findUniqueOrThrow({ where: { id } });
+    if (dto.isActive === false && before.isActive)
+      await this.assertNotInActiveRoutes({ cityId: id }, 'La ciudad');
     const row = await this.prisma.city.update({ where: { id }, data: dto });
     await this.log(actor, 'cities', id, ActionType.update, before, row);
     return row;
@@ -95,7 +98,9 @@ export class CatalogsService {
         isActive: includeInactive ? undefined : true,
         ...(located && { latitude: { not: null }, longitude: { not: null } }),
       },
-      include: { city: { select: { id: true, name: true, state: true } } },
+      include: {
+        city: { select: { id: true, name: true, state: true, timezone: true } },
+      },
       orderBy: { code: 'asc' },
     });
   }
@@ -112,6 +117,28 @@ export class CatalogsService {
     return t;
   }
 
+  /** Impide desactivar terminales (o ciudades) que una ruta activa usa como origen, destino o parada. */
+  private async assertNotInActiveRoutes(
+    terminal: Prisma.TerminalWhereInput,
+    label: string,
+  ) {
+    const route = await this.prisma.route.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { originTerminal: terminal },
+          { destinationTerminal: terminal },
+          { stops: { some: { terminal } } },
+        ],
+      },
+      select: { code: true },
+    });
+    if (route)
+      throw new BadRequestException(
+        `${label} se usa en la ruta activa ${route.code}; desactiva primero la ruta`,
+      );
+  }
+
   async createTerminal(dto: CreateTerminalDto, actor: AuthUser) {
     checkCoordinates(dto.latitude, dto.longitude);
     const row = await this.prisma.terminal.create({ data: dto });
@@ -125,6 +152,11 @@ export class CatalogsService {
     });
     if (dto.latitude !== undefined || dto.longitude !== undefined)
       checkCoordinates(dto.latitude, dto.longitude);
+    if (dto.isActive === false && before.isActive)
+      await this.assertNotInActiveRoutes({ id }, 'La terminal');
+    // Una terminal usada en rutas activas no puede quedarse sin ubicación
+    if (dto.latitude === null && before.latitude !== null)
+      await this.assertNotInActiveRoutes({ id }, 'La terminal');
     const row = await this.prisma.terminal.update({ where: { id }, data: dto });
     await this.log(actor, 'terminals', id, ActionType.update, before, row);
     return row;

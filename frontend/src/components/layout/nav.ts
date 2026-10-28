@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   Fuel,
   LayoutDashboard,
+  Route,
   ShieldCheck,
   Star,
   TriangleAlert,
@@ -32,6 +33,7 @@ export interface NavGroup {
 
 const STAFF_READERS: UserRole[] = ['hr', 'supervisor', 'coordinator']
 const FLEET_READERS: UserRole[] = ['coordinator', 'supervisor']
+const ROUTE_READERS: UserRole[] = ['coordinator', 'supervisor', 'vendor']
 
 // Cada módulo nuevo agrega su grupo aquí
 export const NAV: NavGroup[] = [
@@ -61,6 +63,10 @@ export const NAV: NavGroup[] = [
       { to: '/flota/modelos', label: 'Modelos', icon: LayoutGrid, roles: FLEET_READERS },
       { to: '/flota/catalogos', label: 'Catálogos', icon: Building2, roles: FLEET_READERS },
     ],
+  },
+  {
+    label: 'Rutas',
+    items: [{ to: '/rutas', label: 'Rutas', icon: Route, roles: ROUTE_READERS }],
   },
   {
     label: 'Sistema',
@@ -99,6 +105,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   mantenimiento: 'Mantenimiento',
   incidencias: 'Incidencias',
   combustible: 'Combustible',
+  rutas: 'Rutas',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

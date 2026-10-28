@@ -626,6 +626,8 @@ model City {
   id        String   @id @default(uuid(7)) @db.Uuid
   name      String   @db.VarChar(100)
   state     String   @db.VarChar(100)
+  /// Zona horaria IANA; los horarios de las rutas se interpretan en la zona de cada terminal
+  timezone  String   @default("America/Mexico_City") @db.VarChar(50)
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
@@ -649,8 +651,11 @@ model Terminal {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  city  City  @relation(fields: [cityId], references: [id])
-  buses Bus[]
+  city                City        @relation(fields: [cityId], references: [id])
+  buses               Bus[]
+  routesAsOrigin      Route[]     @relation("RouteOrigin")
+  routesAsDestination Route[]     @relation("RouteDestination")
+  routeStops          RouteStop[]
 
   @@index([cityId])
   @@map("terminals")
@@ -1002,4 +1007,97 @@ model FuelLoad {
   @@index([loadedAt])
   @@index([recordedBy])
   @@map("fuel_loads")
+}
+
+// =====================================================
+// MÓDULO 4: RUTAS
+// =====================================================
+
+model Route {
+  id                       String   @id @default(uuid(7)) @db.Uuid
+  code                     String   @unique @db.VarChar(20)
+  name                     String   @db.VarChar(255)
+  originTerminalId         String   @map("origin_terminal_id") @db.Uuid
+  destinationTerminalId    String   @map("destination_terminal_id") @db.Uuid
+  basePrice                Decimal  @map("base_price") @db.Decimal(10, 2)
+  estimatedDurationMinutes Int      @map("estimated_duration_minutes")
+  distanceKm               Decimal  @map("distance_km") @db.Decimal(8, 2)
+  description              String?  @db.Text
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  originTerminal      Terminal        @relation("RouteOrigin", fields: [originTerminalId], references: [id])
+  destinationTerminal Terminal        @relation("RouteDestination", fields: [destinationTerminalId], references: [id])
+  stops               RouteStop[]
+  schedules           RouteSchedule[]
+
+  @@index([originTerminalId, destinationTerminalId])
+  @@index([destinationTerminalId])
+  @@index([isActive])
+  @@map("routes")
+}
+
+model RouteStop {
+  id                        String   @id @default(uuid(7)) @db.Uuid
+  routeId                   String   @map("route_id") @db.Uuid
+  terminalId                String   @map("terminal_id") @db.Uuid
+  stopOrder                 Int      @map("stop_order")
+  durationFromOriginMinutes Int      @map("duration_from_origin_minutes")
+  additionalPrice           Decimal  @default(0) @map("additional_price") @db.Decimal(10, 2)
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  route    Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  terminal Terminal @relation(fields: [terminalId], references: [id])
+
+  @@unique([routeId, stopOrder])
+  @@unique([routeId, terminalId])
+  @@index([terminalId])
+  @@map("route_stops")
+}
+
+model RouteSchedule {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  routeId       String    @map("route_id") @db.Uuid
+  /// Hora local de salida en la zona de la terminal de origen
+  departureTime DateTime  @map("departure_time") @db.Time()
+  /// 0 = domingo … 6 = sábado
+  daysOfWeek    Int[]     @map("days_of_week")
+  validFrom     DateTime  @map("valid_from") @db.Date
+  validUntil    DateTime? @map("valid_until") @db.Date
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@index([validFrom, validUntil])
+  @@map("route_schedules")
+}
+
+enum SeasonType {
+  low
+  normal
+  high
+  holiday
+}
+
+/// Temporadas globales: aplican a todas las rutas y no se solapan entre las activas
+model Season {
+  id                   String     @id @default(uuid(7)) @db.Uuid
+  name                 String     @db.VarChar(100)
+  seasonType           SeasonType @map("season_type")
+  validFrom            DateTime   @map("valid_from") @db.Date
+  validUntil           DateTime   @map("valid_until") @db.Date
+  /// Negativo en baja temporada, positivo en alta
+  priceModifierPercent Decimal    @map("price_modifier_percent") @db.Decimal(5, 2)
+  description          String?    @db.Text
+  isActive             Boolean    @default(true) @map("is_active")
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([validFrom, validUntil])
+  @@map("seasons")
 }

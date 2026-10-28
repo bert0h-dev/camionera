@@ -143,6 +143,8 @@ model User {
   maintenanceOrders  MaintenanceOrder[]  @relation("MaintenanceMechanic")
   incidentsReported  BusIncident[]       @relation("IncidentReporter")
   incidentsReviewed  BusIncident[]       @relation("IncidentReviewer")
+  fuelLoadsRecorded  FuelLoad[]          @relation("FuelLoadRecorder")
+  fuelLoadsReviewed  FuelLoad[]          @relation("FuelLoadReviewer")
   passwordResets     PasswordReset[]
   auditLogs          AuditLog[]
   securityEvents     SecurityEvent[]
@@ -614,6 +616,7 @@ model FuelType {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   busModels BusModel[]
+  fuelLoads FuelLoad[]
 
   @@map("fuel_types")
 }
@@ -736,6 +739,7 @@ model Bus {
   readings          OdometerReading[]
   maintenanceOrders MaintenanceOrder[]
   incidents         BusIncident[]
+  fuelLoads         FuelLoad[]
 
   @@index([status])
   @@index([terminalId])
@@ -948,4 +952,54 @@ model BusIncident {
   @@index([status, severity])
   @@index([reportedBy])
   @@map("bus_incidents")
+}
+
+// =====================================================
+// FLOTA: COMBUSTIBLE (3.4)
+// =====================================================
+
+enum FuelLoadStatus {
+  /// Registrada por el conductor; no cuenta hasta que coordinación la confirme
+  pending
+  confirmed
+  rejected
+}
+
+/// Carga de combustible de una unidad. El rendimiento se mide de tanque lleno a tanque lleno.
+model FuelLoad {
+  id           String         @id @default(uuid(7)) @db.Uuid
+  busId        String         @map("bus_id") @db.Uuid
+  /// Combustible del modelo al momento de la carga
+  fuelTypeId   String         @map("fuel_type_id") @db.Uuid
+  loadedAt     DateTime       @map("loaded_at") @db.Timestamptz()
+  quantity     Decimal        @db.Decimal(8, 2)
+  unitPrice    Decimal        @map("unit_price") @db.Decimal(10, 3)
+  total        Decimal        @db.Decimal(12, 2)
+  odometerKm   Int            @map("odometer_km")
+  isFullTank   Boolean        @default(true) @map("is_full_tank")
+  station      String?        @db.VarChar(150)
+  ticket       String?        @db.VarChar(60)
+  notes        String?        @db.Text
+  status       FuelLoadStatus @default(confirmed)
+  rejectReason String?        @map("reject_reason") @db.Text
+  recordedBy   String         @map("recorded_by") @db.Uuid
+  reviewedBy   String?        @map("reviewed_by") @db.Uuid
+  reviewedAt   DateTime?      @map("reviewed_at") @db.Timestamptz()
+  /// Solo en tanques llenos que cierran un tramo medido
+  tripKm       Int?           @map("trip_km")
+  tripQuantity Decimal?       @map("trip_quantity") @db.Decimal(10, 2)
+  efficiency   Decimal?       @db.Decimal(6, 2)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz()
+
+  bus      Bus      @relation(fields: [busId], references: [id])
+  fuelType FuelType @relation(fields: [fuelTypeId], references: [id])
+  recorder User     @relation("FuelLoadRecorder", fields: [recordedBy], references: [id])
+  reviewer User?    @relation("FuelLoadReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([busId, status, odometerKm])
+  @@index([status])
+  @@index([loadedAt])
+  @@index([recordedBy])
+  @@map("fuel_loads")
 }

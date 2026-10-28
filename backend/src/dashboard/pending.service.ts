@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth.types.js';
 import { DOCUMENT_LABELS } from '../fleet/bus-rules.js';
 import { BusesService } from '../fleet/buses.service.js';
+import { FUEL_MANAGERS, FuelService } from '../fleet/fuel.service.js';
 import { MaintenanceService } from '../fleet/maintenance.service.js';
 import {
   INCIDENT_SEVERITY_LABELS,
@@ -16,7 +17,8 @@ import {
 } from '../generated/prisma/enums.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
-export type PendingArea = 'staff' | 'fleet' | 'maintenance' | 'incident';
+export type PendingArea =
+  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -54,7 +56,7 @@ const staffName = (s: {
 /**
  * Lista única de lo que hay que atender, de todas las áreas que el rol puede ver:
  * documentos del personal, documentos de unidades, preventivos vencidos o próximos
- * e incidencias abiertas.
+ * incidencias abiertas, rendimiento de combustible bajo y cargas por confirmar.
  * Ordenada por urgencia: primero lo vencido, luego lo que vence antes.
  */
 @Injectable()
@@ -64,17 +66,22 @@ export class PendingService {
     private readonly buses: BusesService,
     private readonly maintenance: MaintenanceService,
     private readonly incidents: IncidentsService,
+    private readonly fuel: FuelService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
     const staff = STAFF_AREA.includes(user.role);
     const fleet = FLEET_AREA.includes(user.role);
-    const [staffDocs, busDocs, plan, incidents] = await Promise.all([
-      staff ? this.staffDocs.expirations() : null,
-      fleet ? this.buses.expiringDocuments() : null,
-      fleet ? this.maintenance.plan() : null,
-      fleet ? this.incidents.open() : null,
-    ]);
+    const fuelManager = FUEL_MANAGERS.includes(user.role);
+    const [staffDocs, busDocs, plan, incidents, lowFuel, fuelLoads] =
+      await Promise.all([
+        staff ? this.staffDocs.expirations() : null,
+        fleet ? this.buses.expiringDocuments() : null,
+        fleet ? this.maintenance.plan() : null,
+        fleet ? this.incidents.open() : null,
+        fleet ? this.fuel.lowEfficiency() : null,
+        fuelManager ? this.fuel.pendingLoads() : null,
+      ]);
     const now = Date.now();
 
     const items: PendingItem[] = [
@@ -144,6 +151,27 @@ export class PendingService {
         // Días abierta, en negativo para que las más antiguas suban
         daysLeft: -Math.floor((now - i.occurredAt.getTime()) / 86_400_000),
         link: `/flota/incidencias/${i.id}`,
+      })),
+      ...(lowFuel ?? []).map((e) => ({
+        id: `fuel-low-${e.bus.id}`,
+        area: 'fuel' as const,
+        severity: 'soon' as const,
+        title: `Rendimiento bajo · unidad ${e.bus.economicNumber}`,
+        detail: `${e.last} km/${e.unit} contra ${e.expected} esperado (−${e.dropPct} %)`,
+        date: null,
+        daysLeft: null,
+        link: `/flota/unidades/${e.bus.id}?tab=fuel`,
+      })),
+      ...(fuelLoads ?? []).map((l) => ({
+        id: `fuel-pending-${l.id}`,
+        area: 'fuel' as const,
+        severity: 'soon' as const,
+        title: `Carga por confirmar · unidad ${l.bus.economicNumber}`,
+        detail: `${Number(l.quantity).toLocaleString('es-MX')} ${l.fuelType.unit} · ${l.recorder.fullName}`,
+        date: null,
+        // Días esperando, en negativo para que las más antiguas suban
+        daysLeft: -Math.floor((now - l.createdAt.getTime()) / 86_400_000),
+        link: '/flota/combustible?status=pending',
       })),
     ];
 

@@ -6,6 +6,7 @@ import {
   Bus,
   Wrench,
   CornerDownLeft,
+  Fuel,
   History,
   Moon,
   Plus,
@@ -95,6 +96,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const canFleet = !!role && ['admin', 'coordinator', 'supervisor'].includes(role)
   const canOrders = !!role && ['admin', 'coordinator', 'supervisor', 'mechanic'].includes(role)
   const canIncidents = canOrders || role === 'driver'
+  const canFuel = !!role && ['admin', 'coordinator', 'driver'].includes(role)
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -231,6 +233,18 @@ function Palette({ onClose }: { onClose: () => void }) {
               icon: TriangleAlert,
               keywords: 'falla dano accidente unidad reporte averia',
               to: '/flota/incidencias?nueva=1',
+            },
+          ]
+        : []),
+      ...(canFuel
+        ? [
+            {
+              id: 'action:new-fuel',
+              section: 'Acciones rápidas',
+              label: 'Registrar carga de combustible',
+              icon: Fuel,
+              keywords: 'diesel gasolina litros cargar tanque rendimiento',
+              to: '/flota/combustible?nueva=1',
             },
           ]
         : []),

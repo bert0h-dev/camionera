@@ -962,3 +962,84 @@ export interface IncidentBusOption {
   plates: string
   status: BusStatus
 }
+
+// ---------- Flota: combustible (3.4) ----------
+
+export const FUEL_LOAD_STATUSES = ['pending', 'confirmed', 'rejected'] as const
+export type FuelLoadStatus = (typeof FUEL_LOAD_STATUSES)[number]
+export const FUEL_LOAD_STATUS_LABELS: Record<FuelLoadStatus, string> = {
+  pending: 'Por confirmar',
+  confirmed: 'Confirmada',
+  rejected: 'Rechazada',
+}
+
+export interface FuelLoad {
+  id: string
+  busId: string
+  loadedAt: string
+  quantity: string
+  unitPrice: string
+  total: string
+  odometerKm: number
+  isFullTank: boolean
+  station: string | null
+  ticket: string | null
+  notes: string | null
+  status: FuelLoadStatus
+  rejectReason: string | null
+  reviewedAt: string | null
+  tripKm: number | null
+  tripQuantity: string | null
+  efficiency: string | null
+  recordedBy: string
+  /** Solo la última confirmada de cada unidad se corrige o elimina */
+  isLastConfirmed?: boolean
+  bus: {
+    id: string
+    economicNumber: string
+    plates: string
+    terminal: { id: string; code: string }
+    busModel: { expectedEfficiency: string | null }
+  }
+  fuelType: { id: string; name: string; unit: string }
+  recorder: { id: string; fullName: string; role: UserRole }
+  reviewer: { id: string; fullName: string } | null
+}
+
+export interface FuelSummary {
+  loadsThisMonth: number
+  quantityThisMonth: number
+  spendThisMonth: number
+  averageEfficiency: number | null
+  pending: number
+  rejectedThisMonth: number
+  lowEfficiencyBuses: number
+}
+
+export interface FuelEfficiencyRow {
+  bus: { id: string; economicNumber: string }
+  unit: string
+  expected: number | null
+  last: number | null
+  lastAt: string | null
+  lastLoadId: string | null
+  average90: number | null
+  dropPct: number | null
+  low: boolean
+  threshold: number
+}
+
+export interface FuelBusOption {
+  id: string
+  economicNumber: string
+  plates: string
+  status: BusStatus
+  odometerKm: number
+  lastLoadKm: number | null
+  busModel: { tankCapacity: string | null; fuelType: { id: string; name: string; unit: string } }
+}
+
+export interface FuelFormOptions {
+  buses: FuelBusOption[]
+  lastPrices: { fuelTypeId: string; unitPrice: string; loadedAt: string }[]
+}

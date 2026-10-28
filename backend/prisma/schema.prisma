@@ -134,6 +134,8 @@ model User {
   lockedUntil         DateTime? @map("locked_until") @db.Timestamptz()
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Preferencias de la interfaz (secciones ocultas de Inicio, etc.)
+  preferences         Json      @default("{}") @db.JsonB
 
   // Relations
   staff              Staff?

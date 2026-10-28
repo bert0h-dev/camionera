@@ -9,7 +9,8 @@
 - **Módulo 3, Gestión de Flota** (doc 12):
   - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
   - 3.1 Unidades ✅ fusionada (PR #9).
-  - **3.2 Mantenimientos** lista en la rama `feat/m3-mantenimientos` (PR por fusionar).
+  - 3.2 Mantenimientos ✅ fusionada (PR #10).
+- **Inicio reorganizado** (doc 13): rama `feat/inicio-ordenado`, PR por fusionar.
 
 ## Lo que sigue
 1. **Módulo 3**: siguen 3.3 Incidencias y 3.4 Combustible (ver doc 12).

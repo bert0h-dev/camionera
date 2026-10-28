@@ -26,11 +26,13 @@ describe('Rutas (e2e)', () => {
   let origin: string;
   let destination: string;
   let unlocated: string;
+  let midA: string;
+  let midB: string;
   let cityA: string;
   let cityB: string;
 
   const call = (
-    method: 'get' | 'post' | 'patch' | 'delete',
+    method: 'get' | 'post' | 'patch' | 'put' | 'delete',
     url: string,
     token: string,
   ) =>
@@ -110,6 +112,8 @@ describe('Rutas (e2e)', () => {
     origin = await newTerminal('RO', cityA);
     destination = await newTerminal('RD', cityB);
     unlocated = await newTerminal('RX', cityB, false);
+    midA = await newTerminal('RM', cityA);
+    midB = await newTerminal('RN', cityB);
   });
 
   afterAll(async () => {
@@ -333,6 +337,100 @@ describe('Rutas (e2e)', () => {
       await call('delete', one, vendorToken).expect(403);
       await call('delete', one, coordinatorToken).expect(204);
       expect((await call('get', url(), coordinatorToken)).body).toHaveLength(2);
+    });
+  });
+
+  describe('paradas', () => {
+    const url = () => `/routes/${ids.routes[0]}/stops`;
+    // La ruta de prueba: 300 min y precio base 480 (después de la edición)
+    const stop = (
+      terminalId: string,
+      legKm: number,
+      min: number,
+      price: number,
+    ) => ({
+      terminalId,
+      legKm,
+      durationFromOriginMinutes: min,
+      priceFromOrigin: price,
+    });
+
+    it('guarda el itinerario, acumula km y calcula la distancia de la ruta', async () => {
+      const res = await call('put', url(), coordinatorToken)
+        .send({
+          stops: [stop(midA, 100, 90, 150), stop(midB, 80.5, 200, 320)],
+          finalLegKm: 60,
+        })
+        .expect(200);
+      expect(
+        res.body.stops.map((s: { stopOrder: number }) => s.stopOrder),
+      ).toEqual([1, 2]);
+      expect(
+        res.body.stops.map((s: { kmFromOrigin: string }) =>
+          Number(s.kmFromOrigin),
+        ),
+      ).toEqual([100, 180.5]);
+      expect(Number(res.body.distanceKm)).toBe(240.5);
+    });
+
+    it('con paradas no se edita la distancia ni se deja la duración o el precio por debajo de la última parada', async () => {
+      const route = `/routes/${ids.routes[0]}`;
+      await call('patch', route, coordinatorToken)
+        .send({ distanceKm: 999 })
+        .expect(400);
+      await call('patch', route, coordinatorToken)
+        .send({ estimatedDurationMinutes: 200 })
+        .expect(400);
+      await call('patch', route, coordinatorToken)
+        .send({ basePrice: 300 })
+        .expect(400);
+      await call('patch', route, coordinatorToken)
+        .send({ estimatedDurationMinutes: 310 })
+        .expect(200);
+    });
+
+    it('reordenar invierte el orden; rechaza tiempos, precios, terminales y faltantes inválidos', async () => {
+      const bad = [
+        { stops: [stop(midA, 100, 90, 150)] }, // falta el último tramo
+        { stops: [stop(origin, 100, 90, 150)], finalLegKm: 10 },
+        {
+          stops: [stop(midA, 100, 90, 150), stop(midA, 10, 100, 160)],
+          finalLegKm: 10,
+        },
+        {
+          stops: [stop(midA, 100, 200, 150), stop(midB, 10, 100, 160)],
+          finalLegKm: 10,
+        },
+        { stops: [stop(midA, 100, 90, 500)], finalLegKm: 10 },
+        { stops: [stop(unlocated, 100, 90, 150)], finalLegKm: 10 },
+      ];
+      for (const body of bad)
+        await call('put', url(), coordinatorToken).send(body).expect(400);
+
+      const res = await call('put', url(), coordinatorToken)
+        .send({
+          stops: [stop(midB, 50, 60, 100), stop(midA, 50, 120, 200)],
+          finalLegKm: 50,
+        })
+        .expect(200);
+      expect(res.body.stops[0].terminal.id).toBe(midB);
+      expect(Number(res.body.distanceKm)).toBe(150);
+    });
+
+    it('la terminal de una parada no se puede desactivar; taquilla no edita; sin paradas la distancia es el tramo directo', async () => {
+      await call('patch', `/fleet/terminals/${midA}`, adminToken)
+        .send({ isActive: false })
+        .expect(400);
+      await call('put', url(), vendorToken).send({ stops: [] }).expect(403);
+      const res = await call('put', url(), coordinatorToken)
+        .send({ stops: [], finalLegKm: 333 })
+        .expect(200);
+      expect(res.body.stops).toEqual([]);
+      expect(Number(res.body.distanceKm)).toBe(333);
+      const cleared = await call('put', url(), coordinatorToken)
+        .send({ stops: [] })
+        .expect(200);
+      expect(cleared.body.distanceKm).toBeNull();
     });
   });
 });

@@ -1021,7 +1021,8 @@ model Route {
   destinationTerminalId    String   @map("destination_terminal_id") @db.Uuid
   basePrice                Decimal  @map("base_price") @db.Decimal(10, 2)
   estimatedDurationMinutes Int      @map("estimated_duration_minutes")
-  distanceKm               Decimal  @map("distance_km") @db.Decimal(8, 2)
+  /// Suma de los tramos; con paradas se calcula sola. Sin paradas es opcional
+  distanceKm               Decimal? @map("distance_km") @db.Decimal(8, 2)
   description              String?  @db.Text
   isActive                 Boolean  @default(true) @map("is_active")
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz()
@@ -1044,7 +1045,10 @@ model RouteStop {
   terminalId                String   @map("terminal_id") @db.Uuid
   stopOrder                 Int      @map("stop_order")
   durationFromOriginMinutes Int      @map("duration_from_origin_minutes")
-  additionalPrice           Decimal  @default(0) @map("additional_price") @db.Decimal(10, 2)
+  /// Km acumulados desde el origen
+  kmFromOrigin              Decimal  @map("km_from_origin") @db.Decimal(8, 2)
+  /// Precio del boleto del origen hasta esta parada; un tramo entre paradas cuesta la diferencia
+  priceFromOrigin           Decimal  @map("price_from_origin") @db.Decimal(10, 2)
   createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 

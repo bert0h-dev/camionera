@@ -17,15 +17,15 @@
 | Fase | Contenido | Estado |
 | :-: | --- | :-: |
 | 4.1 | Rutas: CRUD, clave única, activar y desactivar, zona horaria en ciudades | ✅ PR #17 |
-| 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ✅ esta rama |
-| 4.3 | Paradas: orden, tiempo desde el origen, precio adicional, mapa del recorrido | ⏳ |
+| 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ✅ PR #18 |
+| 4.3 | Paradas: km por tramo, tiempo y precio desde el origen; la distancia de la ruta se calcula | ✅ esta rama |
 | 4.4 | Temporadas globales y cálculo del precio vigente | ⏳ |
 | 4.5 | Búsqueda entre ciudades (directas y por tramo) para taquilla | ⏳ |
 
-## Esquema (una sola migración en la 4.1: `20261028191101_routes`)
+## Esquema (migración `20261028191101_routes` en la 4.1; `20261028195738_route_stops_km` en la 4.3)
 - `cities.timezone` (nuevo campo).
-- `routes`: `code` único, `name`, `originTerminalId`, `destinationTerminalId`, `basePrice`, `estimatedDurationMinutes`, `distanceKm`, `description`, `isActive`.
-- `route_stops`: `routeId`, `terminalId`, `stopOrder`, `durationFromOriginMinutes`, `additionalPrice`. Únicos `(routeId, stopOrder)` y `(routeId, terminalId)`. Se borran en cascada con la ruta.
+- `routes`: `code` único, `name`, `originTerminalId`, `destinationTerminalId`, `basePrice`, `estimatedDurationMinutes`, `distanceKm` (opcional desde la 4.3; con paradas es la suma de los tramos), `description`, `isActive`.
+- `route_stops`: `routeId`, `terminalId`, `stopOrder`, `durationFromOriginMinutes`, `kmFromOrigin` (acumulado) y `priceFromOrigin` (precio del boleto del origen hasta la parada; en la 4.3 reemplazó a `additionalPrice`). Únicos `(routeId, stopOrder)` y `(routeId, terminalId)`. Se borran en cascada con la ruta.
 - `route_schedules`: `routeId`, `departureTime` (`time`, hora local del origen), `daysOfWeek Int[]` (0 = domingo), `validFrom`, `validUntil?`, `isActive`. Cascada con la ruta.
 - `seasons`: `name`, `seasonType` (enum `SeasonType`: low, normal, high, holiday), `validFrom`, `validUntil`, `priceModifierPercent`, `description`, `isActive`.
 - Las tablas de paradas, horarios y temporadas ya existen; sus pantallas llegan en 4.2–4.4.
@@ -54,7 +54,7 @@ Cada alta y cambio queda en la bitácora (`routes`).
 
 ### Pantallas
 - **Rutas** (`/rutas`, nuevo grupo "Rutas" en el menú): banda con rutas activas, ciudades conectadas, kilómetros de red y precio base promedio; filtros por texto, ciudad de origen, ciudad de destino y estado. Las rutas que cruzan de zona llevan la etiqueta "Cambia de zona".
-- **Detalle** (`/rutas/:id`): datos, terminales con su hora local y desfase, ejemplo de horario (salida 08:00 → llegada en hora del destino) y mapa con el trazo origen → paradas → destino. La pestaña Paradas aparece deshabilitada hasta la 4.3.
+- **Detalle** (`/rutas/:id`): datos, terminales con su hora local y desfase, ejemplo de horario (salida 08:00 → llegada en hora del destino) y mapa con el trazo origen → paradas → destino. Desde la 4.3 la pestaña Paradas muestra el itinerario.
 - **Modal de ruta**: propone el nombre a partir de las ciudades y avisa cuando la ruta une dos zonas horarias.
 - **Catálogos › Ciudades**: nuevo selector de zona horaria y columna con la hora local actual.
 - **Buscador Ctrl+K**: acción "Nueva ruta" (`/rutas?nueva=1`) para admin y coordinación.
@@ -96,3 +96,29 @@ Cada alta y cambio queda en la bitácora (`routes`).
 
 ### Datos demo
 - 17 salidas en 6 rutas, vigentes desde hace 30 días. León – Querétaro vence en 5 días y Guadalajara – Mazatlán queda sin horarios; las dos aparecen en Pendientes.
+
+## 4.3 Paradas
+
+### Decisiones
+- **Precio desde el origen**: cada parada guarda el precio del boleto del origen hasta ella; el destino usa el precio base. Quien sube en un punto y baja en otro paga la diferencia (`segmentPrice`). Ejemplo GDL → CDMX: León $390, Querétaro $620, destino $820; León → Querétaro = $230.
+- **Km por tramo**: se capturan los km de cada tramo (origen → parada 1 → … → última parada → destino). Cada parada guarda sus km acumulados (`kmFromOrigin`) y la **distancia de la ruta es la suma de los tramos**.
+  - Sin paradas, la distancia es opcional y se captura en el modal de la ruta o como el tramo directo del itinerario.
+  - Con paradas, el modal la bloquea ("se calcula con las paradas") y la API rechaza cambiarla.
+
+### Reglas (`backend/src/routes/stop-rules.ts`, con pruebas)
+- La parada es una terminal activa con ubicación (solo se revisa si es nueva en el itinerario), distinta del origen y del destino, y sin repetirse.
+- Tiempo desde el origen creciente y menor que la duración de la ruta; precio creciente, mayor a 0 y menor que el precio base; km del tramo mayores a 0.
+- Con paradas, el último tramo hasta el destino es obligatorio.
+- Al editar la ruta con paradas, la duración y el precio base no pueden quedar por debajo de los de la última parada. Al reactivarla se revisan también las terminales de las paradas.
+
+### API
+- `PUT /routes/:id/stops` (editores): `{ stops: [{ terminalId, legKm, durationFromOriginMinutes, priceFromOrigin }], finalLegKm }`. Reemplaza el itinerario en una transacción, recalcula `distanceKm` y devuelve la ruta con sus paradas. Bitácora en `route_stops`.
+- Las paradas se leen con `GET /routes/:id` (no hay un GET aparte).
+
+### Pantalla (detalle de ruta › Paradas, `?tab=stops`)
+- **Itinerario** vertical Origen → paradas → Destino con km, precio y hora de llegada en la hora local de cada terminal para la salida elegida (selector con los horarios vigentes).
+- **Precio por tramo**: matriz sube × baja con la diferencia de precios.
+- **Editar**: cada parada como tramo "de X a Y" con terminal, km del tramo (muestra el acumulado), horas y minutos desde la salida y precio desde el origen; subir, bajar y quitar; último tramo hasta el destino y la distancia total calculada al momento.
+
+### Datos demo
+- GDL → CDMX por León (220 km, 3 h 20, $390) y Querétaro (410 km, 5 h 30, $620), 625 km en total; el regreso CDMX → GDL por Querétaro y León.

@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -21,6 +22,7 @@ import {
   UpdateRouteDto,
 } from './dto/route.dto.js';
 import { CreateSchedulesDto, UpdateScheduleDto } from './dto/schedule.dto.js';
+import { ReplaceStopsDto } from './dto/stop.dto.js';
 import { RoutesService } from './routes.service.js';
 import { SchedulesService } from './schedules.service.js';
 
@@ -77,6 +79,17 @@ export class RoutesController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.routes.update(id, dto, actor);
+  }
+
+  // ---------- Paradas ----------
+
+  @Put(':id/stops')
+  replaceStops(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReplaceStopsDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.routes.replaceStops(id, dto, actor);
   }
 
   // ---------- Horarios ----------

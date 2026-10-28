@@ -458,8 +458,8 @@ async function loadFleet() {
 /** Rutas demo (clave DEM-…) entre las terminales demo; incluye cruces de zona horaria. */
 async function loadRoutes() {
   const routes = [
-    { code: 'DEM-GDL-CDMX', name: 'Guadalajara – Ciudad de México', from: 'GDL', to: 'CDMXN', price: 820, min: 420, km: 540 },
-    { code: 'DEM-CDMX-GDL', name: 'Ciudad de México – Guadalajara', from: 'CDMXN', to: 'GDL', price: 820, min: 420, km: 540 },
+    { code: 'DEM-GDL-CDMX', name: 'Guadalajara – Ciudad de México', from: 'GDL', to: 'CDMXN', price: 820, min: 420, km: 625 },
+    { code: 'DEM-CDMX-GDL', name: 'Ciudad de México – Guadalajara', from: 'CDMXN', to: 'GDL', price: 820, min: 420, km: 625 },
     { code: 'DEM-GDL-LEO', name: 'Guadalajara – León', from: 'GDL', to: 'LEO', price: 390, min: 210, km: 220 },
     { code: 'DEM-LEO-QRO', name: 'León – Querétaro', from: 'LEO', to: 'QRO', price: 340, min: 150, km: 190 },
     { code: 'DEM-QRO-CDMX', name: 'Querétaro – Ciudad de México', from: 'QRO', to: 'CDMXN', price: 310, min: 180, km: 215 },
@@ -522,6 +522,35 @@ async function loadRoutes() {
       }
   }
   console.log(`Horarios demo: ${schedules} nuevos (desde ${dateKey(start)})`);
+
+  // Paradas demo: la ruta GDL ⇄ CDMX pasa por León y Querétaro; la distancia sale de los tramos
+  const itineraries: Record<string, { stops: [string, number, number, number][]; finalKm: number }> = {
+    // [terminal, km acumulados, minutos desde el origen, precio desde el origen]
+    'DEM-GDL-CDMX': { stops: [['LEO', 220, 200, 390], ['QRO', 410, 330, 620]], finalKm: 215 },
+    'DEM-CDMX-GDL': { stops: [['QRO', 215, 150, 310], ['LEO', 405, 280, 560]], finalKm: 220 },
+  };
+  for (const [code, it] of Object.entries(itineraries)) {
+    const route = await prisma.route.findUnique({ where: { code }, include: { _count: { select: { stops: true } } } });
+    if (!route || route._count.stops) continue;
+    const ids = new Map(
+      (await prisma.terminal.findMany({ where: { code: { in: it.stops.map((s) => s[0]) } } })).map((t) => [t.code, t.id]),
+    );
+    await prisma.routeStop.createMany({
+      data: it.stops.map(([t, km, min, price], i) => ({
+        routeId: route.id,
+        terminalId: ids.get(t)!,
+        stopOrder: i + 1,
+        kmFromOrigin: km,
+        durationFromOriginMinutes: min,
+        priceFromOrigin: price,
+      })),
+    });
+    await prisma.route.update({
+      where: { id: route.id },
+      data: { distanceKm: it.stops[it.stops.length - 1][1] + it.finalKm },
+    });
+  }
+  console.log('Paradas demo: GDL ⇄ CDMX por León y Querétaro');
 }
 
 /**

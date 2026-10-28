@@ -1065,7 +1065,8 @@ export interface RouteListItem {
   destinationTerminalId: string
   basePrice: string
   estimatedDurationMinutes: number
-  distanceKm: string
+  /** Suma de los tramos; null si no se ha capturado */
+  distanceKm: string | null
   description: string | null
   isActive: boolean
   createdAt: string
@@ -1080,7 +1081,10 @@ export interface RouteStop {
   terminalId: string
   stopOrder: number
   durationFromOriginMinutes: number
-  additionalPrice: string
+  /** Km acumulados desde el origen */
+  kmFromOrigin: string
+  /** Precio del boleto del origen hasta esta parada */
+  priceFromOrigin: string
   terminal: RouteTerminal
 }
 

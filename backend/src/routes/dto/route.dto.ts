@@ -63,11 +63,16 @@ export class CreateRouteDto {
   @Max(4320)
   estimatedDurationMinutes: number;
 
-  @ApiProperty({ example: 540 })
+  @ApiPropertyOptional({
+    example: 540,
+    description:
+      'Solo sin paradas; con paradas se calcula como la suma de los tramos',
+  })
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
   @Max(99999)
-  distanceKm: number;
+  distanceKm?: number | null;
 
   @ApiPropertyOptional()
   @Transform(trimOrNull)

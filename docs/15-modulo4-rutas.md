@@ -16,8 +16,8 @@
 
 | Fase | Contenido | Estado |
 | :-: | --- | :-: |
-| 4.1 | Rutas: CRUD, clave única, activar y desactivar, zona horaria en ciudades | ✅ esta rama |
-| 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ⏳ |
+| 4.1 | Rutas: CRUD, clave única, activar y desactivar, zona horaria en ciudades | ✅ PR #17 |
+| 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ✅ esta rama |
 | 4.3 | Paradas: orden, tiempo desde el origen, precio adicional, mapa del recorrido | ⏳ |
 | 4.4 | Temporadas globales y cálculo del precio vigente | ⏳ |
 | 4.5 | Búsqueda entre ciudades (directas y por tramo) para taquilla | ⏳ |
@@ -54,7 +54,7 @@ Cada alta y cambio queda en la bitácora (`routes`).
 
 ### Pantallas
 - **Rutas** (`/rutas`, nuevo grupo "Rutas" en el menú): banda con rutas activas, ciudades conectadas, kilómetros de red y precio base promedio; filtros por texto, ciudad de origen, ciudad de destino y estado. Las rutas que cruzan de zona llevan la etiqueta "Cambia de zona".
-- **Detalle** (`/rutas/:id`): datos, terminales con su hora local y desfase, ejemplo de horario (salida 08:00 → llegada en hora del destino) y mapa con el trazo origen → paradas → destino. Las pestañas Paradas y Horarios aparecen deshabilitadas hasta la 4.2 y 4.3.
+- **Detalle** (`/rutas/:id`): datos, terminales con su hora local y desfase, ejemplo de horario (salida 08:00 → llegada en hora del destino) y mapa con el trazo origen → paradas → destino. La pestaña Paradas aparece deshabilitada hasta la 4.3.
 - **Modal de ruta**: propone el nombre a partir de las ciudades y avisa cuando la ruta une dos zonas horarias.
 - **Catálogos › Ciudades**: nuevo selector de zona horaria y columna con la hora local actual.
 - **Buscador Ctrl+K**: acción "Nueva ruta" (`/rutas?nueva=1`) para admin y coordinación.
@@ -63,3 +63,36 @@ Cada alta y cambio queda en la bitácora (`routes`).
 - Nuevas terminales HMO (Hermosillo, `America/Hermosillo`), TIJ (Tijuana, `America/Tijuana`) y MZT (Mazatlán, `America/Mazatlan`).
 - 8 rutas con clave `DEM-…`, una de ellas inactiva. `--clean` las borra y `-- --routes` las carga solas.
 - Las ciudades que no son demo quedan en `America/Mexico_City`; hay que revisar las que estén en otra zona (por ejemplo Mexicali → `America/Tijuana`).
+
+## 4.2 Horarios
+
+### Reglas (`backend/src/routes/schedule-rules.ts`, con pruebas)
+- La hora de salida (`HH:mm`) es hora local de la terminal de origen. La llegada se calcula con `localArrival` y se muestra en hora del destino, con "(+1)" si llega al día siguiente. Para tomar bien el horario de verano se calcula en hoy o, si el horario aún no empieza, en su primer día de vigencia.
+- Días: al menos uno, de 0 (domingo) a 6, sin repetir; se guardan ordenados.
+- Vigencia: inicio obligatorio, fin opcional (vacío = indefinida) y no anterior al inicio.
+- **Sin choques**: dos horarios activos de la misma ruta no pueden tener la misma hora con algún día en común y vigencias que se crucen. El error dice con cuál choca. Uno inactivo no choca.
+- Situación calculada en la fecha local del origen: Vigente, Próximo, Vencido o Inactivo.
+- El alta acepta varias horas con los mismos días y vigencia, en una transacción: si una choca no se guarda ninguna.
+- Se pueden borrar mientras no haya recorridos; en el Módulo 5, un horario con recorridos solo se podrá desactivar.
+
+### API
+| Método | Ruta | Roles |
+| --- | --- | --- |
+| GET | `/routes/:id/schedules` | lectores (con `status`, `arrivalTime`, `arrivalDayOffset`) |
+| POST | `/routes/:id/schedules` | editores (`departureTimes[]`, `daysOfWeek`, `validFrom`, `validUntil?`) |
+| PATCH | `/routes/:id/schedules/:scheduleId` | editores (también activa y desactiva) |
+| DELETE | `/routes/:id/schedules/:scheduleId` | editores |
+
+- `GET /routes` cuenta en `_count.schedules` solo los horarios vigentes hoy. `GET /routes/summary` agrega `weeklyDepartures`.
+
+### Pantallas
+- **Detalle de ruta › Horarios** (`?tab=schedules` la abre directo): tabla con salida, llegada, días (chips L M M J V S D), vigencia y situación. Los vencidos e inactivos se ocultan hasta pedirlos. La vista **Semana** muestra las salidas vigentes de cada día y marca los días sin salidas.
+- **Modal**: varias horas (con la llegada calculada al lado), días con atajos Diario / Lunes a viernes / Fin de semana, y vigencia.
+- La banda del detalle y la de la lista muestran **Salidas por semana**. En la lista, una ruta activa sin horarios vigentes lleva la etiqueta "sin horarios".
+
+### Inicio y parámetros
+- Pendientes, área **Rutas** (admin y coordinación): "Ruta sin horarios" (activa y sin salidas vigentes; si tiene horarios futuros dice cuándo empiezan) y "Horario por vencer" según `routes.schedule_expiry_alert_days` (7 días).
+- Parámetros: nuevo módulo **Rutas** con el grupo "Horarios de ruta".
+
+### Datos demo
+- 17 salidas en 6 rutas, vigentes desde hace 30 días. León – Querétaro vence en 5 días y Guadalajara – Mazatlán queda sin horarios; las dos aparecen en Pendientes.

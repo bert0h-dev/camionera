@@ -12,6 +12,10 @@ import {
   UpdateRouteDto,
 } from './dto/route.dto.js';
 import { routeError } from './route-rules.js';
+import {
+  currentSchedulesWhere,
+  SchedulesService,
+} from './schedules.service.js';
 
 const TABLE = 'routes';
 
@@ -27,11 +31,15 @@ const terminal = {
   },
 } satisfies Prisma.TerminalDefaultArgs;
 
-const listInclude = {
-  originTerminal: terminal,
-  destinationTerminal: terminal,
-  _count: { select: { stops: true, schedules: true } },
-} satisfies Prisma.RouteInclude;
+/** Los horarios cuentan solo si están vigentes hoy. */
+const listInclude = () =>
+  ({
+    originTerminal: terminal,
+    destinationTerminal: terminal,
+    _count: {
+      select: { stops: true, schedules: { where: currentSchedulesWhere() } },
+    },
+  }) satisfies Prisma.RouteInclude;
 
 const detailInclude = {
   originTerminal: terminal,
@@ -51,6 +59,7 @@ export class RoutesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly catalogs: CatalogsService,
+    private readonly schedules: SchedulesService,
   ) {}
 
   async findAll(q: QueryRoutesDto) {
@@ -74,7 +83,7 @@ export class RoutesService {
     const [data, total] = await Promise.all([
       this.prisma.route.findMany({
         where,
-        include: listInclude,
+        include: listInclude(),
         orderBy: { [q.sort ?? 'code']: 'asc' },
         skip: (q.page - 1) * q.limit,
         take: q.limit,
@@ -86,7 +95,7 @@ export class RoutesService {
 
   /** Cifras para la banda de la pantalla de rutas. */
   async summary() {
-    const [active, inactive, agg, ends] = await Promise.all([
+    const [active, inactive, agg, ends, weeklyDepartures] = await Promise.all([
       this.prisma.route.count({ where: { isActive: true } }),
       this.prisma.route.count({ where: { isActive: false } }),
       this.prisma.route.aggregate({
@@ -101,6 +110,7 @@ export class RoutesService {
           destinationTerminal: { select: { cityId: true } },
         },
       }),
+      this.schedules.weeklyDepartures(),
     ]);
     const cities = new Set(
       ends.flatMap((r) => [
@@ -115,6 +125,7 @@ export class RoutesService {
       averagePrice:
         agg._avg.basePrice === null ? null : Number(agg._avg.basePrice),
       cities: cities.size,
+      weeklyDepartures,
     };
   }
 

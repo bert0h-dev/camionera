@@ -13,14 +13,15 @@
   - 3.3 Incidencias ✅ fusionada (PR #13).
   - 3.4 Combustible ✅ fusionada (PR #15).
 - **Módulo 4, Gestión de Rutas** (doc 15): 🚧 en curso.
-  - 4.1 Rutas y zona horaria por ciudad ✅ en la rama `feat/m4-rutas` (migración con todas las tablas del módulo).
-  - En la misma rama: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
+  - 4.1 Rutas y zona horaria por ciudad ✅ fusionada (PR #17; migración con todas las tablas del módulo).
+  - 4.2 Horarios ✅ en la rama `feat/m4-horarios`.
+  - Con la 4.1: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
 - **README** actualizado al estado actual (módulos 1–3, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 4, Rutas**: 4.2 Horarios, 4.3 Paradas, 4.4 Temporadas globales (precio a peso entero) y 4.5 Búsqueda (ver doc 15).
+1. **Módulo 4, Rutas**: 4.3 Paradas, 4.4 Temporadas globales (precio a peso entero) y 4.5 Búsqueda (ver doc 15).
 2. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
    - Los parámetros `trips.*` y `tickets.*` ya están listos.
 

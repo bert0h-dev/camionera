@@ -92,7 +92,8 @@ function RoutesPage() {
       header: 'Paradas · horarios',
       cell: (r) => (
         <span className="font-data">
-          {r._count.stops} · {r._count.schedules}
+          {r._count.stops} ·{' '}
+          {r.isActive && !r._count.schedules ? <Badge tone="warning">sin horarios</Badge> : r._count.schedules}
         </span>
       ),
     },
@@ -138,13 +139,13 @@ function RoutesPage() {
               label="Ciudades conectadas"
               value={s?.cities ?? 0}
               loading={summary.isLoading}
-              hint="con rutas activas"
+              hint={s ? `${formatKm(s.totalKm)} de red` : 'con rutas activas'}
             />
             <HeroStat
-              label="Kilómetros de red"
-              value={s ? formatKm(s.totalKm) : '—'}
+              label="Salidas por semana"
+              value={s?.weeklyDepartures ?? 0}
               loading={summary.isLoading}
-              hint="suma de rutas activas"
+              hint="horarios vigentes hoy"
             />
             <HeroStat
               label="Precio base promedio"

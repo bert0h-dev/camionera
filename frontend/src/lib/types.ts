@@ -1093,6 +1093,21 @@ export interface RouteSchedule {
   isActive: boolean
 }
 
+export type ScheduleStatus = 'current' | 'upcoming' | 'expired' | 'inactive'
+
+/** Horario con la hora como 'HH:mm', las fechas como 'AAAA-MM-DD' y la llegada ya calculada. */
+export interface RouteScheduleRow {
+  id: string
+  departureTime: string
+  daysOfWeek: number[]
+  validFrom: string
+  validUntil: string | null
+  isActive: boolean
+  status: ScheduleStatus
+  arrivalTime: string
+  arrivalDayOffset: number
+}
+
 export interface RouteDetail extends Omit<RouteListItem, '_count'> {
   stops: RouteStop[]
   schedules: RouteSchedule[]
@@ -1104,4 +1119,5 @@ export interface RouteSummary {
   totalKm: number
   averagePrice: number | null
   cities: number
+  weeklyDepartures: number
 }

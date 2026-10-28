@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, Info, MapPinned, Pencil, Power } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
@@ -17,12 +17,14 @@ import { LoadingBlock } from '../../components/ui/Spinner'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { RouteModal } from './RouteModal'
-import { formatKm, routeEnds, useCanEditRoutes, useRoute } from './useRoutes'
+import { RouteSchedulesTab } from './RouteSchedulesTab'
+import { formatKm, routeEnds, useCanEditRoutes, useRoute, useRouteSchedules } from './useRoutes'
 
 // El mapa (Leaflet) se descarga solo al abrir el detalle
 const PointsMap = lazy(() => import('../../components/map/TerminalMap').then((m) => ({ default: m.PointsMap })))
 
 type TabKey = 'general' | 'stops' | 'schedules'
+const TAB_KEYS: TabKey[] = ['general', 'schedules']
 
 const toPoint = (t: RouteTerminal, role: string): MapPoint[] =>
   t.latitude != null && t.longitude != null
@@ -65,9 +67,15 @@ function RouteDetailPage() {
   const canEdit = useCanEditRoutes()
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState<TabKey>('general')
+  const [params] = useSearchParams()
+  // Inicio abre directo los horarios con ?tab=schedules
+  const [tab, setTab] = useState<TabKey>(() => {
+    const t = params.get('tab') as TabKey
+    return TAB_KEYS.includes(t) ? t : 'general'
+  })
   const [editOpen, setEditOpen] = useState(false)
   const { data: route, error, isFetching } = useRoute(id)
+  const schedules = useRouteSchedules(id)
 
   const toggle = useMutation({
     mutationFn: (isActive: boolean) => api.patch(`/routes/${id}`, { isActive }),
@@ -101,10 +109,13 @@ function RouteDetailPage() {
   const sampleArrival = arrivalLabel('08:00', route.estimatedDurationMinutes, originTz, destinationTz, today)
   const kmh = Math.round(Number(route.distanceKm) / (route.estimatedDurationMinutes / 60))
 
+  const current = (schedules.data ?? []).filter((s) => s.status === 'current')
+  const weekly = current.reduce((n, s) => n + s.daysOfWeek.length, 0)
+
   const tabs: TabItem<TabKey>[] = [
     { key: 'general', label: 'General', icon: Info },
     { key: 'stops', label: 'Paradas', icon: MapPinned, disabled: true },
-    { key: 'schedules', label: 'Horarios', icon: CalendarClock, disabled: true },
+    { key: 'schedules', label: 'Horarios', icon: CalendarClock },
   ]
 
   return (
@@ -148,10 +159,11 @@ function RouteDetailPage() {
             <HeroStat label="Distancia" value={formatKm(route.distanceKm)} hint={`≈ ${kmh} km/h promedio`} />
             <HeroStat label="Duración" value={formatMinutes(route.estimatedDurationMinutes)} hint="estimada" />
             <HeroStat
-              label="Paradas · horarios"
-              value={`${route.stops.length} · ${route.schedules.length}`}
-              tone={route.isActive && !route.schedules.length ? 'warning' : 'neutral'}
-              hint={route.schedules.length ? 'configurados' : 'sin horarios aún'}
+              label="Salidas por semana"
+              value={weekly}
+              tone={route.isActive && !weekly ? 'warning' : 'neutral'}
+              loading={schedules.isLoading}
+              hint={current.length ? `${current.length} horario(s) vigentes` : 'sin horarios vigentes'}
             />
           </>
         }
@@ -192,6 +204,8 @@ function RouteDetailPage() {
           </Card>
         </div>
       )}
+
+      {tab === 'schedules' && <RouteSchedulesTab route={route} />}
 
       {canEdit && <RouteModal route={editOpen ? route : undefined} onClose={() => setEditOpen(false)} />}
     </div>

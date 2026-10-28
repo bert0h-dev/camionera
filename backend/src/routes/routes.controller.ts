@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -18,7 +20,9 @@ import {
   QueryRoutesDto,
   UpdateRouteDto,
 } from './dto/route.dto.js';
+import { CreateSchedulesDto, UpdateScheduleDto } from './dto/schedule.dto.js';
 import { RoutesService } from './routes.service.js';
+import { SchedulesService } from './schedules.service.js';
 
 /** Coordinación (y admin) administra las rutas; supervisión y taquilla las consultan. */
 export const ROUTE_READERS = [
@@ -33,7 +37,10 @@ export const ROUTE_EDITORS = [UserRole.coordinator];
 @Roles(...ROUTE_EDITORS)
 @Controller('routes')
 export class RoutesController {
-  constructor(private readonly routes: RoutesService) {}
+  constructor(
+    private readonly routes: RoutesService,
+    private readonly schedules: SchedulesService,
+  ) {}
 
   @Get('summary')
   @Roles(...ROUTE_READERS)
@@ -70,5 +77,42 @@ export class RoutesController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.routes.update(id, dto, actor);
+  }
+
+  // ---------- Horarios ----------
+
+  @Get(':id/schedules')
+  @Roles(...ROUTE_READERS)
+  listSchedules(@Param('id', ParseUUIDPipe) id: string) {
+    return this.schedules.list(id);
+  }
+
+  @Post(':id/schedules')
+  createSchedules(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateSchedulesDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.schedules.create(id, dto, actor);
+  }
+
+  @Patch(':id/schedules/:scheduleId')
+  updateSchedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('scheduleId', ParseUUIDPipe) scheduleId: string,
+    @Body() dto: UpdateScheduleDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.schedules.update(id, scheduleId, dto, actor);
+  }
+
+  @Delete(':id/schedules/:scheduleId')
+  @HttpCode(204)
+  removeSchedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('scheduleId', ParseUUIDPipe) scheduleId: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.schedules.remove(id, scheduleId, actor);
   }
 }

@@ -486,6 +486,42 @@ async function loadRoutes() {
     await prisma.route.upsert({ where: { code: r.code }, update: data, create: { code: r.code, ...data } });
   }
   console.log(`Rutas demo: ${routes.length}`);
+
+  // Horarios demo: Guadalajara – Mazatlán queda sin horarios para que se vea el aviso en Inicio
+  const WEEKDAYS = [1, 2, 3, 4, 5];
+  const ALL = [0, 1, 2, 3, 4, 5, 6];
+  const start = addDays(today(), -30);
+  const plans: Record<string, { times: string[]; days: number[]; until?: Date }[]> = {
+    'DEM-GDL-CDMX': [{ times: ['06:00', '08:30', '13:00', '22:00'], days: ALL }],
+    'DEM-CDMX-GDL': [{ times: ['07:00', '14:30', '23:00'], days: ALL }],
+    'DEM-GDL-LEO': [
+      { times: ['07:15', '15:15'], days: WEEKDAYS },
+      { times: ['09:00'], days: [0, 6] },
+    ],
+    // Corrida de temporada que vence pronto
+    'DEM-LEO-QRO': [{ times: ['08:00', '18:00'], days: ALL, until: addDays(today(), 5) }],
+    'DEM-QRO-CDMX': [{ times: ['05:30', '12:00', '19:30'], days: WEEKDAYS }],
+    'DEM-HMO-TIJ': [{ times: ['09:00', '21:00'], days: ALL }],
+  };
+  let schedules = 0;
+  for (const [code, list] of Object.entries(plans)) {
+    const route = await prisma.route.findUnique({ where: { code }, include: { _count: { select: { schedules: true } } } });
+    if (!route || route._count.schedules) continue;
+    for (const p of list)
+      for (const t of p.times) {
+        await prisma.routeSchedule.create({
+          data: {
+            routeId: route.id,
+            departureTime: new Date(`1970-01-01T${t}:00Z`),
+            daysOfWeek: p.days,
+            validFrom: start,
+            validUntil: p.until ?? null,
+          },
+        });
+        schedules++;
+      }
+  }
+  console.log(`Horarios demo: ${schedules} nuevos (desde ${dateKey(start)})`);
 }
 
 /**

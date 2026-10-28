@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bus, CheckCircle2, ChevronDown, FileText, Fuel, TriangleAlert, Wrench, type LucideIcon } from 'lucide-react'
+import {
+  Bus,
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  Fuel,
+  Route,
+  TriangleAlert,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react'
 import { api } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { daysLabel, formatDate } from '../../lib/format'
@@ -9,7 +19,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 
-type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel'
+type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route'
 
 interface PendingItem {
   id: string
@@ -28,6 +38,7 @@ const AREA_ICON: Record<Area, LucideIcon> = {
   maintenance: Wrench,
   incident: TriangleAlert,
   fuel: Fuel,
+  route: Route,
 }
 const AREA_LABEL: Record<Area, string> = {
   staff: 'Personal',
@@ -35,6 +46,7 @@ const AREA_LABEL: Record<Area, string> = {
   maintenance: 'Taller',
   incident: 'Incidencia',
   fuel: 'Combustible',
+  route: 'Ruta',
 }
 
 /** Las incidencias y las cargas por confirmar no vencen: se cuenta cuánto llevan esperando. */
@@ -45,15 +57,17 @@ function ageLabel(daysOpen: number, verb = 'Abierta') {
 
 function badgeLabel(i: PendingItem) {
   if (i.area === 'incident') return i.severity === 'overdue' ? 'Urgente' : 'Abierta'
+  if (i.area === 'route') return i.id.startsWith('route-unscheduled') ? 'Sin horarios' : 'Por vencer'
   if (i.area === 'fuel') return i.id.startsWith('fuel-low') ? 'Rendimiento bajo' : 'Por confirmar'
   return i.severity === 'overdue' ? 'Vencido' : 'Por vencer'
 }
 
-type Filter = 'all' | 'staff' | 'fleet'
+type Filter = 'all' | 'staff' | 'fleet' | 'route'
 const FILTERS: { key: Filter; label: string; match: (a: Area) => boolean }[] = [
   { key: 'all', label: 'Todo', match: () => true },
   { key: 'staff', label: 'Personal', match: (a) => a === 'staff' },
-  { key: 'fleet', label: 'Flota', match: (a) => a !== 'staff' },
+  { key: 'fleet', label: 'Flota', match: (a) => a !== 'staff' && a !== 'route' },
+  { key: 'route', label: 'Rutas', match: (a) => a === 'route' },
 ]
 
 const VISIBLE = 6
@@ -69,9 +83,9 @@ export function PendingPanel() {
   })
 
   const all = data ?? []
-  const areas = new Set(all.map((i) => i.area))
-  // Los filtros solo aparecen si hay pendientes de más de un área
-  const showFilters = areas.has('staff') && [...areas].some((a) => a !== 'staff')
+  // Solo los filtros con pendientes; si todo es de un mismo grupo no se muestran
+  const filters = FILTERS.filter((f) => f.key === 'all' || all.some((i) => f.match(i.area)))
+  const showFilters = filters.length > 2
   const items = all.filter((i) => FILTERS.find((f) => f.key === filter)!.match(i.area))
   const shown = expanded ? items : items.slice(0, VISIBLE)
   const overdue = all.filter((i) => i.severity === 'overdue').length
@@ -89,7 +103,7 @@ export function PendingPanel() {
         </div>
         {showFilters && (
           <div className="flex gap-1 rounded-lg bg-surface-sunken p-1">
-            {FILTERS.map((f) => (
+            {filters.map((f) => (
               <button
                 key={f.key}
                 type="button"

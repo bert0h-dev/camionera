@@ -221,4 +221,118 @@ describe('Rutas (e2e)', () => {
       .expect(200);
     expect(Number(res.body.basePrice)).toBe(480);
   });
+
+  describe('horarios', () => {
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City',
+    }).format(new Date());
+    const plus = (days: number) =>
+      new Date(Date.parse(`${today}T00:00:00Z`) + days * 86400000)
+        .toISOString()
+        .slice(0, 10);
+    const url = () => `/routes/${ids.routes[0]}/schedules`;
+    const pendingIds = async () =>
+      (
+        await call('get', '/dashboard/pending', coordinatorToken).expect(200)
+      ).body.map((p: { id: string }) => p.id) as string[];
+
+    it('sin horarios vigentes aparece en Pendientes', async () => {
+      expect(await pendingIds()).toContain(
+        `route-unscheduled-${ids.routes[0]}`,
+      );
+    });
+
+    it('alta de varias horas a la vez con días ordenados y llegada en hora local', async () => {
+      const res = await call('post', url(), coordinatorToken)
+        .send({
+          departureTimes: ['10:00', '06:30'],
+          daysOfWeek: [5, 1, 2, 3, 4],
+          validFrom: today,
+        })
+        .expect(201);
+      expect(
+        res.body.map((s: { departureTime: string }) => s.departureTime),
+      ).toEqual(['06:30', '10:00']);
+      expect(res.body[0].daysOfWeek).toEqual([1, 2, 3, 4, 5]);
+
+      const list = await call('get', url(), vendorToken).expect(200);
+      expect(list.body).toHaveLength(2);
+      expect(list.body[0].status).toBe('current');
+      // 300 min del centro a Tijuana: 10:30 o 11:30 en hora local según el horario de verano
+      expect(['10:30', '11:30']).toContain(list.body[0].arrivalTime);
+      expect(await pendingIds()).not.toContain(
+        `route-unscheduled-${ids.routes[0]}`,
+      );
+
+      const routes = await call(
+        'get',
+        `/routes?search=${tag}`,
+        vendorToken,
+      ).expect(200);
+      expect(routes.body.data[0]._count.schedules).toBe(2);
+    });
+
+    it('rechaza choques, horas repetidas, sin días y vigencia invertida; si una choca no guarda ninguna', async () => {
+      const clash = await call('post', url(), coordinatorToken)
+        .send({
+          departureTimes: ['07:00', '10:00'],
+          daysOfWeek: [5, 6],
+          validFrom: plus(3),
+        })
+        .expect(400);
+      expect(JSON.stringify(clash.body)).toMatch(/10:00/);
+      expect((await call('get', url(), coordinatorToken)).body).toHaveLength(2);
+
+      const bad = [
+        {
+          departureTimes: ['07:00', '07:00'],
+          daysOfWeek: [1],
+          validFrom: today,
+        },
+        { departureTimes: ['07:00'], daysOfWeek: [], validFrom: today },
+        { departureTimes: ['25:00'], daysOfWeek: [1], validFrom: today },
+        {
+          departureTimes: ['07:00'],
+          daysOfWeek: [1],
+          validFrom: plus(5),
+          validUntil: plus(1),
+        },
+      ];
+      for (const body of bad)
+        await call('post', url(), coordinatorToken).send(body).expect(400);
+
+      // A la misma hora pero en fin de semana no choca
+      await call('post', url(), coordinatorToken)
+        .send({
+          departureTimes: ['10:00'],
+          daysOfWeek: [0, 6],
+          validFrom: today,
+          validUntil: plus(3),
+        })
+        .expect(201);
+    });
+
+    it('el horario por vencer sale en Pendientes; editar, desactivar y borrar', async () => {
+      const list = (await call('get', url(), coordinatorToken).expect(200))
+        .body as { id: string; validUntil: string | null }[];
+      const weekend = list.find((s) => s.validUntil)!;
+      expect(await pendingIds()).toContain(`route-expiring-${weekend.id}`);
+
+      const one = `${url()}/${weekend.id}`;
+      // Pasarlo a lunes choca con el de entre semana
+      await call('patch', one, coordinatorToken)
+        .send({ daysOfWeek: [1] })
+        .expect(400);
+      await call('patch', one, coordinatorToken)
+        .send({ isActive: false })
+        .expect(200);
+      const after = (await call('get', url(), coordinatorToken)).body.find(
+        (s: { id: string }) => s.id === weekend.id,
+      );
+      expect(after.status).toBe('inactive');
+      await call('delete', one, vendorToken).expect(403);
+      await call('delete', one, coordinatorToken).expect(204);
+      expect((await call('get', url(), coordinatorToken)).body).toHaveLength(2);
+    });
+  });
 });

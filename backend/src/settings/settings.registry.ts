@@ -346,7 +346,19 @@ export const SETTINGS = {
       'Porcentaje por debajo del rendimiento esperado del modelo para marcar la unidad con rendimiento bajo',
   },
 
-  // ---------- Recorridos (se usarán en el Módulo 4) ----------
+  // ---------- Rutas ----------
+  'routes.schedule_expiry_alert_days': {
+    type: 'number',
+    default: 7,
+    min: 1,
+    max: 90,
+    label: 'Aviso de horarios por vencer',
+    unit: 'días',
+    description:
+      'Días antes del fin de vigencia de un horario para avisarlo en Pendientes',
+  },
+
+  // ---------- Recorridos (se usarán en el Módulo 5) ----------
   'trips.unit_turnaround_minutes': {
     type: 'number',
     default: 30,

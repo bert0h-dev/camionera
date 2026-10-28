@@ -34,8 +34,8 @@ export const useRouteTerminals = (enabled = true) =>
 export const routeEnds = (r: { originTerminal: RouteTerminal; destinationTerminal: RouteTerminal }) =>
   `${r.originTerminal.code} → ${r.destinationTerminal.code}`
 
-export const formatKm = (km: number | string) =>
-  `${Number(km).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km`
+export const formatKm = (km: number | string | null) =>
+  km === null ? '—' : `${Number(km).toLocaleString('es-MX', { maximumFractionDigits: 1 })} km`
 
 export const useRouteSchedules = (routeId: string) =>
   useQuery({

@@ -11,7 +11,9 @@ import {
   QueryRoutesDto,
   UpdateRouteDto,
 } from './dto/route.dto.js';
+import { ReplaceStopsDto } from './dto/stop.dto.js';
 import { routeError } from './route-rules.js';
+import { checkItinerary } from './stop-rules.js';
 import {
   currentSchedulesWhere,
   SchedulesService,
@@ -190,13 +192,41 @@ export class RoutesService {
       reactivating || origin !== before.originTerminalId,
       reactivating || destination !== before.destinationTerminalId,
     );
-    const stopClash = await this.prisma.routeStop.findFirst({
-      where: { routeId: id, terminalId: { in: [origin, destination] } },
+    const stops = await this.prisma.routeStop.findMany({
+      where: { routeId: id },
+      orderBy: { stopOrder: 'asc' },
     });
-    if (stopClash)
+    if (
+      stops.some((s) => s.terminalId === origin || s.terminalId === destination)
+    )
       throw new BadRequestException(
         'Esa terminal ya es una parada de la ruta; quítala de las paradas primero',
       );
+    if (stops.length) {
+      if (
+        dto.distanceKm !== undefined &&
+        Number(dto.distanceKm) !== Number(before.distanceKm)
+      )
+        throw new BadRequestException(
+          'La ruta tiene paradas: la distancia se calcula con los km de cada tramo',
+        );
+      // Las paradas deben seguir llegando antes y costando menos que el destino
+      const duration =
+        dto.estimatedDurationMinutes ?? before.estimatedDurationMinutes;
+      const price = dto.basePrice ?? Number(before.basePrice);
+      const last = stops[stops.length - 1];
+      if (last.durationFromOriginMinutes >= duration)
+        throw new BadRequestException(
+          `La duración debe ser mayor que el tiempo a la última parada (${last.durationFromOriginMinutes} min)`,
+        );
+      if (Number(last.priceFromOrigin) >= price)
+        throw new BadRequestException(
+          `El precio base debe ser mayor que el de la última parada (${Number(last.priceFromOrigin)})`,
+        );
+      if (reactivating)
+        for (const s of stops)
+          await this.catalogs.assertUsableTerminal(s.terminalId);
+    }
     const row = await this.prisma.route.update({ where: { id }, data: dto });
     await this.audit.log({
       userId: actor.id,
@@ -205,6 +235,62 @@ export class RoutesService {
       actionType: ActionType.update,
       oldValues: before,
       newValues: row,
+    });
+    return this.findOne(id);
+  }
+
+  /**
+   * Reemplaza el itinerario completo en una transacción: paradas en orden con sus km
+   * acumulados, y la distancia de la ruta como la suma de los tramos.
+   */
+  async replaceStops(id: string, dto: ReplaceStopsDto, actor: AuthUser) {
+    const route = await this.prisma.route.findUniqueOrThrow({
+      where: { id },
+      include: { stops: { orderBy: { stopOrder: 'asc' } } },
+    });
+    const finalLegKm = dto.finalLegKm ?? null;
+    const result = checkItinerary(
+      {
+        originTerminalId: route.originTerminalId,
+        destinationTerminalId: route.destinationTerminalId,
+        estimatedDurationMinutes: route.estimatedDurationMinutes,
+        basePrice: Number(route.basePrice),
+      },
+      dto.stops,
+      finalLegKm,
+    );
+    if (result.errors.length) throw new BadRequestException(result.errors);
+    // Solo las terminales nuevas en el itinerario deben estar activas y con ubicación
+    const current = new Set(route.stops.map((s) => s.terminalId));
+    for (const s of dto.stops)
+      if (!current.has(s.terminalId))
+        await this.catalogs.assertUsableTerminal(s.terminalId);
+
+    await this.prisma.$transaction([
+      this.prisma.routeStop.deleteMany({ where: { routeId: id } }),
+      this.prisma.routeStop.createMany({
+        data: dto.stops.map((s, i) => ({
+          routeId: id,
+          terminalId: s.terminalId,
+          stopOrder: i + 1,
+          durationFromOriginMinutes: s.durationFromOriginMinutes,
+          kmFromOrigin: result.kmFromOrigin[i],
+          priceFromOrigin: s.priceFromOrigin,
+        })),
+      }),
+      this.prisma.route.update({
+        where: { id },
+        data: { distanceKm: result.totalKm },
+      }),
+    ]);
+    const { stops: before, ...rest } = route;
+    await this.audit.log({
+      userId: actor.id,
+      tableName: 'route_stops',
+      recordId: id,
+      actionType: ActionType.update,
+      oldValues: { stops: before, distanceKm: rest.distanceKm },
+      newValues: { stops: dto.stops, distanceKm: result.totalKm },
     });
     return this.findOne(id);
   }

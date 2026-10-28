@@ -31,7 +31,7 @@ const toDraft = (r?: RouteListItem | RouteDetail | null): Draft => ({
   basePrice: r ? String(Number(r.basePrice)) : '',
   hours: r ? String(Math.floor(r.estimatedDurationMinutes / 60)) : '',
   minutes: r ? String(r.estimatedDurationMinutes % 60) : '0',
-  distanceKm: r ? String(Number(r.distanceKm)) : '',
+  distanceKm: r?.distanceKm != null ? String(Number(r.distanceKm)) : '',
   description: r?.description ?? '',
 })
 
@@ -57,6 +57,7 @@ export function RouteModal({
   }
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
+  const hasStops = !!route && ('stops' in route ? route.stops.length > 0 : route._count.stops > 0)
   const list = terminals.data ?? []
   const byId = (id: string) => list.find((t) => t.id === id)
   const origin = byId(draft.originTerminalId)
@@ -77,7 +78,8 @@ export function RouteModal({
         destinationTerminalId: draft.destinationTerminalId,
         basePrice: Number(draft.basePrice),
         estimatedDurationMinutes: Number(draft.hours || 0) * 60 + Number(draft.minutes || 0),
-        distanceKm: Number(draft.distanceKm),
+        // Con paradas la distancia la calcula el itinerario; no se envía
+        ...(!hasStops && { distanceKm: draft.distanceKm ? Number(draft.distanceKm) : null }),
         description: draft.description || null,
       }
       return route
@@ -169,12 +171,12 @@ export function RouteModal({
             onChange={(e) => set({ basePrice: e.target.value })}
           />
           <Input
-            label="Distancia"
-            required
+            label="Distancia (km)"
             type="number"
             min={1}
             step="0.1"
-            hint="km"
+            disabled={hasStops}
+            hint={hasStops ? 'Se calcula con las paradas' : 'Opcional; se calcula al capturar paradas'}
             value={draft.distanceKm}
             onChange={(e) => set({ distanceKm: e.target.value })}
           />

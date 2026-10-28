@@ -18,13 +18,14 @@ import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { RouteModal } from './RouteModal'
 import { RouteSchedulesTab } from './RouteSchedulesTab'
+import { RouteStopsTab } from './RouteStopsTab'
 import { formatKm, routeEnds, useCanEditRoutes, useRoute, useRouteSchedules } from './useRoutes'
 
 // El mapa (Leaflet) se descarga solo al abrir el detalle
 const PointsMap = lazy(() => import('../../components/map/TerminalMap').then((m) => ({ default: m.PointsMap })))
 
 type TabKey = 'general' | 'stops' | 'schedules'
-const TAB_KEYS: TabKey[] = ['general', 'schedules']
+const TAB_KEYS: TabKey[] = ['general', 'stops', 'schedules']
 
 const toPoint = (t: RouteTerminal, role: string): MapPoint[] =>
   t.latitude != null && t.longitude != null
@@ -107,14 +108,15 @@ function RouteDetailPage() {
   const today = todayKey()
   // Ejemplo de cómo se ven las horas: una salida a las 08:00 de hoy
   const sampleArrival = arrivalLabel('08:00', route.estimatedDurationMinutes, originTz, destinationTz, today)
-  const kmh = Math.round(Number(route.distanceKm) / (route.estimatedDurationMinutes / 60))
+  const kmh =
+    route.distanceKm === null ? null : Math.round(Number(route.distanceKm) / (route.estimatedDurationMinutes / 60))
 
   const current = (schedules.data ?? []).filter((s) => s.status === 'current')
   const weekly = current.reduce((n, s) => n + s.daysOfWeek.length, 0)
 
   const tabs: TabItem<TabKey>[] = [
     { key: 'general', label: 'General', icon: Info },
-    { key: 'stops', label: 'Paradas', icon: MapPinned, disabled: true },
+    { key: 'stops', label: 'Paradas', icon: MapPinned },
     { key: 'schedules', label: 'Horarios', icon: CalendarClock },
   ]
 
@@ -156,7 +158,11 @@ function RouteDetailPage() {
         stats={
           <>
             <HeroStat label="Precio base" value={formatMoney(route.basePrice)} tone="primary" hint="boleto completo" />
-            <HeroStat label="Distancia" value={formatKm(route.distanceKm)} hint={`≈ ${kmh} km/h promedio`} />
+            <HeroStat
+              label="Distancia"
+              value={formatKm(route.distanceKm)}
+              hint={kmh === null ? 'sin capturar' : `≈ ${kmh} km/h promedio`}
+            />
             <HeroStat label="Duración" value={formatMinutes(route.estimatedDurationMinutes)} hint="estimada" />
             <HeroStat
               label="Salidas por semana"
@@ -205,6 +211,7 @@ function RouteDetailPage() {
         </div>
       )}
 
+      {tab === 'stops' && <RouteStopsTab route={route} schedules={schedules.data ?? []} />}
       {tab === 'schedules' && <RouteSchedulesTab route={route} />}
 
       {canEdit && <RouteModal route={editOpen ? route : undefined} onClose={() => setEditOpen(false)} />}

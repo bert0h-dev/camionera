@@ -23,6 +23,7 @@ import {
 } from './dto/route.dto.js';
 import { CreateSchedulesDto, UpdateScheduleDto } from './dto/schedule.dto.js';
 import { ReplaceStopsDto } from './dto/stop.dto.js';
+import { FaresQueryDto } from './dto/season.dto.js';
 import { RoutesService } from './routes.service.js';
 import { SchedulesService } from './schedules.service.js';
 
@@ -79,6 +80,12 @@ export class RoutesController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.routes.update(id, dto, actor);
+  }
+
+  @Get(':id/fares')
+  @Roles(...ROUTE_READERS)
+  fares(@Param('id', ParseUUIDPipe) id: string, @Query() q: FaresQueryDto) {
+    return this.routes.fares(id, q.date);
   }
 
   // ---------- Paradas ----------

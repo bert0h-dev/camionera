@@ -91,7 +91,7 @@ Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras cla
 | 4.1 | **Rutas**: terminal a terminal, clave única, activar y desactivar; zona horaria por ciudad para calcular llegadas entre estados | ✅ |
 | 4.2 | **Horarios**: alta de varias salidas a la vez, días, vigencia sin choques, vista semanal y llegada en hora local del destino | ✅ |
 | 4.3 | **Paradas**: itinerario con km por tramo, tiempo y precio desde el origen; precio por tramo y distancia de la ruta calculada | ✅ |
-| 4.4 | **Temporadas**: modificadores globales sin solapes; precio redondeado a peso entero | ⏳ |
+| 4.4 | **Temporadas**: ajustes globales sin solapes por fecha del viaje, calendario anual y precio por tramo redondeado a peso entero | ✅ |
 | 4.5 | **Búsqueda**: rutas entre ciudades con horarios y precio vigente | ⏳ |
 
 ---

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useAuth } from '../../auth/useAuth'
 import { cn } from '../../lib/cn'
@@ -16,6 +16,11 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarProps) {
   const { user } = useAuth()
   const groups = visibleNav(user?.role)
+  const { pathname } = useLocation()
+  const paths = groups.flatMap((g) => g.items.map((i) => i.to))
+  // /rutas no se marca en /rutas/temporadas: gana el elemento más específico
+  const shadowed = (to: string) =>
+    paths.some((o) => o.startsWith(`${to}/`) && (pathname === o || pathname.startsWith(`${o}/`)))
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-indigo-950 to-[#13123a] text-indigo-100">
@@ -46,25 +51,29 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
                     onMouseEnter={() => preloadPath(item.to)}
                     onFocus={() => preloadPath(item.to)}
                     title={collapsed ? item.label : undefined}
-                    className={({ isActive }) =>
-                      cn(
+                    className={({ isActive: matched }) => {
+                      const isActive = matched && !shadowed(item.to)
+                      return cn(
                         'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                         collapsed && 'justify-center px-0',
                         isActive ? 'bg-white/10 text-white' : 'text-indigo-200/80 hover:bg-white/5 hover:text-white',
                       )
-                    }
+                    }}
                   >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span className="absolute top-1.5 bottom-1.5 left-0 w-1 rounded-r-full bg-amber-400" />
-                        )}
-                        <item.icon
-                          className={cn('size-[18px] shrink-0', isActive ? 'text-amber-400' : 'text-indigo-300/70')}
-                        />
-                        {!collapsed && <span className="truncate">{item.label}</span>}
-                      </>
-                    )}
+                    {({ isActive: matched }) => {
+                      const isActive = matched && !shadowed(item.to)
+                      return (
+                        <>
+                          {isActive && (
+                            <span className="absolute top-1.5 bottom-1.5 left-0 w-1 rounded-r-full bg-amber-400" />
+                          )}
+                          <item.icon
+                            className={cn('size-[18px] shrink-0', isActive ? 'text-amber-400' : 'text-indigo-300/70')}
+                          />
+                          {!collapsed && <span className="truncate">{item.label}</span>}
+                        </>
+                      )
+                    }}
                   </NavLink>
                 </li>
               ))}

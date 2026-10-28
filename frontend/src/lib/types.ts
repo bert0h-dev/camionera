@@ -1125,3 +1125,32 @@ export interface RouteSummary {
   cities: number
   weeklyDepartures: number
 }
+
+export type SeasonType = 'low' | 'normal' | 'high' | 'holiday'
+export type SeasonStatus = 'current' | 'upcoming' | 'past' | 'inactive'
+
+export interface Season {
+  id: string
+  name: string
+  seasonType: SeasonType
+  validFrom: string
+  validUntil: string
+  priceModifierPercent: number
+  description: string | null
+  isActive: boolean
+  status: SeasonStatus
+  canDelete: boolean
+}
+
+export interface SeasonSummary {
+  current: Season | null
+  next: Season | null
+}
+
+export interface RouteFares {
+  date: string
+  season: Pick<Season, 'id' | 'name' | 'seasonType' | 'priceModifierPercent'> | null
+  points: { id: string; code: string; name: string; priceFromOrigin: number }[]
+  segments: { from: number; to: number; base: number; price: number }[]
+  fullFare: { base: number; price: number }
+}

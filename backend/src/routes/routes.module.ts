@@ -4,11 +4,13 @@ import { SettingsModule } from '../settings/settings.module.js';
 import { RoutesController } from './routes.controller.js';
 import { RoutesService } from './routes.service.js';
 import { SchedulesService } from './schedules.service.js';
+import { SeasonsController } from './seasons.controller.js';
+import { SeasonsService } from './seasons.service.js';
 
 @Module({
   imports: [FleetModule, SettingsModule],
-  controllers: [RoutesController],
-  providers: [RoutesService, SchedulesService],
-  exports: [RoutesService, SchedulesService],
+  controllers: [RoutesController, SeasonsController],
+  providers: [RoutesService, SchedulesService, SeasonsService],
+  exports: [RoutesService, SchedulesService, SeasonsService],
 })
 export class RoutesModule {}

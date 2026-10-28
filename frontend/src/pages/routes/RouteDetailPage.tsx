@@ -19,7 +19,15 @@ import { useToast } from '../../components/ui/toast-context'
 import { RouteModal } from './RouteModal'
 import { RouteSchedulesTab } from './RouteSchedulesTab'
 import { RouteStopsTab } from './RouteStopsTab'
-import { formatKm, routeEnds, useCanEditRoutes, useRoute, useRouteSchedules } from './useRoutes'
+import {
+  formatKm,
+  routeEnds,
+  useCanEditRoutes,
+  useRoute,
+  useRouteFares,
+  useRouteSchedules,
+  formatPercent,
+} from './useRoutes'
 
 // El mapa (Leaflet) se descarga solo al abrir el detalle
 const PointsMap = lazy(() => import('../../components/map/TerminalMap').then((m) => ({ default: m.PointsMap })))
@@ -77,6 +85,8 @@ function RouteDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const { data: route, error, isFetching } = useRoute(id)
   const schedules = useRouteSchedules(id)
+  // Precio del boleto completo para un viaje hoy, con la temporada vigente
+  const fares = useRouteFares(id, todayKey())
 
   const toggle = useMutation({
     mutationFn: (isActive: boolean) => api.patch(`/routes/${id}`, { isActive }),
@@ -157,7 +167,17 @@ function RouteDetailPage() {
         }
         stats={
           <>
-            <HeroStat label="Precio base" value={formatMoney(route.basePrice)} tone="primary" hint="boleto completo" />
+            <HeroStat
+              label="Precio hoy"
+              value={formatMoney(fares.data?.fullFare.price ?? route.basePrice)}
+              tone="primary"
+              loading={fares.isLoading}
+              hint={
+                fares.data?.season
+                  ? `${fares.data.season.name} ${formatPercent(fares.data.season.priceModifierPercent)} · base ${formatMoney(route.basePrice)}`
+                  : 'boleto completo, sin temporada'
+              }
+            />
             <HeroStat
               label="Distancia"
               value={formatKm(route.distanceKm)}

@@ -3,6 +3,7 @@ import {
   Bus,
   LayoutGrid,
   CalendarClock,
+  CalendarRange,
   ScrollText,
   Settings,
   ClipboardCheck,
@@ -66,7 +67,10 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Rutas',
-    items: [{ to: '/rutas', label: 'Rutas', icon: Route, roles: ROUTE_READERS }],
+    items: [
+      { to: '/rutas', label: 'Rutas', icon: Route, roles: ROUTE_READERS },
+      { to: '/rutas/temporadas', label: 'Temporadas', icon: CalendarRange, roles: ROUTE_READERS },
+    ],
   },
   {
     label: 'Sistema',
@@ -106,6 +110,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   incidencias: 'Incidencias',
   combustible: 'Combustible',
   rutas: 'Rutas',
+  temporadas: 'Temporadas',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

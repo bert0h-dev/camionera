@@ -22,6 +22,7 @@ describe('Rutas (e2e)', () => {
     cities: [] as string[],
     terminals: [] as string[],
     routes: [] as string[],
+    seasons: [] as string[],
   };
   let origin: string;
   let destination: string;
@@ -119,6 +120,7 @@ describe('Rutas (e2e)', () => {
   afterAll(async () => {
     const recordIds = [
       ...ids.routes,
+      ...ids.seasons,
       ...ids.terminals,
       ...ids.cities,
       ...ids.users,
@@ -132,6 +134,7 @@ describe('Rutas (e2e)', () => {
       where: { userId: { in: ids.users } },
     });
     await prisma.route.deleteMany({ where: { id: { in: ids.routes } } });
+    await prisma.season.deleteMany({ where: { id: { in: ids.seasons } } });
     await prisma.terminal.deleteMany({ where: { id: { in: ids.terminals } } });
     await prisma.city.deleteMany({ where: { id: { in: ids.cities } } });
     await prisma.refreshToken.deleteMany({
@@ -431,6 +434,119 @@ describe('Rutas (e2e)', () => {
         .send({ stops: [] })
         .expect(200);
       expect(cleared.body.distanceKm).toBeNull();
+    });
+  });
+
+  describe('temporadas y precios', () => {
+    // Años lejanos para no cruzarse con las temporadas demo
+    const season = (body: Record<string, unknown>) =>
+      call('post', '/seasons', coordinatorToken).send({
+        name: 'Prueba',
+        seasonType: 'high',
+        validFrom: '2091-07-01',
+        validUntil: '2091-07-31',
+        priceModifierPercent: 20,
+        ...body,
+      });
+
+    it('crea temporadas y rechaza solapes y signos incorrectos', async () => {
+      const high = await season({ name: `Verano ${tag}` }).expect(201);
+      ids.seasons.push(high.body.id);
+      expect(high.body.status).toBe('upcoming');
+
+      const clash = await season({
+        validFrom: '2091-07-31',
+        validUntil: '2091-08-10',
+      }).expect(400);
+      expect(JSON.stringify(clash.body)).toMatch(/Verano/);
+      await season({
+        seasonType: 'low',
+        validFrom: '2091-09-01',
+        validUntil: '2091-09-30',
+      }).expect(400);
+      await season({
+        validFrom: '2091-09-10',
+        validUntil: '2091-09-01',
+      }).expect(400);
+
+      const low = await season({
+        name: `Baja ${tag}`,
+        seasonType: 'low',
+        validFrom: '2091-08-01',
+        validUntil: '2091-08-31',
+        priceModifierPercent: -10,
+      }).expect(201);
+      ids.seasons.push(low.body.id);
+
+      const list = await call('get', '/seasons?year=2091', vendorToken).expect(
+        200,
+      );
+      expect(list.body.map((s: { id: string }) => s.id)).toEqual([
+        high.body.id,
+        low.body.id,
+      ]);
+      await season({ validFrom: '2092-01-01', validUntil: '2092-01-02' })
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .expect(403);
+    });
+
+    it('los precios por tramo aplican la temporada de la fecha del viaje, redondeados a peso', async () => {
+      const route = ids.routes[0];
+      // Itinerario: parada a $150; precio base de la ruta $480
+      await call('put', `/routes/${route}/stops`, coordinatorToken)
+        .send({
+          stops: [
+            {
+              terminalId: midA,
+              legKm: 100,
+              durationFromOriginMinutes: 90,
+              priceFromOrigin: 150.5,
+            },
+          ],
+          finalLegKm: 50,
+        })
+        .expect(200);
+
+      const summer = await call(
+        'get',
+        `/routes/${route}/fares?date=2091-07-15`,
+        vendorToken,
+      ).expect(200);
+      expect(summer.body.season.priceModifierPercent).toBe(20);
+      expect(summer.body.fullFare).toEqual({ base: 480, price: 576 });
+      const leg = summer.body.segments.find(
+        (s: { from: number; to: number }) => s.from === 1 && s.to === 2,
+      );
+      expect(leg).toMatchObject({ base: 329.5, price: 395 });
+
+      const low = await call(
+        'get',
+        `/routes/${route}/fares?date=2091-08-31`,
+        vendorToken,
+      ).expect(200);
+      expect(low.body.fullFare.price).toBe(432);
+
+      const none = await call(
+        'get',
+        `/routes/${route}/fares?date=2091-10-01`,
+        vendorToken,
+      ).expect(200);
+      expect(none.body.season).toBeNull();
+      expect(none.body.segments[0]).toMatchObject({ base: 150.5, price: 151 });
+    });
+
+    it('desactivar quita el ajuste; se borra la que no ha terminado', async () => {
+      const [high, low] = ids.seasons;
+      await call('patch', `/seasons/${high}`, coordinatorToken)
+        .send({ isActive: false })
+        .expect(200);
+      const fares = await call(
+        'get',
+        `/routes/${ids.routes[0]}/fares?date=2091-07-15`,
+        vendorToken,
+      ).expect(200);
+      expect(fares.body.season).toBeNull();
+      await call('delete', `/seasons/${low}`, coordinatorToken).expect(204);
     });
   });
 });

@@ -88,6 +88,7 @@ async function clean() {
   await prisma.busIncident.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.fuelLoad.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.route.deleteMany({ where: { code: { startsWith: 'DEM-' } } }); // paradas y horarios en cascada
+  await prisma.season.deleteMany({ where: { description: { startsWith: 'Demo · ' } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
@@ -551,6 +552,30 @@ async function loadRoutes() {
     });
   }
   console.log('Paradas demo: GDL ⇄ CDMX por León y Querétaro');
+
+  // Temporadas demo (globales); se reconocen por la descripción "Demo · …"
+  const seasons = [
+    { name: 'Baja de otoño', seasonType: 'low' as const, from: '2026-10-01', until: '2026-11-30', pct: -10 },
+    { name: 'Navidad y Año Nuevo', seasonType: 'holiday' as const, from: '2026-12-15', until: '2027-01-06', pct: 25 },
+    { name: 'Semana Santa 2027', seasonType: 'holiday' as const, from: '2027-03-21', until: '2027-04-04', pct: 20 },
+    { name: 'Verano 2027', seasonType: 'high' as const, from: '2027-07-05', until: '2027-08-22', pct: 10 },
+  ];
+  let newSeasons = 0;
+  for (const s of seasons) {
+    if (await prisma.season.findFirst({ where: { name: s.name } })) continue;
+    await prisma.season.create({
+      data: {
+        name: s.name,
+        seasonType: s.seasonType,
+        validFrom: new Date(`${s.from}T00:00:00Z`),
+        validUntil: new Date(`${s.until}T00:00:00Z`),
+        priceModifierPercent: s.pct,
+        description: 'Demo · temporada de ejemplo',
+      },
+    });
+    newSeasons++;
+  }
+  console.log(`Temporadas demo: ${newSeasons} nuevas`);
 }
 
 /**

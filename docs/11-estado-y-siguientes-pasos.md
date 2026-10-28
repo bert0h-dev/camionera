@@ -11,7 +11,8 @@
   - 3.1 Unidades ✅ fusionada (PR #9).
   - 3.2 Mantenimientos ✅ fusionada (PR #10).
   - 3.3 Incidencias ✅ fusionada (PR #13).
-  - 3.4 Combustible ✅ en la rama `feat/m3-combustible`, PR por fusionar.
+  - 3.4 Combustible ✅ fusionada (PR #15).
+- **README** actualizado al estado actual (módulos 1–3, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
@@ -32,6 +33,7 @@
 - Del contexto, aún abiertos para módulos futuros: venta por tramos, carrito u orden, terminales y andenes, y tipo de pasajero.
 
 ## Forma de trabajo acordada
+- **Lint**: el proyecto usa **oxlint** (`npm run lint`), no ESLint. Los avisos `no-misused-spread` de los servicios de flota son conocidos.
 - **Siempre plan antes de código**, y esperar la aprobación del usuario.
 - **Ramas y PR**: una rama por fase (`feat/...`) y un PR. El usuario fusiona y pide pasar a `main` y borrar la rama.
 - **Commits** con gitmoji en código y en español: `:sparkles: feat: …`.

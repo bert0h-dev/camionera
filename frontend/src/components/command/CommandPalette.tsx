@@ -260,6 +260,14 @@ function Palette({ onClose }: { onClose: () => void }) {
               keywords: 'ruta origen destino terminal corrida',
               to: '/rutas?nueva=1',
             },
+            {
+              id: 'action:new-season',
+              section: 'Acciones rápidas',
+              label: 'Nueva temporada',
+              icon: Route,
+              keywords: 'temporada alta baja vacaciones navidad semana santa precio tarifa',
+              to: '/rutas/temporadas?nueva=1',
+            },
           ]
         : []),
       {

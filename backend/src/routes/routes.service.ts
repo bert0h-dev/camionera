@@ -14,6 +14,9 @@ import {
 import { ReplaceStopsDto } from './dto/stop.dto.js';
 import { routeError } from './route-rules.js';
 import { checkItinerary } from './stop-rules.js';
+import { applySeason } from './season-rules.js';
+import { SeasonsService } from './seasons.service.js';
+import { dateKey, today } from '../common/dates.js';
 import {
   currentSchedulesWhere,
   SchedulesService,
@@ -62,7 +65,55 @@ export class RoutesService {
     private readonly audit: AuditService,
     private readonly catalogs: CatalogsService,
     private readonly schedules: SchedulesService,
+    private readonly seasons: SeasonsService,
   ) {}
+
+  /**
+   * Precios de la ruta para una fecha de viaje: cada tramo (sube → baja) cuesta la diferencia
+   * de precios desde el origen, con el ajuste de la temporada y redondeado a peso entero.
+   */
+  async fares(id: string, date = dateKey(today())) {
+    const route = await this.prisma.route.findUniqueOrThrow({
+      where: { id },
+      include: {
+        originTerminal: { select: { id: true, code: true, name: true } },
+        destinationTerminal: { select: { id: true, code: true, name: true } },
+        stops: {
+          orderBy: { stopOrder: 'asc' },
+          include: {
+            terminal: { select: { id: true, code: true, name: true } },
+          },
+        },
+      },
+    });
+    const season = await this.seasons.on(date);
+    const pct = season?.priceModifierPercent ?? null;
+    const points = [
+      { ...route.originTerminal, priceFromOrigin: 0 },
+      ...route.stops.map((s) => ({
+        ...s.terminal,
+        priceFromOrigin: Number(s.priceFromOrigin),
+      })),
+      {
+        ...route.destinationTerminal,
+        priceFromOrigin: Number(route.basePrice),
+      },
+    ];
+    const segments = points.flatMap((from, i) =>
+      points.slice(i + 1).map((to, k) => {
+        const base = to.priceFromOrigin - from.priceFromOrigin;
+        return { from: i, to: i + 1 + k, base, price: applySeason(base, pct) };
+      }),
+    );
+    const basePrice = Number(route.basePrice);
+    return {
+      date,
+      season,
+      points,
+      segments,
+      fullFare: { base: basePrice, price: applySeason(basePrice, pct) },
+    };
+  }
 
   async findAll(q: QueryRoutesDto) {
     const terms = q.search?.trim().split(/\s+/).filter(Boolean) ?? [];

@@ -12,7 +12,8 @@ import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Input, Select } from '../../components/ui/Field'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/toast-context'
-import { formatKm, useCanEditRoutes, useRouteTerminals } from './useRoutes'
+import { LoadingBlock } from '../../components/ui/Spinner'
+import { formatKm, formatPercent, useCanEditRoutes, useRouteFares, useRouteTerminals } from './useRoutes'
 
 /** Un punto del itinerario: origen, parada o destino, con sus acumulados desde el origen. */
 interface Point {
@@ -46,35 +47,84 @@ function itinerary(route: RouteDetail): Point[] {
   ]
 }
 
-/** Precio de cada tramo: fila = donde sube, columna = donde baja (diferencia de precios acumulados). */
-function FareMatrix({ points }: { points: Point[] }) {
+/**
+ * Precio de cada tramo en la fecha del viaje: fila = donde sube, columna = donde baja.
+ * Es la diferencia de precios desde el origen con el ajuste de la temporada, a peso entero.
+ */
+function FaresCard({ route }: { route: RouteDetail }) {
+  const [date, setDate] = useState(todayKey())
+  const { data, isLoading } = useRouteFares(route.id, date)
+  const price = (from: number, to: number) => data?.segments.find((x) => x.from === from && x.to === to)
+  const points = data?.points ?? []
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-xs text-fg-muted">
-            <th className="px-2 py-1.5 text-left font-medium">Sube ↓ · Baja →</th>
-            {points.slice(1).map((p) => (
-              <th key={p.key} className="px-2 py-1.5 text-right font-data font-medium">
-                {p.terminal.code}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {points.slice(0, -1).map((from, i) => (
-            <tr key={from.key} className="border-t border-border">
-              <th className="px-2 py-1.5 text-left font-data font-medium">{from.terminal.code}</th>
-              {points.slice(1).map((to, j) => (
-                <td key={to.key} className="px-2 py-1.5 text-right font-data">
-                  {j >= i ? formatMoney(to.price - from.price) : <span className="text-fg-subtle">—</span>}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card>
+      <CardHeader
+        title="Precio por tramo"
+        description="Lo que paga quien sube en un punto y baja en otro, con la temporada de la fecha del viaje"
+        actions={
+          <Input
+            type="date"
+            aria-label="Fecha del viaje"
+            className="w-40"
+            value={date}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+          />
+        }
+      />
+      <CardBody className="space-y-3">
+        {data?.season ? (
+          <Alert tone="info">
+            {data.season.name}: {formatPercent(data.season.priceModifierPercent)} sobre el precio de la ruta.
+          </Alert>
+        ) : (
+          <p className="text-sm text-fg-muted">Sin temporada en esa fecha: se cobra el precio de la ruta.</p>
+        )}
+        {isLoading || !data ? (
+          <LoadingBlock text="Calculando precios…" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-fg-muted">
+                  <th className="px-2 py-1.5 text-left font-medium">Sube ↓ · Baja →</th>
+                  {points.slice(1).map((p) => (
+                    <th key={p.id} className="px-2 py-1.5 text-right font-data font-medium">
+                      {p.code}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {points.slice(0, -1).map((from, i) => (
+                  <tr key={from.id} className="border-t border-border">
+                    <th className="px-2 py-1.5 text-left font-data font-medium">{from.code}</th>
+                    {points.slice(1).map((to, j) => {
+                      const seg = price(i, j + 1)
+                      return (
+                        <td key={to.id} className="px-2 py-1.5 text-right font-data">
+                          {seg ? (
+                            <>
+                              {formatMoney(seg.price)}
+                              {seg.price !== seg.base && (
+                                <span className="block text-[11px] text-fg-subtle line-through">
+                                  {formatMoney(seg.base)}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-fg-subtle">—</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   )
 }
 
@@ -402,7 +452,7 @@ export function RouteStopsTab({ route, schedules }: { route: RouteDetail; schedu
                         <div className="font-data">{formatKm(p.km)}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-fg-muted">Precio</div>
+                        <div className="text-xs text-fg-muted">Precio base</div>
                         <div className="font-data">{i === 0 ? '—' : formatMoney(p.price)}</div>
                       </div>
                     </div>
@@ -427,21 +477,7 @@ export function RouteStopsTab({ route, schedules }: { route: RouteDetail; schedu
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader
-          title="Precio por tramo"
-          description="Lo que paga quien sube en un punto y baja en otro: la diferencia de los precios desde el origen"
-        />
-        <CardBody>
-          {route.stops.length ? (
-            <FareMatrix points={points} />
-          ) : (
-            <Alert tone="info">
-              Sin paradas, el único tramo es el boleto completo de {formatMoney(route.basePrice)}.
-            </Alert>
-          )}
-        </CardBody>
-      </Card>
+      <FaresCard route={route} />
     </div>
   )
 }

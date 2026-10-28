@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import type { RouteDetail, RouteScheduleRow, RouteSummary, RouteTerminal, Terminal } from '../../lib/types'
+import type {
+  RouteDetail,
+  RouteFares,
+  RouteScheduleRow,
+  RouteSummary,
+  RouteTerminal,
+  Season,
+  SeasonSummary,
+  SeasonType,
+  Terminal,
+} from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 
 /** Coordinación (y admin) administra las rutas; supervisión y taquilla solo consultan. */
@@ -64,3 +74,33 @@ export function daysText(days: number[]) {
         .map((d) => DAY_NAMES[d].slice(0, 3))
         .join(', ')
 }
+
+export const SEASON_LABELS: Record<SeasonType, string> = {
+  low: 'Baja',
+  normal: 'Normal',
+  high: 'Alta',
+  holiday: 'Vacaciones / festivo',
+}
+
+export const useSeasons = (year: number) =>
+  useQuery({
+    queryKey: ['routes', 'seasons', year],
+    queryFn: async () => (await api.get<Season[]>('/seasons', { params: { year } })).data,
+  })
+
+export const useSeasonSummary = () =>
+  useQuery({
+    queryKey: ['routes', 'seasons', 'summary'],
+    queryFn: async () => (await api.get<SeasonSummary>('/seasons/summary')).data,
+  })
+
+/** Precios de la ruta para una fecha de viaje, con la temporada aplicada. */
+export const useRouteFares = (routeId: string, date: string) =>
+  useQuery({
+    queryKey: ['routes', 'fares', routeId, date],
+    enabled: !!date,
+    queryFn: async () => (await api.get<RouteFares>(`/routes/${routeId}/fares`, { params: { date } })).data,
+  })
+
+/** '+25 %' / '−10 %' */
+export const formatPercent = (pct: number) => `${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)} %`

@@ -18,8 +18,8 @@
 | :-: | --- | :-: |
 | 4.1 | Rutas: CRUD, clave única, activar y desactivar, zona horaria en ciudades | ✅ PR #17 |
 | 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ✅ PR #18 |
-| 4.3 | Paradas: km por tramo, tiempo y precio desde el origen; la distancia de la ruta se calcula | ✅ esta rama |
-| 4.4 | Temporadas globales y cálculo del precio vigente | ⏳ |
+| 4.3 | Paradas: km por tramo, tiempo y precio desde el origen; la distancia de la ruta se calcula | ✅ PR #19 |
+| 4.4 | Temporadas globales y cálculo del precio vigente | ✅ esta rama |
 | 4.5 | Búsqueda entre ciudades (directas y por tramo) para taquilla | ⏳ |
 
 ## Esquema (migración `20261028191101_routes` en la 4.1; `20261028195738_route_stops_km` en la 4.3)
@@ -122,3 +122,32 @@ Cada alta y cambio queda en la bitácora (`routes`).
 
 ### Datos demo
 - GDL → CDMX por León (220 km, 3 h 20, $390) y Querétaro (410 km, 5 h 30, $620), 625 km en total; el regreso CDMX → GDL por Querétaro y León.
+
+## 4.4 Temporadas
+
+### Decisiones
+- **Globales**: aplican a todas las rutas. Dos temporadas activas no pueden cruzarse en fechas (extremos incluidos).
+- **Cuenta la fecha del viaje**, no la de compra: un boleto comprado hoy para Navidad paga la tarifa de Navidad.
+- **Signo obligatorio según el tipo**: baja resta, alta y vacaciones/festivo suman, normal = 0 %. El ajuste va de −90 % a +200 %.
+- **Precio = redondeo a peso entero de (precio sin temporada × (1 + % / 100))**. En un tramo se aplica a la diferencia de precios desde el origen, así un tramo no depende del redondeo de otro. Sin temporada, el precio de la ruta también se redondea.
+- Las temporadas que ya terminaron no se borran (solo se desactivan) para conservar el historial.
+
+### Reglas (`backend/src/routes/season-rules.ts`, con pruebas)
+`seasonErrors` (fechas, rango y signo), `findSeasonClash`, `seasonStatus` (Vigente, Próxima, Pasada, Inactiva), `seasonOn` (temporada de una fecha) y `applySeason` (redondeo).
+
+### API
+| Método | Ruta | Roles |
+| --- | --- | --- |
+| GET | `/seasons?year=` | lectores (con `status` y `canDelete`) |
+| GET | `/seasons/summary` | lectores (vigente y próxima) |
+| POST, PATCH, DELETE | `/seasons`, `/seasons/:id` | editores |
+| GET | `/routes/:id/fares?date=` | lectores: temporada de la fecha, puntos del itinerario, cada tramo con `base` y `price`, y `fullFare` |
+
+### Pantallas
+- **Temporadas** (`/rutas/temporadas`, en el menú Rutas): banda con la vigente, la próxima, las del año y los días con ajuste; **calendario anual** con barras por tipo y la línea de hoy; tabla con acciones; modal que propone el signo según el tipo y muestra un ejemplo ($820 → precio ajustado).
+- **Detalle de ruta**: la banda muestra **Precio hoy** con la temporada aplicada y el precio base en la nota. En Paradas, **Precio por tramo** tiene un selector de fecha del viaje y muestra el precio ajustado con el base tachado.
+- **Ctrl+K**: acción "Nueva temporada".
+- El menú lateral marca solo el elemento más específico (Temporadas, no Rutas, en `/rutas/temporadas`).
+
+### Datos demo
+Baja de otoño (−10 %, 1 oct–30 nov 2026, vigente hoy), Navidad y Año Nuevo (+25 %), Semana Santa 2027 (+20 %) y Verano 2027 (+10 %). Se reconocen por la descripción "Demo · …" y `--clean` las borra.

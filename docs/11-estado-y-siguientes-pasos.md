@@ -10,7 +10,7 @@
   - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
   - 3.1 Unidades ✅ fusionada (PR #9).
   - 3.2 Mantenimientos ✅ fusionada (PR #10).
-  - 3.3 Incidencias: rama `feat/m3-incidencias`, PR por fusionar.
+  - 3.3 Incidencias ✅ fusionada (PR #13).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
@@ -36,6 +36,8 @@
 - **Ramas y PR**: una rama por fase (`feat/...`) y un PR. El usuario fusiona y pide pasar a `main` y borrar la rama.
 - **Commits** con gitmoji en código y en español: `:sparkles: feat: …`.
 - **Diseño**: todo lo nuevo sigue la dirección D (`PageHeader` con banda, `HeroStat`, `font-data`, `FilterBar`, `Alert`, `LoadingBlock`).
+- **Docs en cada PR**: además del doc de la fase y este doc 11, revisar los docs anteriores que el cambio deje obsoletos (reglas, pantallas, parámetros) y corregirlos en el mismo PR.
+- **Fechas en el frontend**: `formatDate` solo para columnas de fecha (`@db.Date`); para instantes (`Timestamptz`) usar `formatInstantDate` y `formatTime`, que usan la zona de la central.
 - **Revisión visual en Chrome** en cada fase.
   - Antes, apagar los procesos node del proyecto filtrando por `Repos\camionera` **y** por puerto (3002 y 5173): `node dist/main` no lleva la ruta en su línea de comandos.
   - Verificar que una ruta nueva responda 401 y no 404.

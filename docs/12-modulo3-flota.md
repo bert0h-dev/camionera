@@ -94,10 +94,10 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
   - Banda con unidades, disponibles, en mantenimiento, no aptas y documentos con alerta.
   - Filtros y columna "Apta / No apta"; al pasar el cursor se ven los motivos.
 - **Detalle** (`/flota/unidades/:id`):
-  - Pestañas General, Asientos (clic para bloquear o desbloquear), Documentos e Historial (odómetro y cambios de estado).
+  - Pestañas General, Asientos (clic para bloquear o desbloquear), Documentos, Mantenimiento (3.2), Incidencias (3.3) e Historial (odómetro y cambios de estado).
   - Botones Odómetro, Cambiar estado y Editar.
 - **Alta y edición**: vista previa de los asientos del modelo. Solo aparecen terminales con ubicación, y el modelo queda bloqueado si la unidad ya salió a servicio.
-- **Inicio**: panel "Documentos de unidades por vencer" para admin, coordinación y supervisión.
+- **Inicio**: los documentos de unidades vencidos o por vencer aparecen en **Pendientes** para admin, coordinación y supervisión (antes era un panel propio; ver doc 13).
 - **Ctrl+K**: acción "Nueva unidad" y búsqueda de unidades por número, placas o VIN.
 
 ### Demo y pruebas
@@ -133,16 +133,17 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
   - Sin preventivo previo, se cuenta desde el alta de la unidad (fecha y primera lectura del odómetro).
   - El plan es el de la unidad o, si no tiene, el del modelo.
 - **Iniciar**: registra el odómetro de entrada (origen "mantenimiento"; nunca baja) y pasa la unidad a **en mantenimiento**.
-  - No se puede si la unidad está en servicio o fuera de servicio.
+  - No se puede si la unidad está en servicio. Fuera de servicio solo se inician correctivos (cambio de la 3.3).
   - Si un mecánico inicia una orden sin asignar, se la queda.
 - **Terminar**: registra el odómetro de salida (no puede ser menor al de entrada) y los costos.
   - Si la orden es preventiva, actualiza el último servicio.
-  - La unidad vuelve a **disponible** si no le queda otra orden en proceso.
-- **Cancelar**: con motivo. Si la orden estaba en proceso, la unidad vuelve a disponible.
+  - La unidad vuelve a **disponible** si no le queda otra orden en proceso; si tiene una incidencia crítica abierta, queda **fuera de servicio** (3.3).
+  - Si la orden nació de una incidencia, la resuelve con el trabajo realizado (3.3).
+- **Cancelar**: con motivo. Si la orden estaba en proceso, la unidad se libera con la misma regla que al terminar.
 - **Al crear**:
   - Solo un preventivo abierto por unidad.
   - Los preventivos sin tareas propias copian el catálogo de tareas base.
-  - No se puede crear una orden para una unidad fuera de servicio.
+  - Una unidad fuera de servicio solo admite órdenes correctivas (desde la 3.3, para atender incidencias críticas).
 - **Mecánico**: solo ve y trabaja sus órdenes o las que no tienen mecánico. Puede iniciar, palomear, agregar tareas y terminar, pero no crear, editar ni cancelar.
 - **Permisos de los demás**: coordinación (y admin) hace todo; supervisión consulta.
 
@@ -163,9 +164,11 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
   - Botones Iniciar, Terminar y Cancelar según el estado y el rol.
   - Al terminar, avisa si quedan tareas sin marcar.
 - **Unidad**: pestaña **Mantenimiento** con el próximo preventivo, el botón "Programar preventivo", "Orden correctiva" y el historial de órdenes.
-- **Inicio**:
-  - Panel "Mantenimiento preventivo" (vencidos y próximos) para admin, coordinación y supervisión.
-  - Panel "Mis órdenes de trabajo" para el mecánico.
+- **Inicio** (ver doc 13):
+  - Los preventivos vencidos y próximos aparecen en **Pendientes** para admin, coordinación y supervisión.
+  - La pestaña **Flota** muestra el estado del taller.
+  - El mecánico ve la sección "Mis órdenes de trabajo".
+- **Parámetros**: `fleet.maintenance_alert_days` y `fleet.maintenance_alert_km` están en Configuración → Parámetros → Flota → "Alertas de flota".
 - **Ctrl+K**: acción "Nueva orden de mantenimiento" (`?nueva=1`) y búsqueda de órdenes por folio (OT-12 o 12).
 
 ### Demo y pruebas

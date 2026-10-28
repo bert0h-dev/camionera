@@ -107,3 +107,76 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
   - `--clean` las borra.
 - **Unitarias**: `bus-rules.spec.ts`.
 - **E2E**: `test/buses.e2e-spec.ts`. Cubre alta con terminal ubicada, permisos, apta con documentos, odómetro, bloqueo de asiento, modelo fijo tras salir a servicio y resumen.
+
+## 3.2 Mantenimientos (rama `feat/m3-mantenimientos`)
+### Decisiones del usuario
+- **Mecánico**: es solo un rol de usuario (`mechanic`), no un empleado de Personal.
+- **Costos**: dos importes, mano de obra y refacciones. El detalle de refacciones llegará con inventario.
+- **Último servicio**: solo el preventivo lo actualiza; el correctivo no reinicia el conteo.
+- **Tareas base del preventivo**: catálogo editable (`maintenance_task_templates`, 10 tareas en el seed base).
+
+### Datos
+- **`maintenance_orders`**:
+  - Identificación: folio consecutivo (se muestra como OT-000123), unidad, tipo (preventivo o correctivo) y estado (programada, en proceso, terminada o cancelada).
+  - Planeación: prioridad (normal o urgente), descripción, fecha programada, taller externo opcional y mecánico (usuario con rol mecánico).
+  - Al iniciar: fecha y odómetro de entrada.
+  - Al terminar: fecha, odómetro de salida, trabajo realizado, mano de obra y refacciones.
+  - Si se cancela: el motivo.
+- **`maintenance_tasks`**: lista de tareas de cada orden, que se palomean con fecha.
+- **En `buses`**: `last_service_at` y `last_service_km`.
+- **Parámetros**: `fleet.maintenance_alert_days` (7) y `fleet.maintenance_alert_km` (1000).
+
+### Reglas
+- **Próximo preventivo** (`maintenance-rules.ts`, con pruebas):
+  - Se calcula con el último preventivo más el intervalo en km y en días. Manda lo que ocurra primero.
+  - Estados: al día, próximo (dentro de los umbrales), vencido o sin plan.
+  - Sin preventivo previo, se cuenta desde el alta de la unidad (fecha y primera lectura del odómetro).
+  - El plan es el de la unidad o, si no tiene, el del modelo.
+- **Iniciar**: registra el odómetro de entrada (origen "mantenimiento"; nunca baja) y pasa la unidad a **en mantenimiento**.
+  - No se puede si la unidad está en servicio o fuera de servicio.
+  - Si un mecánico inicia una orden sin asignar, se la queda.
+- **Terminar**: registra el odómetro de salida (no puede ser menor al de entrada) y los costos.
+  - Si la orden es preventiva, actualiza el último servicio.
+  - La unidad vuelve a **disponible** si no le queda otra orden en proceso.
+- **Cancelar**: con motivo. Si la orden estaba en proceso, la unidad vuelve a disponible.
+- **Al crear**:
+  - Solo un preventivo abierto por unidad.
+  - Los preventivos sin tareas propias copian el catálogo de tareas base.
+  - No se puede crear una orden para una unidad fuera de servicio.
+- **Mecánico**: solo ve y trabaja sus órdenes o las que no tienen mecánico. Puede iniciar, palomear, agregar tareas y terminar, pero no crear, editar ni cancelar.
+- **Permisos de los demás**: coordinación (y admin) hace todo; supervisión consulta.
+
+### API (`/fleet/maintenance`)
+- **Plan y catálogos**: `GET plan`, `GET plan/:busId`, `GET summary`, `GET mechanics`, `GET|POST|PATCH task-templates`.
+- **Órdenes**:
+  - `GET|POST orders`, `GET|PATCH orders/:id`.
+  - `POST orders/:id/start|complete|cancel`.
+  - `POST orders/:id/tasks` y `PATCH orders/:id/tasks/:taskId`.
+
+### Pantallas
+- **`/flota/mantenimiento`**:
+  - Banda con preventivos vencidos, próximos, en proceso y gasto del mes.
+  - Pestañas **Órdenes**, **Plan preventivo** (con "Programar" en cada unidad) y **Tareas base**.
+  - El mecánico ve "Mis órdenes".
+- **Detalle de orden** (`/flota/mantenimiento/:id`):
+  - Lista de tareas para palomear y agregar.
+  - Botones Iniciar, Terminar y Cancelar según el estado y el rol.
+  - Al terminar, avisa si quedan tareas sin marcar.
+- **Unidad**: pestaña **Mantenimiento** con el próximo preventivo, el botón "Programar preventivo", "Orden correctiva" y el historial de órdenes.
+- **Inicio**:
+  - Panel "Mantenimiento preventivo" (vencidos y próximos) para admin, coordinación y supervisión.
+  - Panel "Mis órdenes de trabajo" para el mecánico.
+- **Ctrl+K**: acción "Nueva orden de mantenimiento" (`?nueva=1`) y búsqueda de órdenes por folio (OT-12 o 12).
+
+### Demo y pruebas
+- **Demo**: `--fleet` agrega 12 órdenes demo: preventivos terminados con costos, una correctiva urgente en proceso en la unidad 1004 y tres programadas.
+  - Si `DEMO_PASSWORD` está en `backend/.env`, también crea el usuario `mecanico@demo.camionera.mx`.
+  - `--clean` lo borra.
+- **Unitarias**: `maintenance-rules.spec.ts`.
+- **E2E**: `test/maintenance.e2e-spec.ts`.
+  - Plan desde el alta.
+  - Flujo completo con estado de la unidad, odómetro y reinicio del preventivo.
+  - Tareas del catálogo y un solo preventivo abierto por unidad.
+  - Aislamiento entre mecánicos.
+  - El correctivo no reinicia el conteo; cancelación en proceso.
+  - Costos del mes.

@@ -3,6 +3,8 @@ import { SettingsModule } from '../settings/settings.module.js';
 import { BusModelsService } from './bus-models.service.js';
 import { BusesController } from './buses.controller.js';
 import { BusesService } from './buses.service.js';
+import { MaintenanceController } from './maintenance.controller.js';
+import { MaintenanceService } from './maintenance.service.js';
 import { CatalogsService } from './catalogs.service.js';
 import {
   BusModelsController,
@@ -11,8 +13,23 @@ import {
 
 @Module({
   imports: [SettingsModule],
-  controllers: [FleetCatalogsController, BusModelsController, BusesController],
-  providers: [CatalogsService, BusModelsService, BusesService],
-  exports: [CatalogsService, BusModelsService, BusesService],
+  controllers: [
+    FleetCatalogsController,
+    BusModelsController,
+    BusesController,
+    MaintenanceController,
+  ],
+  providers: [
+    CatalogsService,
+    BusModelsService,
+    BusesService,
+    MaintenanceService,
+  ],
+  exports: [
+    CatalogsService,
+    BusModelsService,
+    BusesService,
+    MaintenanceService,
+  ],
 })
 export class FleetModule {}

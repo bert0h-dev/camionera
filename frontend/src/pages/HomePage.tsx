@@ -7,6 +7,7 @@ import { LiveClock } from '../components/ui/LiveClock'
 import { PageHeader } from '../components/ui/PageHeader'
 import { ExpirationsPanel } from './home/ExpirationsPanel'
 import { BusExpirationsPanel } from './home/BusExpirationsPanel'
+import { MaintenanceDuePanel, MyOrdersPanel } from './home/MaintenancePanels'
 import { MyEvaluationsCard } from './home/MyEvaluationsCard'
 import { MyPayslipsCard } from './home/MyPayslipsCard'
 import { MyMonthCard } from './home/MyMonthCard'
@@ -126,7 +127,9 @@ function HomePage() {
 
       {isTeamReader && <TeamDashboard team={t} />}
       {isTeamReader && <ExpirationsPanel />}
+      {isFleetReader && <MaintenanceDuePanel />}
       {isFleetReader && <BusExpirationsPanel />}
+      {user?.role === 'mechanic' && <MyOrdersPanel />}
     </div>
   )
 }

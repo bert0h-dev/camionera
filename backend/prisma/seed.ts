@@ -66,6 +66,24 @@ async function main() {
     await prisma.fuelType.upsert({ where: { name: f.name }, update: {}, create: f });
   }
   console.log(`Combustibles: ${fuels.length}`);
+
+  // Tareas base del servicio preventivo (se copian a cada orden preventiva nueva)
+  const tasks = [
+    'Cambio de aceite de motor y filtro',
+    'Cambio de filtros de aire y combustible',
+    'Revisión de frenos y balatas',
+    'Revisión de suspensión y dirección',
+    'Revisión de llantas, presión y rotación',
+    'Revisión de niveles (refrigerante, frenos, dirección)',
+    'Revisión de luces y sistema eléctrico',
+    'Revisión de aire acondicionado',
+    'Engrasado general',
+    'Prueba de manejo',
+  ];
+  for (const [i, description] of tasks.entries()) {
+    await prisma.maintenanceTaskTemplate.upsert({ where: { description }, update: {}, create: { description, sortOrder: (i + 1) * 10 } });
+  }
+  console.log(`Tareas de preventivo: ${tasks.length}`);
 }
 
 main()

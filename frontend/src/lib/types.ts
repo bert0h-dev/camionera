@@ -4,6 +4,7 @@ export const USER_ROLES = [
   'supervisor',
   'hr',
   'driver',
+  'mechanic',
   'collector',
   'vendor',
   'viewer',
@@ -17,6 +18,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   supervisor: 'Supervisor',
   hr: 'Recursos Humanos',
   driver: 'Conductor',
+  mechanic: 'Mecánico',
   collector: 'Cobrador',
   vendor: 'Vendedor',
   viewer: 'Consulta',
@@ -779,4 +781,105 @@ export interface BusExpiringDocument {
   status: 'expiring' | 'expired'
   daysToExpiry: number
   bus: { id: string; economicNumber: string }
+}
+
+// ---------- Mantenimiento ----------
+
+export type MaintenanceType = 'preventive' | 'corrective'
+export const MAINTENANCE_TYPE_LABELS: Record<MaintenanceType, string> = {
+  preventive: 'Preventivo',
+  corrective: 'Correctivo',
+}
+
+export const MAINTENANCE_STATUSES = ['scheduled', 'in_progress', 'completed', 'cancelled'] as const
+export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number]
+export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceStatus, string> = {
+  scheduled: 'Programada',
+  in_progress: 'En proceso',
+  completed: 'Terminada',
+  cancelled: 'Cancelada',
+}
+
+export type MaintenancePriority = 'normal' | 'urgent'
+
+export interface MaintenanceTask {
+  id: string
+  description: string
+  sortOrder: number
+  isDone: boolean
+  doneAt: string | null
+}
+
+export interface MaintenanceOrder {
+  id: string
+  folio: number
+  busId: string
+  type: MaintenanceType
+  status: MaintenanceStatus
+  priority: MaintenancePriority
+  description: string
+  scheduledDate: string
+  externalShop: string | null
+  mechanicId: string | null
+  startedAt: string | null
+  startKm: number | null
+  completedAt: string | null
+  endKm: number | null
+  workPerformed: string | null
+  laborCost: string | null
+  partsCost: string | null
+  cancelReason: string | null
+  createdAt: string
+  total: number
+  bus: { id: string; economicNumber: string; plates: string; status: BusStatus; odometerKm: number }
+  mechanic: { id: string; fullName: string } | null
+}
+
+export interface MaintenanceOrderListItem extends MaintenanceOrder {
+  tasksDone: number
+  tasksTotal: number
+}
+
+export interface MaintenanceOrderDetail extends MaintenanceOrder {
+  tasks: MaintenanceTask[]
+}
+
+export type ServiceStatus = 'ok' | 'due_soon' | 'overdue' | 'no_plan'
+
+export interface ServicePlanRow {
+  bus: {
+    id: string
+    economicNumber: string
+    plates: string
+    status: BusStatus
+    odometerKm: number
+    model: string
+    terminal: string
+  }
+  plan: { km: number | null; days: number | null }
+  lastServiceAt: string | null
+  lastServiceKm: number | null
+  openOrder: { id: string; folio: number; status: MaintenanceStatus; scheduledDate: string } | null
+  status: ServiceStatus
+  dueDate: string | null
+  dueKm: number | null
+  daysLeft: number | null
+  kmLeft: number | null
+  trigger: 'km' | 'days' | null
+}
+
+export interface MaintenanceSummary {
+  overdue: number
+  dueSoon: number
+  inProgress: number
+  scheduled: number
+  completedThisMonth: number
+  costThisMonth: number
+}
+
+export interface MaintenanceTaskTemplate {
+  id: string
+  description: string
+  sortOrder: number
+  isActive: boolean
 }

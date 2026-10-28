@@ -315,6 +315,27 @@ export const SETTINGS = {
       'Días de anticipación para alertar el vencimiento del seguro, la tarjeta de circulación, permisos y verificaciones',
   },
 
+  'fleet.maintenance_alert_days': {
+    type: 'number',
+    default: 7,
+    min: 1,
+    max: 90,
+    label: 'Aviso de preventivo por días',
+    unit: 'días',
+    description:
+      'Días antes de la fecha del próximo servicio preventivo para marcarlo como próximo',
+  },
+  'fleet.maintenance_alert_km': {
+    type: 'number',
+    default: 1000,
+    min: 100,
+    max: 20000,
+    label: 'Aviso de preventivo por km',
+    unit: 'km',
+    description:
+      'Kilómetros antes del próximo servicio preventivo para marcarlo como próximo',
+  },
+
   // ---------- Recorridos (se usarán en el Módulo 4) ----------
   'trips.unit_turnaround_minutes': {
     type: 'number',

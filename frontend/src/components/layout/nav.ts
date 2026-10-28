@@ -11,6 +11,7 @@ import {
   Star,
   Users,
   Wallet,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 import type { UserRole } from '../../lib/types'
@@ -47,6 +48,7 @@ export const NAV: NavGroup[] = [
     label: 'Flota',
     items: [
       { to: '/flota/unidades', label: 'Unidades', icon: Bus, roles: FLEET_READERS },
+      { to: '/flota/mantenimiento', label: 'Mantenimiento', icon: Wrench, roles: [...FLEET_READERS, 'mechanic'] },
       { to: '/flota/modelos', label: 'Modelos', icon: LayoutGrid, roles: FLEET_READERS },
       { to: '/flota/catalogos', label: 'Catálogos', icon: Building2, roles: FLEET_READERS },
     ],
@@ -85,6 +87,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   modelos: 'Modelos',
   catalogos: 'Catálogos',
   unidades: 'Unidades',
+  mantenimiento: 'Mantenimiento',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

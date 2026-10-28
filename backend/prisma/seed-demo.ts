@@ -1,10 +1,12 @@
 // Datos de demostración para revisar la interfaz con información realista.
 //   npm run seed:demo -w backend            → carga (reemplaza los demo anteriores)
 //   npm run seed:demo -w backend -- --clean → solo borra
-//   npm run seed:demo -w backend -- --fleet → solo agrega la flota demo (no toca al personal)
+//   npm run seed:demo -w backend -- --fleet → solo agrega la flota y el mantenimiento demo (no toca al personal)
+//   DEMO_PASSWORD en .env (opcional) crea el usuario mecánico demo
 // Todo lo demo se identifica por el correo @demo.camionera.mx de los empleados.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as argon2 from 'argon2';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -79,7 +81,9 @@ async function clean() {
   });
   const ids = staff.map((s) => s.id);
   await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: 'DEMO · ' } } });
+  await prisma.maintenanceOrder.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
+  await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
   await prisma.auditLog.deleteMany({ where: { recordId: { in: ids } } });
   console.log(`Demo eliminada: ${ids.length} empleados`);
@@ -434,6 +438,109 @@ async function loadFleet() {
     created++;
   }
   console.log(`Unidades demo: ${created} nuevas`);
+  await loadMaintenance();
+}
+
+/**
+ * Mantenimiento demo: órdenes terminadas, una en proceso (unidad 1004) y algunas programadas.
+ * El mecánico demo solo se crea si DEMO_PASSWORD está en .env; si no, las órdenes quedan sin asignar.
+ */
+async function loadMaintenance() {
+  if (await prisma.maintenanceOrder.count({ where: { bus: { plates: { startsWith: 'DEM' } } } })) return;
+
+  let mechanicId: string | null = null;
+  if (process.env.DEMO_PASSWORD) {
+    const mechanic = await prisma.user.upsert({
+      where: { email: `mecanico${DEMO_DOMAIN}` },
+      update: {},
+      create: {
+        email: `mecanico${DEMO_DOMAIN}`,
+        fullName: 'Mecánico Demo',
+        role: UserRole.mechanic,
+        passwordHash: await argon2.hash(process.env.DEMO_PASSWORD),
+      },
+    });
+    mechanicId = mechanic.id;
+  }
+
+  const buses = await prisma.bus.findMany({ where: { plates: { startsWith: 'DEM' } }, orderBy: { economicNumber: 'asc' } });
+  const templates = await prisma.maintenanceTaskTemplate.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } });
+  const day0 = today();
+  const taskRows = (done: boolean) =>
+    templates.map((t) => ({ description: t.description, sortOrder: t.sortOrder, isDone: done, doneAt: done ? new Date() : null }));
+  let count = 0;
+
+  for (const [i, bus] of buses.entries()) {
+    // Preventivo terminado hace un tiempo: reinicia el conteo del próximo servicio
+    if (i % 3 !== 2 && bus.status !== 'out_of_service') {
+      const daysAgo = 20 + i * 7;
+      const km = bus.odometerKm - (3000 + i * 1100);
+      const completedAt = addDays(day0, -daysAgo);
+      await prisma.maintenanceOrder.create({
+        data: {
+          busId: bus.id,
+          type: 'preventive',
+          status: 'completed',
+          description: 'Servicio preventivo de 15,000 km',
+          scheduledDate: addDays(completedAt, -1),
+          mechanicId,
+          startedAt: addDays(completedAt, -1),
+          startKm: km,
+          completedAt,
+          endKm: km,
+          workPerformed: 'Servicio completo según tareas base',
+          laborCost: 1800 + i * 50,
+          partsCost: 3500 + i * 120,
+          tasks: { create: taskRows(true) },
+        },
+      });
+      await prisma.bus.update({ where: { id: bus.id }, data: { lastServiceAt: completedAt, lastServiceKm: km } });
+      count++;
+    }
+  }
+
+  // La 1004 ya está en mantenimiento: le corresponde una orden en proceso
+  const inShop = buses.find((b) => b.status === 'maintenance');
+  if (inShop) {
+    await prisma.maintenanceOrder.create({
+      data: {
+        busId: inShop.id,
+        type: 'corrective',
+        status: 'in_progress',
+        priority: 'urgent',
+        description: 'Cambio de balatas delanteras',
+        scheduledDate: addDays(day0, -1),
+        mechanicId,
+        startedAt: addDays(day0, -1),
+        startKm: inShop.odometerKm,
+        tasks: {
+          create: [
+            { description: 'Desmontar ruedas delanteras', sortOrder: 10, isDone: true, doneAt: new Date() },
+            { description: 'Cambiar balatas y revisar discos', sortOrder: 20 },
+            { description: 'Prueba de frenado', sortOrder: 30 },
+          ],
+        },
+      },
+    });
+    await prisma.bus.update({ where: { id: inShop.id }, data: { statusReason: 'Cambio de balatas delanteras' } });
+    count++;
+  }
+
+  // Programadas para los próximos días
+  for (const [n, bus] of buses.filter((b, i) => i % 3 === 2 && b.status === 'available').slice(0, 3).entries()) {
+    await prisma.maintenanceOrder.create({
+      data: {
+        busId: bus.id,
+        type: n === 2 ? 'corrective' : 'preventive',
+        description: n === 2 ? 'Revisar aire acondicionado, no enfría' : 'Servicio preventivo de 15,000 km',
+        scheduledDate: addDays(day0, 2 + n * 3),
+        mechanicId: n === 0 ? mechanicId : null,
+        tasks: { create: n === 2 ? [] : taskRows(false) },
+      },
+    });
+    count++;
+  }
+  console.log(`Mantenimiento demo: ${count} órdenes${mechanicId ? '' : ' (sin mecánico: define DEMO_PASSWORD para crearlo)'}`);
 }
 
 async function main() {

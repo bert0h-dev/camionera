@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Bus,
+  Wrench,
   CornerDownLeft,
   History,
   Moon,
@@ -27,6 +28,7 @@ import {
   ROLE_LABELS,
   STAFF_ROLE_LABELS,
   type BusListItem,
+  type MaintenanceOrderListItem,
   type Paginated,
   type Staff,
   type User,
@@ -89,6 +91,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const isAdmin = role === 'admin'
   const isHr = role === 'admin' || role === 'hr'
   const canFleet = !!role && ['admin', 'coordinator', 'supervisor'].includes(role)
+  const canOrders = !!role && ['admin', 'coordinator', 'supervisor', 'mechanic'].includes(role)
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -123,6 +126,19 @@ function Palette({ onClose }: { onClose: () => void }) {
     enabled: canFleet && searching,
     queryFn: async () =>
       (await api.get<Paginated<BusListItem>>('/fleet/buses', { params: { search: debounced, limit: 5 } })).data.data,
+  })
+
+  // Órdenes de mantenimiento por folio (OT-123 o solo el número)
+  const orderTerm = debounced.replace(/^OT-?/i, '')
+  const orders = useQuery({
+    queryKey: ['command', 'orders', orderTerm],
+    enabled: canOrders && /^\d+$/.test(orderTerm),
+    queryFn: async () =>
+      (
+        await api.get<Paginated<MaintenanceOrderListItem>>('/fleet/maintenance/orders', {
+          params: { search: orderTerm, limit: 4 },
+        })
+      ).data.data,
   })
 
   const commands = useMemo<Command[]>(() => {
@@ -180,6 +196,14 @@ function Palette({ onClose }: { onClose: () => void }) {
               keywords: 'flota autobus camion alta economico placas',
               to: '/flota/unidades/nueva',
             },
+            {
+              id: 'action:new-order',
+              section: 'Acciones rápidas',
+              label: 'Nueva orden de mantenimiento',
+              icon: Wrench,
+              keywords: 'taller servicio preventivo correctivo reparacion',
+              to: '/flota/mantenimiento?nueva=1',
+            },
           ]
         : []),
       {
@@ -234,6 +258,14 @@ function Palette({ onClose }: { onClose: () => void }) {
           kind: 'bus' as const,
         },
       })),
+      ...(orders.data ?? []).map((o) => ({
+        id: `order:${o.id}`,
+        section: 'Órdenes de mantenimiento',
+        label: `OT-${String(o.folio).padStart(6, '0')} · Unidad ${o.bus.economicNumber}`,
+        hint: o.description,
+        icon: Wrench,
+        to: `/flota/mantenimiento/${o.id}`,
+      })),
     ]
 
     const recents: Command[] = q
@@ -249,7 +281,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         }))
 
     return [...recents, ...pages.filter(matches), ...actions.filter(matches), ...found]
-  }, [query, role, isHr, resolved, setPreference, staff.data, users.data, buses.data])
+  }, [query, role, isHr, resolved, setPreference, staff.data, users.data, buses.data, orders.data])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado
   const [prevLength, setPrevLength] = useState(commands.length)

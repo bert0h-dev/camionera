@@ -8,7 +8,7 @@
    - RR. HH.: en turno, asistencia, sin registrar entrada y pendientes.
    - Mecánico: órdenes en proceso y programadas.
 2. **Pendientes**: una sola lista con todo lo que hay que atender, ordenada por urgencia (vencidos primero, luego por días restantes).
-   - Áreas: documentos del personal, documentos de unidades y preventivos vencidos o próximos.
+   - Áreas: documentos del personal, documentos de unidades, preventivos vencidos o próximos e incidencias abiertas.
    - Muestra 6 y "Ver todos (n)". Filtro Todo / Personal / Flota cuando hay pendientes de ambas áreas.
    - Endpoint: `GET /dashboard/pending` (`backend/src/dashboard/pending.service.ts`). Cada rol recibe solo sus áreas.
 3. **Mi información**: los datos propios del empleado (turno, mes, evaluaciones y recibos), si el usuario está ligado a uno.

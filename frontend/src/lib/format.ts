@@ -35,6 +35,17 @@ export const formatTime = (iso: string | null | undefined) =>
       }).format(new Date(iso))
     : ''
 
+/** Fecha local de la central (DD/MM/AAAA) de un instante ISO; `formatDate` es solo para columnas de fecha. */
+export const formatInstantDate = (iso: string | null | undefined) =>
+  iso
+    ? new Intl.DateTimeFormat('es-MX', {
+        timeZone: BUSINESS_TIMEZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date(iso))
+    : '—'
+
 /** Hoy en la central como 'AAAA-MM-DD'. */
 export const todayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: BUSINESS_TIMEZONE }).format(new Date())
 

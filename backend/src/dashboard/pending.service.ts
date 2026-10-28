@@ -3,11 +3,20 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { DOCUMENT_LABELS } from '../fleet/bus-rules.js';
 import { BusesService } from '../fleet/buses.service.js';
 import { MaintenanceService } from '../fleet/maintenance.service.js';
+import {
+  INCIDENT_SEVERITY_LABELS,
+  incidentFolio,
+} from '../fleet/incident-rules.js';
+import { IncidentsService } from '../fleet/incidents.service.js';
 import { orderFolio } from '../fleet/maintenance-rules.js';
-import { UserRole } from '../generated/prisma/enums.js';
+import {
+  IncidentSeverity,
+  IncidentStatus,
+  UserRole,
+} from '../generated/prisma/enums.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
-export type PendingArea = 'staff' | 'fleet' | 'maintenance';
+export type PendingArea = 'staff' | 'fleet' | 'maintenance' | 'incident';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -44,7 +53,8 @@ const staffName = (s: {
 
 /**
  * Lista única de lo que hay que atender, de todas las áreas que el rol puede ver:
- * documentos del personal, documentos de unidades y preventivos vencidos o próximos.
+ * documentos del personal, documentos de unidades, preventivos vencidos o próximos
+ * e incidencias abiertas.
  * Ordenada por urgencia: primero lo vencido, luego lo que vence antes.
  */
 @Injectable()
@@ -53,16 +63,19 @@ export class PendingService {
     private readonly staffDocs: StaffDocumentsService,
     private readonly buses: BusesService,
     private readonly maintenance: MaintenanceService,
+    private readonly incidents: IncidentsService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
     const staff = STAFF_AREA.includes(user.role);
     const fleet = FLEET_AREA.includes(user.role);
-    const [staffDocs, busDocs, plan] = await Promise.all([
+    const [staffDocs, busDocs, plan, incidents] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
       fleet ? this.maintenance.plan() : null,
+      fleet ? this.incidents.open() : null,
     ]);
+    const now = Date.now();
 
     const items: PendingItem[] = [
       ...(staffDocs?.items ?? []).map((d) => ({
@@ -113,6 +126,25 @@ export class PendingService {
               : `/flota/unidades/${p.bus.id}`,
           };
         }),
+      ...(incidents ?? []).map((i) => ({
+        id: `incident-${i.id}`,
+        area: 'incident' as const,
+        // Las críticas y altas se atienden ya; las demás se pueden programar
+        severity:
+          i.severity === IncidentSeverity.critical ||
+          i.severity === IncidentSeverity.high
+            ? ('overdue' as const)
+            : ('soon' as const),
+        title: `${INCIDENT_SEVERITY_LABELS[i.severity]} · unidad ${i.bus.economicNumber}`,
+        detail: `${incidentFolio(i.folio)} · ${i.category.name} · ${
+          i.status === IncidentStatus.reported ? 'sin revisar' : 'en revisión'
+        }`,
+        // Sin fecha límite: Inicio muestra cuánto lleva abierta
+        date: null,
+        // Días abierta, en negativo para que las más antiguas suban
+        daysLeft: -Math.floor((now - i.occurredAt.getTime()) / 86_400_000),
+        link: `/flota/incidencias/${i.id}`,
+      })),
     ];
 
     const rank = (i: PendingItem) => (i.severity === 'overdue' ? 0 : 1);

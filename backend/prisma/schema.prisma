@@ -141,6 +141,8 @@ model User {
   staff              Staff?
   refreshTokens      RefreshToken[]
   maintenanceOrders  MaintenanceOrder[]  @relation("MaintenanceMechanic")
+  incidentsReported  BusIncident[]       @relation("IncidentReporter")
+  incidentsReviewed  BusIncident[]       @relation("IncidentReviewer")
   passwordResets     PasswordReset[]
   auditLogs          AuditLog[]
   securityEvents     SecurityEvent[]
@@ -733,6 +735,7 @@ model Bus {
   documents         BusDocument[]
   readings          OdometerReading[]
   maintenanceOrders MaintenanceOrder[]
+  incidents         BusIncident[]
 
   @@index([status])
   @@index([terminalId])
@@ -828,6 +831,8 @@ model MaintenanceOrder {
   laborCost     Decimal?            @map("labor_cost") @db.Decimal(12, 2)
   partsCost     Decimal?            @map("parts_cost") @db.Decimal(12, 2)
   cancelReason  String?             @map("cancel_reason") @db.Text
+  /// Incidencia de la que nació la orden (correctivas)
+  incidentId    String?             @map("incident_id") @db.Uuid
   createdBy     String?             @map("created_by") @db.Uuid
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz()
@@ -835,10 +840,12 @@ model MaintenanceOrder {
   bus      Bus               @relation(fields: [busId], references: [id])
   mechanic User?             @relation("MaintenanceMechanic", fields: [mechanicId], references: [id])
   tasks    MaintenanceTask[]
+  incident BusIncident?      @relation(fields: [incidentId], references: [id])
 
   @@index([busId, status])
   @@index([status, scheduledDate])
   @@index([mechanicId])
+  @@index([incidentId])
   @@map("maintenance_orders")
 }
 
@@ -866,4 +873,79 @@ model MaintenanceTaskTemplate {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@map("maintenance_task_templates")
+}
+
+// =====================================================
+// FLOTA: INCIDENCIAS (3.3)
+// =====================================================
+
+enum IncidentSeverity {
+  low
+  medium
+  high
+  /// No puede circular: la unidad sale de servicio al reportarse
+  critical
+}
+
+enum IncidentStatus {
+  reported
+  in_review
+  resolved
+  dismissed
+}
+
+/// Catálogo editable de categorías de incidencia.
+model IncidentCategory {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  name       String   @unique @db.VarChar(80)
+  /// Pide los datos del siniestro (aseguradora, terceros, lesionados)
+  isAccident Boolean  @default(false) @map("is_accident")
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  incidents BusIncident[]
+
+  @@map("incident_categories")
+}
+
+/// Incidencia reportada sobre una unidad (falla, daño, accidente…).
+model BusIncident {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  folio        Int              @unique @default(autoincrement())
+  busId        String           @map("bus_id") @db.Uuid
+  categoryId   String           @map("category_id") @db.Uuid
+  severity     IncidentSeverity
+  status       IncidentStatus   @default(reported)
+  description  String           @db.Text
+  location     String?          @db.VarChar(200)
+  occurredAt   DateTime         @map("occurred_at") @db.Timestamptz()
+  odometerKm   Int?             @map("odometer_km")
+  reportedBy   String           @map("reported_by") @db.Uuid
+  // Datos del siniestro (solo categorías de accidente)
+  claimNumber  String?          @map("claim_number") @db.VarChar(50)
+  insurer      String?          @db.VarChar(150)
+  thirdParties Boolean?         @map("third_parties")
+  injuries     Boolean?
+  // Atención
+  reviewedBy   String?          @map("reviewed_by") @db.Uuid
+  reviewedAt   DateTime?        @map("reviewed_at") @db.Timestamptz()
+  closedAt     DateTime?        @map("closed_at") @db.Timestamptz()
+  resolution   String?          @db.Text
+  /// La incidencia sacó la unidad de servicio (crítica con la unidad disponible)
+  tookBusOut   Boolean          @default(false) @map("took_bus_out")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  bus      Bus                @relation(fields: [busId], references: [id])
+  category IncidentCategory   @relation(fields: [categoryId], references: [id])
+  reporter User               @relation("IncidentReporter", fields: [reportedBy], references: [id])
+  reviewer User?              @relation("IncidentReviewer", fields: [reviewedBy], references: [id])
+  orders   MaintenanceOrder[]
+
+  @@index([busId, status])
+  @@index([status, severity])
+  @@index([reportedBy])
+  @@map("bus_incidents")
 }

@@ -10,11 +10,12 @@
   - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
   - 3.1 Unidades ✅ fusionada (PR #9).
   - 3.2 Mantenimientos ✅ fusionada (PR #10).
+  - 3.3 Incidencias: rama `feat/m3-incidencias`, PR por fusionar.
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
-- **Parámetros por módulo** (doc 14): rama `refactor/parametros-por-modulo`, PR por fusionar.
+- **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 3**: siguen 3.3 Incidencias y 3.4 Combustible (ver doc 12).
+1. **Módulo 3**: sigue 3.4 Combustible (ver doc 12).
 2. **Módulo 4, Rutas**: origen, destino y paradas entre terminales con ubicación; precios por tramo, horarios, cancelación y temporadas.
 3. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
    - Los parámetros `trips.*` y `tickets.*` ya están listos.

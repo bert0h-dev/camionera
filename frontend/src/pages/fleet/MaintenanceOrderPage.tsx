@@ -16,8 +16,9 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
 import { cn } from '../../lib/cn'
+import { SeverityBadge } from './IncidentBadges'
 import { OrderStatusBadge, OrderTypeBadge } from './MaintenanceBadges'
-import { orderFolio, useMaintenanceRole } from './useFleet'
+import { incidentFolio, orderFolio, useMaintenanceRole } from './useFleet'
 
 const formatKm = (km: number) => `${km.toLocaleString('es-MX')} km`
 
@@ -201,6 +202,20 @@ function MaintenanceOrderPage() {
                   </Link>
                 </dd>
               </div>
+              {order.incident && (
+                <div>
+                  <dt className="text-xs text-fg-muted">Incidencia de origen</dt>
+                  <dd className="flex items-center gap-2">
+                    <Link
+                      className="font-data text-primary hover:underline"
+                      to={`/flota/incidencias/${order.incident.id}`}
+                    >
+                      {incidentFolio(order.incident.folio)}
+                    </Link>
+                    <SeverityBadge severity={order.incident.severity} />
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs text-fg-muted">Taller</dt>
                 <dd>{order.externalShop ?? 'Interno'}</dd>
@@ -368,6 +383,11 @@ function OrderDialogs({
           </div>
           {order.type === 'preventive' && (
             <p className="text-xs text-fg-muted">Al terminar se reinicia el conteo del próximo preventivo.</p>
+          )}
+          {order.incident && (
+            <p className="text-xs text-fg-muted">
+              La incidencia {incidentFolio(order.incident.folio)} se resolverá con el trabajo realizado.
+            </p>
           )}
           {footer('Terminar', !!kmError || workPerformed.trim().length < 3)}
         </form>

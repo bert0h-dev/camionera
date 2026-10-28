@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react'
 import {
   Bus,
   CalendarClock,
@@ -13,156 +13,140 @@ import {
   Ticket,
   Wallet,
   type LucideIcon,
-} from "lucide-react";
-import { cn } from "../../lib/cn";
-import type { SettingItem } from "../../lib/types";
-import { Badge } from "../../components/ui/Badge";
-import { EmptyState } from "../../components/ui/EmptyState";
-import { Input } from "../../components/ui/Field";
-import { SettingsForm } from "./SettingsForm";
+} from 'lucide-react'
+import { cn } from '../../lib/cn'
+import type { SettingItem } from '../../lib/types'
+import { Badge } from '../../components/ui/Badge'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Input } from '../../components/ui/Field'
+import { SettingsForm } from './SettingsForm'
 
-type ModuleKey = "staff" | "fleet" | "system" | "upcoming";
+type ModuleKey = 'staff' | 'fleet' | 'system' | 'upcoming'
 
 // Orden de los módulos; "upcoming" agrupa lo que aún no se aplica y va colapsado al final
 const MODULES: { key: ModuleKey; title: string }[] = [
-  { key: "staff", title: "Personal" },
-  { key: "fleet", title: "Flota" },
-  { key: "system", title: "Sistema" },
-  { key: "upcoming", title: "Próximamente" },
-];
+  { key: 'staff', title: 'Personal' },
+  { key: 'fleet', title: 'Flota' },
+  { key: 'system', title: 'Sistema' },
+  { key: 'upcoming', title: 'Próximamente' },
+]
 
 // Orden y textos de cada grupo; los que no aparecen aquí no se muestran como parámetros.
 // Un grupo nuevo solo necesita declararse aquí con su módulo.
 const GROUPS: {
-  group: string;
-  module: ModuleKey;
-  title: string;
-  description: string;
-  icon: LucideIcon;
+  group: string
+  module: ModuleKey
+  title: string
+  description: string
+  icon: LucideIcon
 }[] = [
   {
-    group: "schedules",
-    module: "staff",
-    title: "Turnos",
-    description:
-      "Límites de jornada (NOM-087 y LFT) que se validan al programar turnos",
+    group: 'schedules',
+    module: 'staff',
+    title: 'Turnos',
+    description: 'Límites de jornada (NOM-087 y LFT) que se validan al programar turnos',
     icon: CalendarClock,
   },
   {
-    group: "attendance",
-    module: "staff",
-    title: "Asistencias",
-    description: "Cálculo de retardos, medios días y horas extra",
+    group: 'attendance',
+    module: 'staff',
+    title: 'Asistencias',
+    description: 'Cálculo de retardos, medios días y horas extra',
     icon: ClipboardCheck,
   },
   {
-    group: "documents",
-    module: "staff",
-    title: "Documentos del personal",
-    description: "Alertas de licencias y certificaciones por vencer",
+    group: 'documents',
+    module: 'staff',
+    title: 'Documentos del personal',
+    description: 'Alertas de licencias y certificaciones por vencer',
     icon: FileBadge,
   },
   {
-    group: "payroll",
-    module: "staff",
-    title: "Nómina",
-    description: "Reglas de la prenómina",
+    group: 'payroll',
+    module: 'staff',
+    title: 'Nómina',
+    description: 'Reglas de la prenómina',
     icon: Wallet,
   },
   {
-    group: "fleet",
-    module: "fleet",
-    title: "Documentos de unidades",
-    description:
-      "Alertas de seguros, tarjetas de circulación, permisos y verificaciones",
+    group: 'fleet',
+    module: 'fleet',
+    title: 'Documentos de unidades',
+    description: 'Alertas de seguros, tarjetas de circulación, permisos y verificaciones',
     icon: Bus,
   },
   {
-    group: "security",
-    module: "system",
-    title: "Seguridad de acceso",
-    description: "Bloqueo de cuentas por intentos fallidos",
+    group: 'security',
+    module: 'system',
+    title: 'Seguridad de acceso',
+    description: 'Bloqueo de cuentas por intentos fallidos',
     icon: Lock,
   },
   {
-    group: "audit",
-    module: "system",
-    title: "Bitácora",
-    description:
-      "Cuánto tiempo se conservan los cambios y eventos de seguridad",
+    group: 'audit',
+    module: 'system',
+    title: 'Bitácora',
+    description: 'Cuánto tiempo se conservan los cambios y eventos de seguridad',
     icon: ScrollText,
   },
   {
-    group: "trips",
-    module: "upcoming",
-    title: "Recorridos",
-    description: "Se aplicarán al asignar unidades y conductores (Módulo 5)",
+    group: 'trips',
+    module: 'upcoming',
+    title: 'Recorridos',
+    description: 'Se aplicarán al asignar unidades y conductores (Módulo 5)',
     icon: Route,
   },
   {
-    group: "tickets",
-    module: "upcoming",
-    title: "Boletos",
-    description: "Se aplicarán cuando entre la venta de boletos (Módulo 6)",
+    group: 'tickets',
+    module: 'upcoming',
+    title: 'Boletos',
+    description: 'Se aplicarán cuando entre la venta de boletos (Módulo 6)',
     icon: Ticket,
   },
-];
+]
 
 // Búsqueda sin distinguir mayúsculas ni acentos
-const normalize = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-const isModified = (i: SettingItem) => i.value !== i.default;
+const isModified = (i: SettingItem) => i.value !== i.default
 
 /** Parámetros operacionales agrupados por módulo; cada tarjeta se guarda por separado. */
 export function ParametersTab({ settings }: { settings: SettingItem[] }) {
-  const [query, setQuery] = useState("");
-  const q = normalize(query.trim());
-  const matches = (i: SettingItem) =>
-    !q || normalize(`${i.label ?? ""} ${i.description}`).includes(q);
+  const [query, setQuery] = useState('')
+  const q = normalize(query.trim())
+  const matches = (i: SettingItem) => !q || normalize(`${i.label ?? ''} ${i.description}`).includes(q)
 
   const modules = MODULES.map((m) => ({
     ...m,
     groups: GROUPS.filter((g) => g.module === m.key)
       .map((g) => {
-        const items = settings.filter((s) => s.group === g.group);
+        const items = settings.filter((s) => s.group === g.group)
         // Si el título del grupo coincide se muestran todos sus campos
-        const groupHit = !!q && normalize(g.title).includes(q);
+        const groupHit = !!q && normalize(g.title).includes(q)
         return {
           ...g,
           items,
           visible: items.filter((i) => groupHit || matches(i)),
-        };
+        }
       })
       .filter((g) => g.items.length > 0),
-  })).filter((m) => m.groups.length > 0);
+  })).filter((m) => m.groups.length > 0)
 
-  const anyVisible = modules.some((m) =>
-    m.groups.some((g) => g.visible.length > 0),
-  );
+  const anyVisible = modules.some((m) => m.groups.some((g) => g.visible.length > 0))
 
   return (
     <div className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
       {/* Navegación: lateral en escritorio, chips en pantallas chicas */}
-      <nav
-        aria-label="Grupos de parámetros"
-        className="lg:sticky lg:top-4 lg:self-start"
-      >
+      <nav aria-label="Grupos de parámetros" className="lg:sticky lg:top-4 lg:self-start">
         <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-4 lg:overflow-visible lg:pb-0">
           {modules.map((m) => {
-            const modified = m.groups.reduce(
-              (n, g) => n + g.items.filter(isModified).length,
-              0,
-            );
+            const modified = m.groups.reduce((n, g) => n + g.items.filter(isModified).length, 0)
             return (
               <li key={m.key} className="contents lg:block">
                 <p className="hidden items-center justify-between px-2 text-xs font-semibold tracking-wide text-fg-subtle uppercase lg:flex">
                   {m.title}
                   {modified > 0 && (
-                    <span
-                      className="font-data text-[0.7rem] font-medium normal-case"
-                      title="Parámetros modificados"
-                    >
+                    <span className="font-data text-[0.7rem] font-medium normal-case" title="Parámetros modificados">
                       {modified} mod.
                     </span>
                   )}
@@ -173,16 +157,14 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
                       <a
                         href={`#param-${g.group}`}
                         className={cn(
-                          "flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm whitespace-nowrap text-fg-muted hover:bg-surface-muted hover:text-fg",
-                          "ring-1 ring-border lg:ring-0",
-                          q && g.visible.length === 0 && "opacity-40",
+                          'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm whitespace-nowrap text-fg-muted hover:bg-surface-muted hover:text-fg',
+                          'ring-1 ring-border lg:ring-0',
+                          q && g.visible.length === 0 && 'opacity-40',
                         )}
                         onClick={() => {
                           // Abre el bloque colapsado antes de saltar a él
-                          const el = document.getElementById(
-                            `param-${g.group}`,
-                          );
-                          el?.closest("details")?.setAttribute("open", "");
+                          const el = document.getElementById(`param-${g.group}`)
+                          el?.closest('details')?.setAttribute('open', '')
                         }}
                       >
                         <g.icon className="size-4 shrink-0 text-fg-subtle" />
@@ -192,7 +174,7 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
                   ))}
                 </ul>
               </li>
-            );
+            )
           })}
         </ul>
       </nav>
@@ -216,14 +198,10 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
         )}
 
         {modules.map((m) => {
-          const groups = m.groups.filter((g) => !q || g.visible.length > 0);
-          if (groups.length === 0) return null;
+          const groups = m.groups.filter((g) => !q || g.visible.length > 0)
+          if (groups.length === 0) return null
           const cards = groups.map((g) => (
-            <section
-              key={g.group}
-              id={`param-${g.group}`}
-              className="scroll-mt-4"
-            >
+            <section key={g.group} id={`param-${g.group}`} className="scroll-mt-4">
               <SettingsForm
                 // Al guardar cambian las fechas y el formulario se vuelve a montar con los valores nuevos
                 key={`${g.group}-${g.items.map((i) => i.updatedAt).join()}`}
@@ -240,9 +218,9 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
                 resettable
               />
             </section>
-          ));
+          ))
 
-          if (m.key === "upcoming")
+          if (m.key === 'upcoming')
             return (
               <details key={m.key} open={!!q} className="group space-y-4">
                 <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-fg-muted">
@@ -252,18 +230,16 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
                 </summary>
                 <div className="space-y-4 opacity-80">{cards}</div>
               </details>
-            );
+            )
 
           return (
             <div key={m.key} className="space-y-4">
-              <h2 className="text-sm font-semibold tracking-wide text-fg-subtle uppercase">
-                {m.title}
-              </h2>
+              <h2 className="text-sm font-semibold tracking-wide text-fg-subtle uppercase">{m.title}</h2>
               {cards}
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

@@ -4,10 +4,8 @@ import { api } from '../../lib/api'
 import { formatDate } from '../../lib/format'
 import type { MaintenanceOrderListItem, Paginated } from '../../lib/types'
 import { LoadingBlock } from '../../components/ui/Spinner'
-import { OrderStatusBadge, ServiceStatusBadge } from '../fleet/MaintenanceBadges'
-import { orderFolio, useServicePlan } from '../fleet/useFleet'
-
-const formatKm = (km: number) => `${km.toLocaleString('es-MX')} km`
+import { OrderStatusBadge } from '../fleet/MaintenanceBadges'
+import { orderFolio } from '../fleet/useFleet'
 
 function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -23,66 +21,6 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
       </div>
       {children}
     </section>
-  )
-}
-
-/** Preventivos vencidos o próximos de la flota. */
-export function MaintenanceDuePanel() {
-  const { data, isLoading } = useServicePlan()
-  const due = (data ?? []).filter((r) => r.status === 'overdue' || r.status === 'due_soon')
-  const overdue = due.filter((r) => r.status === 'overdue').length
-
-  return (
-    <Panel
-      title="Mantenimiento preventivo"
-      subtitle={data && `${overdue} vencido(s) · ${due.length - overdue} próximo(s)`}
-    >
-      {isLoading ? (
-        <LoadingBlock className="py-6" />
-      ) : !due.length ? (
-        <p className="px-5 py-6 text-sm text-fg-muted">Todas las unidades están al día con su preventivo.</p>
-      ) : (
-        <ul className="divide-y divide-border">
-          {due.slice(0, 8).map((r) => (
-            <li key={r.bus.id}>
-              <Link
-                to={r.openOrder ? `/flota/mantenimiento/${r.openOrder.id}` : `/flota/unidades/${r.bus.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 hover:bg-surface-muted"
-              >
-                <div>
-                  <div className="font-medium text-fg">
-                    Unidad <span className="font-data">{r.bus.economicNumber}</span>
-                  </div>
-                  <div className="text-xs text-fg-muted">
-                    {r.bus.model}
-                    {r.openOrder ? ` · ${orderFolio(r.openOrder.folio)} programada` : ' · sin orden'}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-right text-xs text-fg-muted">
-                  <div>
-                    {r.kmLeft !== null && (
-                      <div className="font-data">
-                        {r.kmLeft < 0 ? `+${formatKm(-r.kmLeft)}` : `${formatKm(r.kmLeft)} restantes`}
-                      </div>
-                    )}
-                    {r.daysLeft !== null && (
-                      <div>
-                        {r.daysLeft < 0
-                          ? `vencido hace ${-r.daysLeft} días`
-                          : r.daysLeft === 0
-                            ? 'vence hoy'
-                            : `en ${r.daysLeft} días`}
-                      </div>
-                    )}
-                  </div>
-                  <ServiceStatusBadge status={r.status} />
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
   )
 }
 

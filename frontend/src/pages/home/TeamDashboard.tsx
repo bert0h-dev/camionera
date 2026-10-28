@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, FileWarning, Star, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Star, type LucideIcon } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { STAFF_ROLE_LABELS, type DashboardSummary } from '../../lib/types'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
@@ -37,20 +37,6 @@ export function TeamDashboard({ team }: { team: Team | null | undefined }) {
       count: team.today.missingCheckIn,
       text: 'sin registrar entrada, pasada la tolerancia',
       tone: 'bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200',
-    },
-    {
-      to: '/personal',
-      icon: FileWarning,
-      count: team.documents.expired,
-      text: 'documentos vencidos sin reemplazo',
-      tone: 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200',
-    },
-    {
-      to: '/personal',
-      icon: FileWarning,
-      count: team.documents.expiring,
-      text: `documentos vencen en ${team.documents.alertDays} días`,
-      tone: 'bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200',
     },
     {
       to: '/evaluaciones',

@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
+import { HomePreferencesDto } from './dto/home-preferences.dto.js';
 
 const MINUTE_MS = 60 * 1000;
 const TREND_DAYS = 7;
@@ -42,6 +43,33 @@ export class DashboardService {
     private readonly settings: SettingsService,
     private readonly documents: StaffDocumentsService,
   ) {}
+
+  /** Secciones de Inicio que el usuario ocultó; se guardan en `users.preferences.home`. */
+  async homePreferences(userId: string): Promise<HomePreferencesDto> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    const home = (user.preferences as { home?: Partial<HomePreferencesDto> })
+      .home;
+    return { hiddenSections: home?.hiddenSections ?? [] };
+  }
+
+  async saveHomePreferences(userId: string, dto: HomePreferencesDto) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    const preferences = {
+      ...(user.preferences as object),
+      home: { hiddenSections: [...new Set(dto.hiddenSections)] },
+    };
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferences },
+    });
+    return preferences.home;
+  }
 
   async summary(user: AuthUser) {
     const [team, me] = await Promise.all([

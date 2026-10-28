@@ -37,9 +37,10 @@ export const useTerminals = (includeInactive = false) =>
     queryFn: async () => (await api.get<Terminal[]>('/fleet/terminals', { params: { includeInactive } })).data,
   })
 
-export const useBusSummary = () =>
+export const useBusSummary = (enabled = true) =>
   useQuery({
     queryKey: ['fleet', 'buses', 'summary'],
+    enabled,
     queryFn: async () => (await api.get<BusSummary>('/fleet/buses/summary')).data,
   })
 
@@ -54,9 +55,10 @@ export function useMaintenanceRole() {
   return { isMechanic, canManage, canWork: canManage || isMechanic }
 }
 
-export const useMaintenanceSummary = () =>
+export const useMaintenanceSummary = (enabled = true) =>
   useQuery({
     queryKey: ['fleet', 'maintenance', 'summary'],
+    enabled,
     queryFn: async () => (await api.get<MaintenanceSummary>('/fleet/maintenance/summary')).data,
   })
 

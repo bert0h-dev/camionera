@@ -114,12 +114,40 @@ Un sistema integral de gestión de autobuses que permita administrar toda la ope
 
 #### **MÓDULO 4: Gestión de Rutas**
 
-- CRUD de rutas (origen, destino, paradas intermedias)
-- Catalogo de ciudades y terminales.
-- Definición de precios por tramo
-- Gestión de horarios y frecuencias
-- Configuración de políticas de cancelación
-- Temporadas y tarifas especiales
+#### **MÓDULO 4.1: Gestión de Rutas**
+
+- CRUD completo de rutas
+- Validación de ciudades origen/destino
+- Códigos únicos de ruta
+- Activación/desactivación
+
+#### **MÓDULO 4.2: Horarios de Ruta**
+
+- Configuración de horarios por días
+- Múltiples horarios por ruta
+- Validación de fechas de vigencia
+- Sistema de días de semana (0-6)
+
+#### **MÓDULO 4.3: Paradas Intermedias**
+
+- Agregar paradas en la ruta
+- Orden de paradas
+- Tiempo desde origen
+- Precios adicionales
+
+#### **MÓDULO 4.4: Precios por Temporada**
+
+- Precios especiales (alta/baja temporada)
+- Modificadores de precio
+- Rangos de fechas
+- Prevención de solapamientos
+
+#### **MÓDULO 4.5: Búsqueda y Consultas**
+
+- Buscar rutas entre ciudades
+- Filtros avanzados
+- Información completa con horarios
+- Cálculo de precios actuales
 
 #### **MÓDULO 5: Gestión de Recorridos**
 

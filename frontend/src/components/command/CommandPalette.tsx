@@ -343,6 +343,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     orders.data,
     incidents.data,
     canIncidents,
+    canFuel,
   ])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado

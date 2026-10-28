@@ -4,7 +4,7 @@
 
 **Sistema integral de gestión para centrales de autobuses**
 
-Personal · Rutas · Recorridos · Flota · Boletos · Reportes
+Personal · Flota · Rutas · Recorridos · Boletos · Reportes
 
 ![Node](https://img.shields.io/badge/Node-24-339933?logo=nodedotjs&logoColor=white) ![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white) ![Prisma](https://img.shields.io/badge/Prisma-7.10-2D3748?logo=prisma&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white) ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white) ![gitmoji](https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg)
 
@@ -42,13 +42,15 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 
 |  #  | Módulo                     |          Estado          |
 | :-: | -------------------------- | :----------------------: |
-|  1  | **Gestión de Personal**    | ✅ Completado            |
+|  1  | **Gestión de Personal**        | ✅ Completado |
 |  2  | **Administración del Sistema** | ✅ Completado |
-|  3  | Gestión de Rutas           |       ⏳ Pendiente       |
-|  4  | Gestión de Recorridos      |       ⏳ Pendiente       |
-|  5  | Gestión de Flota           |       ⏳ Pendiente       |
-|  6  | Gestión de Boletos         |       ⏳ Pendiente       |
-|  7  | Reportes y Analytics       |       ⏳ Pendiente       |
+|  3  | **Gestión de Flota**           | ✅ Completado |
+|  4  | Gestión de Rutas               | ⏳ Siguiente  |
+|  5  | Gestión de Recorridos          | ⏳ Pendiente  |
+|  6  | Gestión de Boletos             | ⏳ Pendiente  |
+|  7  | Reportes y Analytics           | ⏳ Pendiente  |
+
+Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras clave, una sola lista de **Pendientes** y pestañas por área), un **buscador Ctrl+K** con acciones rápidas y un rediseño visual aplicado a todas las pantallas.
 
 ### Módulo 1: Gestión de Personal
 
@@ -61,6 +63,26 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 | 1.4 | **Asistencias**: autoregistro, retardos, horas extra, cierre diario automático | ✅ |
 | 1.5 | **Evaluaciones de desempeño**: criterios ponderados por puesto, flujo con "enterado" | ✅ |
 | 1.6 | **Prenómina**: salarios con historial, cálculo LFT (extras, prima dominical), retardos configurables, exportación CSV/Excel | ✅ |
+
+### Módulo 2: Administración del Sistema
+
+| Fase | Funcionalidad | Estado |
+| :-: | --- | :-: |
+| 2.1 | **Usuarios y cuentas**: bloqueo por intentos fallidos, cambio obligatorio de contraseña, recuperación por correo, sesiones abiertas y "Mi cuenta" | ✅ |
+| 2.2 | **Configuración general**: datos de la empresa, impuestos y comisiones | ✅ |
+| 2.3 | **Parámetros operacionales**: organizados por módulo, con buscador y valores por defecto | ✅ |
+| 2.4 | **Bitácora**: cambios de datos y eventos de seguridad de acceso | ✅ |
+| 2.5 | Respaldos | ➖ Fuera por decisión; se usa la restauración de Neon |
+
+### Módulo 3: Gestión de Flota
+
+| Fase | Funcionalidad | Estado |
+| :-: | --- | :-: |
+| 3.0 | **Catálogos y modelos**: ciudades, terminales con ubicación en mapa, combustibles y modelos con editor visual de asientos | ✅ |
+| 3.1 | **Unidades**: asientos copiados del modelo, documentos con vencimiento, odómetro y regla de unidad apta | ✅ |
+| 3.2 | **Mantenimiento**: órdenes preventivas y correctivas, plan por km y días, rol de mecánico | ✅ |
+| 3.3 | **Incidencias**: reportes del conductor, gravedad crítica que saca la unidad de servicio, orden correctiva ligada | ✅ |
+| 3.4 | **Combustible**: cargas con confirmación de coordinación y rendimiento de tanque lleno a tanque lleno con alerta | ✅ |
 
 ---
 
@@ -75,6 +97,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 | **PostgreSQL** en **Neon** | Base de datos serverless |
 | `@nestjs/jwt` + **argon2** | Autenticación y hash de contraseñas |
 | `@nestjs/schedule` | Tareas programadas (cierre diario de asistencias) |
+| **Resend** | Correos de recuperación de contraseña |
 | `class-validator` | Validación de DTOs con mensajes en español |
 | **Swagger** | Documentación interactiva de la API |
 | **Vitest** + Supertest | Pruebas unitarias y e2e |
@@ -89,6 +112,8 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 | **TanStack Query 5** | Estado del servidor y caché |
 | **React Hook Form** + **Zod 4** | Formularios y validación |
 | **Axios** | Cliente HTTP con renovación automática de sesión |
+| **Leaflet** + OpenStreetMap | Mapas de terminales (búsqueda de direcciones con Nominatim) |
+| **lucide-react** | Iconos |
 
 ### Herramientas
 
@@ -115,11 +140,13 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 - 🔐 **Sesión segura**:
   - El _access token_ (15 min) vive solo en memoria.
   - El _refresh token_ va en una cookie `httpOnly`, se guarda hasheado, rota en cada uso y detecta si se reutiliza.
+  - La cuenta se bloquea por intentos fallidos y los eventos de acceso quedan en `security_events`.
 - 🛡 **Autorización global**:
   - Todas las rutas requieren sesión, salvo las marcadas con `@Public()`.
   - `@Roles(...)` restringe por rol; `admin` siempre pasa.
 - 📜 **Auditoría**: los cambios relevantes quedan registrados en `audit_logs`, con los valores anteriores y nuevos.
-- ⚙️ **Parámetros configurables**: tolerancias, horas máximas y días de alerta viven en `system_settings`, tienen valores por defecto tipados y solo el admin los edita.
+- ⚙️ **Parámetros configurables**: tolerancias, horas máximas y umbrales de alerta viven en `system_settings`, con valores por defecto tipados (`settings.registry.ts`). El admin los edita todos; RR. HH., solo los de su área.
+- 📌 **Pendientes**: lo que hay que atender de cada área (documentos, preventivos, incidencias, combustible) sale en una sola lista en Inicio (`PendingService`), según el rol.
 - 🕒 **Zona horaria**: las reglas de negocio se calculan en `America/Mexico_City`; las fechas se guardan como `timestamptz`.
 
 ---
@@ -132,17 +159,23 @@ camionera/
 │   ├── prisma/
 │   │   ├── schema.prisma     # Modelo de datos
 │   │   ├── migrations/       # Historial de migraciones
-│   │   └── seed.ts           # Admin, plantillas de turno y criterios base
+│   │   ├── seed.ts           # Datos base (admin, plantillas, catálogos)
+│   │   └── seed-demo.ts      # Datos de demostración
 │   ├── src/
-│   │   ├── auth/             # Login, refresh, guards
+│   │   ├── auth/             # Login, refresh, guards, recuperación
 │   │   ├── users/            # Usuarios del sistema
 │   │   ├── staff/            # Módulo 1: empleados
 │   │   │   ├── documents/    #   licencias y certificaciones
 │   │   │   ├── schedules/    #   turnos y plantillas
 │   │   │   ├── attendance/   #   asistencias
 │   │   │   └── evaluations/  #   evaluaciones de desempeño
-│   │   ├── settings/         # Parámetros configurables
+│   │   ├── payroll/          # Módulo 1: prenómina
+│   │   ├── fleet/            # Módulo 3: catálogos, unidades, mantenimiento, incidencias, combustible
+│   │   ├── dashboard/        # Inicio: cifras, pendientes y preferencias
+│   │   ├── settings/         # Configuración general y parámetros
 │   │   ├── audit/            # Bitácora de cambios
+│   │   ├── mail/             # Envío de correos (Resend)
+│   │   ├── health/           # Estado de la API
 │   │   └── common/           # Decoradores, filtros, validación, fechas
 │   └── test/                 # Pruebas e2e
 ├── frontend/                 # SPA React
@@ -220,7 +253,7 @@ Inicia sesión con el admin definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWOR
 | `prisma:migrate`  | Crea o aplica migraciones en desarrollo       |
 | `prisma:generate` | Regenera el cliente de Prisma                 |
 | `prisma:seed`     | Carga los datos base                          |
-| `seed:demo`       | Datos de demostración (`-- --clean` los borra, `-- --payroll` solo agrega la nómina demo) |
+| `seed:demo`       | Datos de demostración (`-- --clean` los borra, `-- --payroll` solo agrega la nómina demo, `-- --fleet` solo agrega la flota demo) |
 | `start:prod`      | Ejecuta la build de producción                |
 
 > ⚠️ Después de cada `prisma migrate dev` ejecuta `npx prisma generate`; no se regenera solo.
@@ -241,6 +274,8 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | `JWT_ACCESS_TTL` | Vigencia del access token |
 | `JWT_REFRESH_TTL_DAYS` | Vigencia del refresh token, en días |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | Administrador inicial |
+| `RESEND_API_KEY` | Llave de Resend para enviar correos |
+| `MAIL_FROM` | Remitente de los correos (requiere un dominio verificado en Resend) |
 
 > 🔒 **Nunca** subas `.env` al repositorio; ya está en `.gitignore`.
 
@@ -251,7 +286,7 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 - **Llaves primarias**: `uuid v7`, ordenables por tiempo.
 - **Fechas**: `timestamptz` para fechas con hora y `date` para fechas puras.
 - **Migraciones**: versionadas en `backend/prisma/migrations/`.
-- **Seed** (`backend/prisma/seed.ts`): es idempotente. Crea el admin, las plantillas de turno (Matutino, Vespertino y Nocturno) y los criterios de evaluación base.
+- **Seed** (`backend/prisma/seed.ts`): es idempotente. Crea el admin, las plantillas de turno (Matutino, Vespertino y Nocturno), los criterios de evaluación, los combustibles, las tareas base del preventivo y las categorías de incidencia.
 
 | Área | Tablas |
 | --- | --- |
@@ -260,6 +295,10 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | Turnos y asistencia | `shift_templates`, `staff_schedules`, `staff_attendance` |
 | Evaluaciones | `evaluation_criteria`, `staff_evaluations`, `staff_evaluation_scores` |
 | Nómina | `staff_compensations`, `payroll_periods`, `payroll_entries`, `payroll_adjustments` |
+| Catálogos de flota | `cities`, `terminals`, `fuel_types`, `bus_models` |
+| Unidades | `buses`, `bus_seats`, `bus_documents`, `odometer_readings` |
+| Mantenimiento | `maintenance_orders`, `maintenance_tasks`, `maintenance_task_templates` |
+| Incidencias y combustible | `incident_categories`, `bus_incidents`, `fuel_loads` |
 | Sistema | `system_settings`, `audit_logs`, `security_events` |
 
 ---
@@ -268,11 +307,13 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 
 | Rol | Alcance |
 | --- | --- |
-| `admin` | Acceso total, usuarios y configuración |
-| `hr` | Recursos Humanos: expedientes, turnos, asistencias, evaluaciones y criterios |
-| `supervisor` | Turnos, registro de asistencias y evaluaciones (no a sí mismo) |
-| `coordinator` | Consulta del personal y su operación |
-| `driver`, `collector`, `vendor`, `viewer` | Autoservicio: mi turno, mi asistencia y mis evaluaciones |
+| `admin` | Acceso total, usuarios, configuración y bitácora |
+| `hr` | Recursos Humanos: expedientes, turnos, asistencias, evaluaciones, nómina y los parámetros de su área |
+| `supervisor` | Personal: turnos, asistencias y evaluaciones (no a sí mismo). Flota: consulta y atiende incidencias |
+| `coordinator` | Personal: consulta. Flota: administra unidades, mantenimiento, incidencias y combustible |
+| `mechanic` | Sus órdenes de trabajo; reporta incidencias |
+| `driver` | Autoservicio; reporta incidencias y registra cargas de combustible (por confirmar) |
+| `collector`, `vendor`, `viewer` | Autoservicio: mi turno, mi asistencia y mis evaluaciones |
 
 El **puesto** del empleado (`StaffRole`) es independiente del **rol de sistema** (`UserRole`). El rol de sistema se sugiere a partir del puesto al otorgar acceso.
 
@@ -285,11 +326,12 @@ npm run test -w backend       # unitarias
 npm run test:e2e -w backend   # e2e (requiere BD y seed)
 ```
 
-- **Unitarias**: cubren las reglas de negocio puras (validación de turnos, cálculo de asistencia, promedios de evaluación, etc.).
+- **Unitarias**: cubren las reglas de negocio puras (turnos, asistencia, evaluaciones, nómina, asientos, unidades, mantenimiento, incidencias y combustible).
 - **e2e**:
   - Levantan la app completa contra la base de datos de `.env`.
   - Se ejecutan en serie y limpian los datos que crean.
   - Se recomienda usar una **rama de Neon** dedicada a pruebas.
+  - Con los datos demo cargados no corras `attendance.e2e-spec`: cierra el día anterior para todos.
 
 ---
 
@@ -348,7 +390,7 @@ Formato: **código gitmoji** + **tipo** + mensaje **en español**.
 | Carpeta | Contenido |
 | --- | --- |
 | [`contexto/`](contexto/) | Visión del negocio, reglas y diseño original de la BD |
-| [`docs/`](docs/) | Plan del módulo, revisión del esquema y bitácora de cada fase (`03`–`08`) |
+| [`docs/`](docs/) | Planes y bitácora de cada fase y módulo (`00`–`14`). El [`11`](docs/11-estado-y-siguientes-pasos.md) resume el estado actual y lo que sigue |
 | `/api/docs` | Swagger de la API, con el backend en ejecución |
 
 ---

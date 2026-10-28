@@ -21,12 +21,13 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Field'
 import { SettingsForm } from './SettingsForm'
 
-type ModuleKey = 'staff' | 'fleet' | 'system' | 'upcoming'
+type ModuleKey = 'staff' | 'fleet' | 'routes' | 'system' | 'upcoming'
 
 // Orden de los módulos; "upcoming" agrupa lo que aún no se aplica y va colapsado al final
 const MODULES: { key: ModuleKey; title: string }[] = [
   { key: 'staff', title: 'Personal' },
   { key: 'fleet', title: 'Flota' },
+  { key: 'routes', title: 'Rutas' },
   { key: 'system', title: 'Sistema' },
   { key: 'upcoming', title: 'Próximamente' },
 ]
@@ -74,6 +75,13 @@ const GROUPS: {
     title: 'Alertas de flota',
     description: 'Documentos de unidades por vencer, preventivo próximo y rendimiento de combustible bajo',
     icon: Bus,
+  },
+  {
+    group: 'routes',
+    module: 'routes',
+    title: 'Horarios de ruta',
+    description: 'Aviso de horarios cuya vigencia está por terminar',
+    icon: Route,
   },
   {
     group: 'security',

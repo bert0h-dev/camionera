@@ -15,10 +15,14 @@ import {
   IncidentStatus,
   UserRole,
 } from '../generated/prisma/enums.js';
+import { ROUTE_EDITORS } from '../routes/routes.controller.js';
+import { daysLabel, timeKey } from '../routes/schedule-rules.js';
+import { SchedulesService } from '../routes/schedules.service.js';
+import { dateKey, daysBetween, today } from '../common/dates.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
 export type PendingArea =
-  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel';
+  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -67,21 +71,35 @@ export class PendingService {
     private readonly maintenance: MaintenanceService,
     private readonly incidents: IncidentsService,
     private readonly fuel: FuelService,
+    private readonly schedules: SchedulesService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
     const staff = STAFF_AREA.includes(user.role);
     const fleet = FLEET_AREA.includes(user.role);
     const fuelManager = FUEL_MANAGERS.includes(user.role);
-    const [staffDocs, busDocs, plan, incidents, lowFuel, fuelLoads] =
-      await Promise.all([
-        staff ? this.staffDocs.expirations() : null,
-        fleet ? this.buses.expiringDocuments() : null,
-        fleet ? this.maintenance.plan() : null,
-        fleet ? this.incidents.open() : null,
-        fleet ? this.fuel.lowEfficiency() : null,
-        fuelManager ? this.fuel.pendingLoads() : null,
-      ]);
+    const routes =
+      user.role === UserRole.admin ||
+      (ROUTE_EDITORS as UserRole[]).includes(user.role);
+    const [
+      staffDocs,
+      busDocs,
+      plan,
+      incidents,
+      lowFuel,
+      fuelLoads,
+      unscheduled,
+      expiring,
+    ] = await Promise.all([
+      staff ? this.staffDocs.expirations() : null,
+      fleet ? this.buses.expiringDocuments() : null,
+      fleet ? this.maintenance.plan() : null,
+      fleet ? this.incidents.open() : null,
+      fleet ? this.fuel.lowEfficiency() : null,
+      fuelManager ? this.fuel.pendingLoads() : null,
+      routes ? this.schedules.routesWithoutSchedules() : null,
+      routes ? this.schedules.expiringSchedules() : null,
+    ]);
     const now = Date.now();
 
     const items: PendingItem[] = [
@@ -172,6 +190,31 @@ export class PendingService {
         // Días esperando, en negativo para que las más antiguas suban
         daysLeft: -Math.floor((now - l.createdAt.getTime()) / 86_400_000),
         link: '/flota/combustible?status=pending',
+      })),
+      ...(unscheduled ?? []).map((r) => {
+        const next = r.schedules[0]?.validFrom ?? null;
+        return {
+          id: `route-unscheduled-${r.id}`,
+          area: 'route' as const,
+          severity: 'overdue' as const,
+          title: `Ruta sin horarios · ${r.code}`,
+          detail: next
+            ? `${r.name} · los horarios empiezan el ${dateKey(next)}`
+            : `${r.name} · está activa pero no tiene salidas vigentes`,
+          date: next,
+          daysLeft: next ? daysBetween(today(), next) : null,
+          link: `/rutas/${r.id}?tab=schedules`,
+        };
+      }),
+      ...(expiring ?? []).map((s) => ({
+        id: `route-expiring-${s.id}`,
+        area: 'route' as const,
+        severity: 'soon' as const,
+        title: `Horario por vencer · ${s.route.code}`,
+        detail: `Salida ${timeKey(s.departureTime)} (${daysLabel(s.daysOfWeek)}) · ${s.route.name}`,
+        date: s.validUntil,
+        daysLeft: s.validUntil ? daysBetween(today(), s.validUntil) : null,
+        link: `/rutas/${s.route.id}?tab=schedules`,
       })),
     ];
 

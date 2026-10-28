@@ -2,6 +2,7 @@
 //   npm run seed:demo -w backend            → carga (reemplaza los demo anteriores)
 //   npm run seed:demo -w backend -- --clean → solo borra
 //   npm run seed:demo -w backend -- --fleet → solo agrega la flota y el mantenimiento demo (no toca al personal)
+//   npm run seed:demo -w backend -- --routes → solo agrega las rutas demo (clave DEM-…)
 //   DEMO_PASSWORD en .env (opcional) crea el usuario mecánico demo
 // Todo lo demo se identifica por el correo @demo.camionera.mx de los empleados.
 import 'dotenv/config';
@@ -86,6 +87,7 @@ async function clean() {
   await prisma.maintenanceOrder.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.busIncident.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.fuelLoad.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
+  await prisma.route.deleteMany({ where: { code: { startsWith: 'DEM-' } } }); // paradas y horarios en cascada
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
@@ -342,12 +344,17 @@ async function loadFleet() {
     { city: 'Ciudad de México', state: 'Ciudad de México', code: 'CDMXN', name: 'Central de Autobuses del Norte', lat: 19.4794, lng: -99.1405 },
     { city: 'León', state: 'Guanajuato', code: 'LEO', name: 'Central de Autobuses de León', lat: 21.1035, lng: -101.6602 },
     { city: 'Querétaro', state: 'Querétaro', code: 'QRO', name: 'Terminal de Autobuses de Querétaro', lat: 20.5768, lng: -100.3739 },
+    // Zonas distintas al centro para probar horarios entre estados
+    { city: 'Hermosillo', state: 'Sonora', code: 'HMO', name: 'Central de Autobuses de Hermosillo', lat: 29.0729, lng: -110.9559, tz: 'America/Hermosillo' },
+    { city: 'Tijuana', state: 'Baja California', code: 'TIJ', name: 'Central Camionera de Tijuana', lat: 32.4997, lng: -116.9667, tz: 'America/Tijuana' },
+    { city: 'Mazatlán', state: 'Sinaloa', code: 'MZT', name: 'Central de Autobuses de Mazatlán', lat: 23.2366, lng: -106.4205, tz: 'America/Mazatlan' },
   ];
   for (const p of places) {
+    const timezone = p.tz ?? 'America/Mexico_City';
     const city = await prisma.city.upsert({
       where: { name_state: { name: p.city, state: p.state } },
-      update: {},
-      create: { name: p.city, state: p.state },
+      update: { timezone },
+      create: { name: p.city, state: p.state, timezone },
     });
     await prisma.terminal.upsert({
       where: { code: p.code },
@@ -445,6 +452,40 @@ async function loadFleet() {
   await loadMaintenance();
   await loadIncidents();
   await loadFuel();
+  await loadRoutes();
+}
+
+/** Rutas demo (clave DEM-…) entre las terminales demo; incluye cruces de zona horaria. */
+async function loadRoutes() {
+  const routes = [
+    { code: 'DEM-GDL-CDMX', name: 'Guadalajara – Ciudad de México', from: 'GDL', to: 'CDMXN', price: 820, min: 420, km: 540 },
+    { code: 'DEM-CDMX-GDL', name: 'Ciudad de México – Guadalajara', from: 'CDMXN', to: 'GDL', price: 820, min: 420, km: 540 },
+    { code: 'DEM-GDL-LEO', name: 'Guadalajara – León', from: 'GDL', to: 'LEO', price: 390, min: 210, km: 220 },
+    { code: 'DEM-LEO-QRO', name: 'León – Querétaro', from: 'LEO', to: 'QRO', price: 340, min: 150, km: 190 },
+    { code: 'DEM-QRO-CDMX', name: 'Querétaro – Ciudad de México', from: 'QRO', to: 'CDMXN', price: 310, min: 180, km: 215 },
+    { code: 'DEM-GDL-MZT', name: 'Guadalajara – Mazatlán', from: 'GDL', to: 'MZT', price: 760, min: 480, km: 490 },
+    { code: 'DEM-HMO-TIJ', name: 'Hermosillo – Tijuana', from: 'HMO', to: 'TIJ', price: 1150, min: 600, km: 690 },
+    { code: 'DEM-MZT-HMO', name: 'Mazatlán – Hermosillo', from: 'MZT', to: 'HMO', price: 980, min: 690, km: 750, inactive: true },
+  ];
+  const terminals = new Map(
+    (await prisma.terminal.findMany({ where: { code: { in: routes.flatMap((r) => [r.from, r.to]) } } })).map((t) => [
+      t.code,
+      t.id,
+    ]),
+  );
+  for (const r of routes) {
+    const data = {
+      name: r.name,
+      originTerminalId: terminals.get(r.from)!,
+      destinationTerminalId: terminals.get(r.to)!,
+      basePrice: r.price,
+      estimatedDurationMinutes: r.min,
+      distanceKm: r.km,
+      isActive: !r.inactive,
+    };
+    await prisma.route.upsert({ where: { code: r.code }, update: data, create: { code: r.code, ...data } });
+  }
+  console.log(`Rutas demo: ${routes.length}`);
 }
 
 /**
@@ -780,6 +821,7 @@ async function loadFuel() {
 async function main() {
   if (process.argv.includes('--payroll')) return loadPayroll();
   if (process.argv.includes('--fleet')) return loadFleet();
+  if (process.argv.includes('--routes')) return loadRoutes();
   await clean();
   if (!process.argv.includes('--clean')) {
     await load();

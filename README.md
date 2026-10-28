@@ -45,7 +45,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 |  1  | **Gestión de Personal**        | ✅ Completado |
 |  2  | **Administración del Sistema** | ✅ Completado |
 |  3  | **Gestión de Flota**           | ✅ Completado |
-|  4  | Gestión de Rutas               | ⏳ Siguiente  |
+|  4  | **Gestión de Rutas**           | 🚧 En curso   |
 |  5  | Gestión de Recorridos          | ⏳ Pendiente  |
 |  6  | Gestión de Boletos             | ⏳ Pendiente  |
 |  7  | Reportes y Analytics           | ⏳ Pendiente  |
@@ -83,6 +83,16 @@ Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras cla
 | 3.2 | **Mantenimiento**: órdenes preventivas y correctivas, plan por km y días, rol de mecánico | ✅ |
 | 3.3 | **Incidencias**: reportes del conductor, gravedad crítica que saca la unidad de servicio, orden correctiva ligada | ✅ |
 | 3.4 | **Combustible**: cargas con confirmación de coordinación y rendimiento de tanque lleno a tanque lleno con alerta | ✅ |
+
+### Módulo 4: Gestión de Rutas
+
+| Fase | Funcionalidad | Estado |
+| :-: | --- | :-: |
+| 4.1 | **Rutas**: terminal a terminal, clave única, activar y desactivar; zona horaria por ciudad para calcular llegadas entre estados | ✅ |
+| 4.2 | **Horarios**: días de la semana, vigencia y llegada en hora local del destino | ⏳ |
+| 4.3 | **Paradas**: orden, tiempo desde el origen y precio adicional | ⏳ |
+| 4.4 | **Temporadas**: modificadores globales sin solapes; precio redondeado a peso entero | ⏳ |
+| 4.5 | **Búsqueda**: rutas entre ciudades con horarios y precio vigente | ⏳ |
 
 ---
 
@@ -253,7 +263,7 @@ Inicia sesión con el admin definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWOR
 | `prisma:migrate`  | Crea o aplica migraciones en desarrollo       |
 | `prisma:generate` | Regenera el cliente de Prisma                 |
 | `prisma:seed`     | Carga los datos base                          |
-| `seed:demo`       | Datos de demostración (`-- --clean` los borra, `-- --payroll` solo agrega la nómina demo, `-- --fleet` solo agrega la flota demo) |
+| `seed:demo`       | Datos de demostración (`-- --clean` los borra, `-- --payroll` solo agrega la nómina demo, `-- --fleet` solo agrega la flota demo, `-- --routes` solo las rutas demo) |
 | `start:prod`      | Ejecuta la build de producción                |
 
 > ⚠️ Después de cada `prisma migrate dev` ejecuta `npx prisma generate`; no se regenera solo.
@@ -299,6 +309,7 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | Unidades | `buses`, `bus_seats`, `bus_documents`, `odometer_readings` |
 | Mantenimiento | `maintenance_orders`, `maintenance_tasks`, `maintenance_task_templates` |
 | Incidencias y combustible | `incident_categories`, `bus_incidents`, `fuel_loads` |
+| Rutas | `routes`, `route_stops`, `route_schedules`, `seasons` |
 | Sistema | `system_settings`, `audit_logs`, `security_events` |
 
 ---
@@ -309,11 +320,12 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | --- | --- |
 | `admin` | Acceso total, usuarios, configuración y bitácora |
 | `hr` | Recursos Humanos: expedientes, turnos, asistencias, evaluaciones, nómina y los parámetros de su área |
-| `supervisor` | Personal: turnos, asistencias y evaluaciones (no a sí mismo). Flota: consulta y atiende incidencias |
-| `coordinator` | Personal: consulta. Flota: administra unidades, mantenimiento, incidencias y combustible |
+| `supervisor` | Personal: turnos, asistencias y evaluaciones (no a sí mismo). Flota: consulta y atiende incidencias. Rutas: consulta |
+| `coordinator` | Personal: consulta. Flota: administra unidades, mantenimiento, incidencias y combustible. Rutas: las administra |
 | `mechanic` | Sus órdenes de trabajo; reporta incidencias |
 | `driver` | Autoservicio; reporta incidencias y registra cargas de combustible (por confirmar) |
-| `collector`, `vendor`, `viewer` | Autoservicio: mi turno, mi asistencia y mis evaluaciones |
+| `vendor` | Taquilla: consulta las rutas; autoservicio |
+| `collector`, `viewer` | Autoservicio: mi turno, mi asistencia y mis evaluaciones |
 
 El **puesto** del empleado (`StaffRole`) es independiente del **rol de sistema** (`UserRole`). El rol de sistema se sugiere a partir del puesto al otorgar acceso.
 

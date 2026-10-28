@@ -610,6 +610,7 @@ export interface City {
   id: string
   name: string
   state: string
+  timezone: string
   isActive: boolean
   _count?: { terminals: number }
 }
@@ -623,7 +624,7 @@ export interface Terminal {
   latitude: string | null
   longitude: string | null
   isActive: boolean
-  city: { id: string; name: string; state: string }
+  city: { id: string; name: string; state: string; timezone: string }
 }
 
 export const CELL_TYPES = ['seat', 'aisle', 'bathroom', 'stairs', 'driver', 'door', 'cafe'] as const
@@ -1042,4 +1043,65 @@ export interface FuelBusOption {
 export interface FuelFormOptions {
   buses: FuelBusOption[]
   lastPrices: { fuelTypeId: string; unitPrice: string; loadedAt: string }[]
+}
+
+// ---------- Rutas (Módulo 4) ----------
+
+export interface RouteTerminal {
+  id: string
+  code: string
+  name: string
+  latitude: string | null
+  longitude: string | null
+  isActive: boolean
+  city: { id: string; name: string; state: string; timezone: string }
+}
+
+export interface RouteListItem {
+  id: string
+  code: string
+  name: string
+  originTerminalId: string
+  destinationTerminalId: string
+  basePrice: string
+  estimatedDurationMinutes: number
+  distanceKm: string
+  description: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  originTerminal: RouteTerminal
+  destinationTerminal: RouteTerminal
+  _count: { stops: number; schedules: number }
+}
+
+export interface RouteStop {
+  id: string
+  terminalId: string
+  stopOrder: number
+  durationFromOriginMinutes: number
+  additionalPrice: string
+  terminal: RouteTerminal
+}
+
+export interface RouteSchedule {
+  id: string
+  departureTime: string
+  daysOfWeek: number[]
+  validFrom: string
+  validUntil: string | null
+  isActive: boolean
+}
+
+export interface RouteDetail extends Omit<RouteListItem, '_count'> {
+  stops: RouteStop[]
+  schedules: RouteSchedule[]
+}
+
+export interface RouteSummary {
+  active: number
+  inactive: number
+  totalKm: number
+  averagePrice: number | null
+  cities: number
 }

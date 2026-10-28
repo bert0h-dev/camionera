@@ -9,6 +9,7 @@ import { MailModule } from './mail/mail.module.js';
 import { PayrollModule } from './payroll/payroll.module.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RoutesModule } from './routes/routes.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { StaffModule } from './staff/staff.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module.js';
     DashboardModule,
     PayrollModule,
     FleetModule,
+    RoutesModule,
   ],
   controllers: [HealthController],
 })

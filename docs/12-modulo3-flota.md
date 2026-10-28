@@ -23,7 +23,7 @@
 ### Catálogos (`/flota/catalogos`)
 Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran: se desactivan.
 - **Combustibles** (`fuel_types`): el seed base crea Diésel, Gasolina, Gas LP y Gas natural.
-- **Ciudades** (`cities`): nombre + estado, únicos juntos.
+- **Ciudades** (`cities`): nombre + estado, únicos juntos. El catálogo de terminales y ciudades tiene buscador (sin acentos) y paginado de 20 en pantalla; los selectores de otras pantallas siguen recibiendo la lista completa. Desde el Módulo 4 llevan zona horaria (ver doc 15) y no se pueden desactivar si una ruta activa las usa (igual que las terminales).
 - **Terminales** (`terminals`):
   - Datos: clave única en mayúsculas, ciudad y dirección.
   - **Ubicación**: `latitude` y `longitude`, `Decimal(9,6)`, siempre juntas.

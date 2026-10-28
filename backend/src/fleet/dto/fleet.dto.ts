@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsObject,
@@ -19,6 +20,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
+import { MX_TIMEZONES } from '../../common/timezones.js';
 import { BusType } from '../../generated/prisma/enums.js';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -84,6 +86,15 @@ export class CreateCityDto {
   @MinLength(2)
   @MaxLength(100)
   state: string;
+
+  @ApiPropertyOptional({
+    example: 'America/Mexico_City',
+    enum: MX_TIMEZONES,
+    description: 'Zona horaria; los horarios de las rutas se calculan con ella',
+  })
+  @IsOptional()
+  @IsIn(MX_TIMEZONES, { message: 'Zona horaria no válida' })
+  timezone?: string;
 }
 
 export class UpdateCityDto extends PartialType(CreateCityDto) {

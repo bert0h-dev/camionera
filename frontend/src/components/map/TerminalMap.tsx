@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Search, X } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './map.css'
@@ -242,13 +242,19 @@ export function LocationPicker({
   )
 }
 
-/** Mapa de solo lectura con varios puntos. */
-export function PointsMap({ points, className }: { points: MapPoint[]; className?: string }) {
+/** Mapa de solo lectura con varios puntos; `path` los une en orden (recorrido de una ruta). */
+export function PointsMap({ points, className, path }: { points: MapPoint[]; className?: string; path?: boolean }) {
   return (
     <div className={className ?? 'h-[28rem] overflow-hidden rounded-xl border border-border'}>
       <MapContainer center={MEXICO} zoom={5} className="size-full" scrollWheelZoom>
         <TileLayer url={TILES} attribution={ATTRIBUTION} maxZoom={19} />
         <FitAll points={points} />
+        {path && points.length > 1 && (
+          <Polyline
+            positions={points.map((p) => [p.lat, p.lng])}
+            pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.8, dashArray: '8 6' }}
+          />
+        )}
         {points.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={pin}>
             <Popup>

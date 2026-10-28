@@ -7,6 +7,7 @@ import {
   Wrench,
   CornerDownLeft,
   Fuel,
+  Route,
   History,
   Moon,
   Plus,
@@ -97,6 +98,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const canOrders = !!role && ['admin', 'coordinator', 'supervisor', 'mechanic'].includes(role)
   const canIncidents = canOrders || role === 'driver'
   const canFuel = !!role && ['admin', 'coordinator', 'driver'].includes(role)
+  const canEditRoutes = role === 'admin' || role === 'coordinator'
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -248,6 +250,18 @@ function Palette({ onClose }: { onClose: () => void }) {
             },
           ]
         : []),
+      ...(canEditRoutes
+        ? [
+            {
+              id: 'action:new-route',
+              section: 'Acciones rápidas',
+              label: 'Nueva ruta',
+              icon: Route,
+              keywords: 'ruta origen destino terminal corrida',
+              to: '/rutas?nueva=1',
+            },
+          ]
+        : []),
       {
         id: 'action:account',
         section: 'Acciones rápidas',
@@ -344,6 +358,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     incidents.data,
     canIncidents,
     canFuel,
+    canEditRoutes,
   ])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado

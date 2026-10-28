@@ -32,8 +32,8 @@ export function Modal({ open, title, description, size = 'md', onClose, children
 
   return createPortal(
     <div
+      // Un clic fuera no cierra: se perdería lo capturado. Se cierra con la X, Cancelar o Esc
       className="fixed inset-0 z-50 flex items-end justify-center bg-overlay p-0 backdrop-blur-sm animate-fade-in sm:items-center sm:p-4"
-      onClick={onClose}
     >
       <div
         role="dialog"
@@ -43,7 +43,6 @@ export function Modal({ open, title, description, size = 'md', onClose, children
           'flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-border bg-surface shadow-pop animate-pop-in sm:rounded-2xl',
           SIZES[size],
         )}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
           <div>

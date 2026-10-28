@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Building2, Fuel, Map as MapIcon, MapPin, Plus } from 'lucide-react'
+import { Building2, Fuel, Map as MapIcon, MapPin, Plus, Search } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import type { City, FuelType, Terminal } from '../../lib/types'
 import { DEFAULT_TIMEZONE, localClock, MX_TIMEZONES, utcOffsetLabel } from '../../lib/timezones'
@@ -10,7 +10,9 @@ import { Input, Select, Textarea } from '../../components/ui/Field'
 import { HeroStat } from '../../components/ui/HeroStat'
 import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Table, type Column } from '../../components/ui/Table'
+import { Pagination, Table, type Column } from '../../components/ui/Table'
+import { FilterBar } from '../../components/ui/FilterBar'
+import { normalize } from '../../components/command/normalize'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import type { LatLng, MapPoint } from '../../components/map/TerminalMap'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
@@ -22,6 +24,8 @@ const LocationPicker = lazy(() =>
   import('../../components/map/TerminalMap').then((m) => ({ default: m.LocationPicker })),
 )
 const PointsMap = lazy(() => import('../../components/map/TerminalMap').then((m) => ({ default: m.PointsMap })))
+
+const PAGE_SIZE = 20
 
 type TabKey = 'terminals' | 'map' | 'cities' | 'fuel'
 
@@ -83,6 +87,13 @@ function FleetCatalogsPage() {
   const queryClient = useQueryClient()
   const canEdit = useCanEditFleet()
   const [tab, setTab] = useState<TabKey>('terminals')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const changeTab = (key: TabKey) => {
+    setTab(key)
+    setSearch('')
+    setPage(1)
+  }
   const [draft, setDraft] = useState<Draft | null>(null)
 
   const fuels = useFuelTypes(true)
@@ -208,6 +219,17 @@ function FleetCatalogsPage() {
   const activeTerminals = (terminals.data ?? []).filter((t) => t.isActive)
   const unlocated = activeTerminals.filter((t) => !locationOf(t)).length
 
+  // Búsqueda y paginado en pantalla: los selectores de otras pantallas siguen recibiendo la lista completa
+  const matches = (...fields: string[]) => {
+    const terms = normalize(search).split(/s+/).filter(Boolean)
+    const text = normalize(fields.join(' '))
+    return terms.every((t) => text.includes(t))
+  }
+  const terminalRows = (terminals.data ?? []).filter((t) => matches(t.code, t.name, t.city.name, t.city.state))
+  const cityRows = (cities.data ?? []).filter((c) => matches(c.name, c.state))
+  const pages = (rows: unknown[]) => Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const pageOf = <T,>(rows: T[]) => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
   const points = useMemo<MapPoint[]>(
     () =>
       (terminals.data ?? []).flatMap((t) => {
@@ -264,20 +286,38 @@ function FleetCatalogsPage() {
           </>
         }
         statsColumns={5}
-        bottom={<Tabs variant="band" items={TABS} value={tab} onChange={setTab} />}
+        bottom={<Tabs variant="band" items={TABS} value={tab} onChange={changeTab} />}
       />
 
+      {(tab === 'terminals' || tab === 'cities') && (
+        <FilterBar>
+          <div className="min-w-60 flex-1">
+            <Input
+              icon={Search}
+              placeholder={tab === 'terminals' ? 'Buscar por clave, nombre o ciudad…' : 'Buscar por ciudad o estado…'}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+            />
+          </div>
+        </FilterBar>
+      )}
       {tab === 'terminals' && (
         <Table
           columns={terminalColumns}
-          rows={terminals.data ?? []}
+          rows={pageOf(terminalRows)}
           rowKey={(t) => t.id}
           loading={terminals.isLoading}
           rowClassName={(t) => !t.isActive && 'opacity-60'}
           emptyIcon={Building2}
-          emptyMessage="Aún no hay terminales"
-          emptyDescription="Primero registra la ciudad y después su terminal"
+          emptyMessage={search ? 'Ninguna terminal coincide con la búsqueda' : 'Aún no hay terminales'}
+          emptyDescription={search ? undefined : 'Primero registra la ciudad y después su terminal'}
         />
+      )}
+      {tab === 'terminals' && terminalRows.length > PAGE_SIZE && (
+        <Pagination page={page} totalPages={pages(terminalRows)} total={terminalRows.length} onChange={setPage} />
       )}
       {tab === 'map' && (
         <div className="space-y-2">
@@ -294,13 +334,16 @@ function FleetCatalogsPage() {
       {tab === 'cities' && (
         <Table
           columns={cityColumns}
-          rows={cities.data ?? []}
+          rows={pageOf(cityRows)}
           rowKey={(c) => c.id}
           loading={cities.isLoading}
           rowClassName={(c) => !c.isActive && 'opacity-60'}
           emptyIcon={MapPin}
-          emptyMessage="Aún no hay ciudades"
+          emptyMessage={search ? 'Ninguna ciudad coincide con la búsqueda' : 'Aún no hay ciudades'}
         />
+      )}
+      {tab === 'cities' && cityRows.length > PAGE_SIZE && (
+        <Pagination page={page} totalPages={pages(cityRows)} total={cityRows.length} onChange={setPage} />
       )}
       {tab === 'fuel' && (
         <Table

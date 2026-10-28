@@ -14,6 +14,7 @@
   - 3.4 Combustible ✅ fusionada (PR #15).
 - **Módulo 4, Gestión de Rutas** (doc 15): 🚧 en curso.
   - 4.1 Rutas y zona horaria por ciudad ✅ en la rama `feat/m4-rutas` (migración con todas las tablas del módulo).
+  - En la misma rama: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
 - **README** actualizado al estado actual (módulos 1–3, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
@@ -43,6 +44,7 @@
 - **Commits** con gitmoji en código y en español: `:sparkles: feat: …`.
 - **Diseño**: todo lo nuevo sigue la dirección D (`PageHeader` con banda, `HeroStat`, `font-data`, `FilterBar`, `Alert`, `LoadingBlock`).
 - **Docs en cada PR**: además del doc de la fase y este doc 11, revisar los docs anteriores que el cambio deje obsoletos (reglas, pantallas, parámetros) y corregirlos en el mismo PR.
+- **Modales**: no se cierran con clic en el fondo, para no perder lo capturado; solo con la X, Cancelar o Esc.
 - **Fechas en el frontend**: `formatDate` solo para columnas de fecha (`@db.Date`); para instantes (`Timestamptz`) usar `formatInstantDate` y `formatTime`, que usan la zona de la central.
 - **Revisión visual en Chrome** en cada fase.
   - Antes, apagar los procesos node del proyecto filtrando por `Repos\camionera` **y** por puerto (3002 y 5173): `node dist/main` no lleva la ruta en su línea de comandos.

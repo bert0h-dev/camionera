@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Armchair, FileText, Gauge, History, Info, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Armchair, FileText, Gauge, History, Info, Pencil, Plus, RefreshCw, Wrench } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { daysLabel, formatDate } from '../../lib/format'
 import {
@@ -26,11 +26,12 @@ import { Table, type Column } from '../../components/ui/Table'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { DocumentModal, OdometerModal, SeatModal, StatusModal } from './BusModals'
+import { BusMaintenanceTab } from './BusMaintenanceTab'
 import { BusSeatMap } from './BusSeatMap'
 import { BusStatusBadge, FitBadge } from './BusStatusBadge'
 import { useCanEditFleet } from './useFleet'
 
-type TabKey = 'general' | 'seats' | 'documents' | 'history'
+type TabKey = 'general' | 'seats' | 'documents' | 'maintenance' | 'history'
 
 const formatKm = (km: number) => `${km.toLocaleString('es-MX')} km`
 
@@ -83,6 +84,7 @@ function BusDetailPage() {
     { key: 'general', label: 'General', icon: Info },
     { key: 'seats', label: 'Asientos', icon: Armchair, badge: blocked || undefined },
     { key: 'documents', label: 'Documentos', icon: FileText, badge: docAlerts || undefined },
+    { key: 'maintenance', label: 'Mantenimiento', icon: Wrench },
     { key: 'history', label: 'Historial', icon: History },
   ]
 
@@ -293,6 +295,8 @@ function BusDetailPage() {
           />
         </div>
       )}
+
+      {tab === 'maintenance' && <BusMaintenanceTab busId={bus.id} />}
 
       {tab === 'history' &&
         (history.isLoading ? (

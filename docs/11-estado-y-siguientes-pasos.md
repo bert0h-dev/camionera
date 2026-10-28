@@ -8,10 +8,11 @@
 - **Rediseño**: dirección D aplicada a todo, D5 terminada (buscador Ctrl+K y carga diferida).
 - **Módulo 3, Gestión de Flota** (doc 12):
   - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
-  - **3.1 Unidades** lista en la rama `feat/m3-unidades` (PR por fusionar).
+  - 3.1 Unidades ✅ fusionada (PR #9).
+  - **3.2 Mantenimientos** lista en la rama `feat/m3-mantenimientos` (PR por fusionar).
 
 ## Lo que sigue
-1. **Módulo 3**: 3.1 revisada en Chrome; siguen 3.2 Mantenimientos, 3.3 Incidencias y 3.4 Combustible (ver doc 12).
+1. **Módulo 3**: siguen 3.3 Incidencias y 3.4 Combustible (ver doc 12).
 2. **Módulo 4, Rutas**: origen, destino y paradas entre terminales con ubicación; precios por tramo, horarios, cancelación y temporadas.
 3. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
    - Los parámetros `trips.*` y `tickets.*` ya están listos.

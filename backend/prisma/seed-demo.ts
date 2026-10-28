@@ -16,6 +16,7 @@ import {
   PaymentFrequency,
   PaymentType,
   PayrollStatus,
+  Prisma,
   LicenseType,
   PrismaClient,
   ShiftType,
@@ -27,6 +28,7 @@ import { addDays, dateKey, today, weekStart, zonedDateTime } from '../src/common
 import { computePayroll, totals } from '../src/payroll/payroll-rules.js';
 import { defaultLayout, seatCount } from '../src/fleet/layout-rules.js';
 import { seatsFromLayout } from '../src/fleet/bus-rules.js';
+import { fuelTotal, measureLoads } from '../src/fleet/fuel-rules.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -83,6 +85,7 @@ async function clean() {
   await prisma.payrollPeriod.deleteMany({ where: { name: { startsWith: 'DEMO · ' } } });
   await prisma.maintenanceOrder.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.busIncident.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
+  await prisma.fuelLoad.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
   await prisma.staff.deleteMany({ where: { id: { in: ids } } }); // documentos, turnos, asistencias y evaluaciones en cascada
@@ -441,6 +444,7 @@ async function loadFleet() {
   console.log(`Unidades demo: ${created} nuevas`);
   await loadMaintenance();
   await loadIncidents();
+  await loadFuel();
 }
 
 /**
@@ -657,6 +661,120 @@ async function loadMaintenance() {
     count++;
   }
   console.log(`Mantenimiento demo: ${count} órdenes${mechanicId ? '' : ' (sin mecánico: define DEMO_PASSWORD para crearlo)'}`);
+}
+
+/**
+ * Combustible demo: ~3 meses de cargas por unidad que terminan en su odómetro actual,
+ * con una parcial de vez en cuando. La 1002 cae en rendimiento en sus últimos tanques
+ * para que salga la alerta, y un conductor demo deja dos cargas por confirmar.
+ */
+async function loadFuel() {
+  if (await prisma.fuelLoad.count({ where: { bus: { plates: { startsWith: 'DEM' } } } })) return;
+  const recorder = await prisma.user.findFirst({ where: { role: { in: [UserRole.coordinator, UserRole.admin] } } });
+  if (!recorder) return;
+  const driver = await prisma.user.findFirst({ where: { role: UserRole.driver, email: { endsWith: DEMO_DOMAIN } } });
+  const buses = await prisma.bus.findMany({
+    where: { plates: { startsWith: 'DEM' } },
+    include: { busModel: true },
+    orderBy: { economicNumber: 'asc' },
+  });
+  const stations = ['Pemex Periférico', 'Pemex Autopista km 120', 'G500 Central', 'Oxxo Gas Libramiento'];
+  const day0 = today();
+  const at = (days: number, hour: number) => new Date(addDays(day0, days).getTime() + (hour + 6) * 3_600_000);
+  // Precio del diésel por día: sube poco a poco con algo de ruido
+  const price = (days: number) => Math.round((24.2 + (90 + days) * 0.012 + ((days * 7) % 5) * 0.04) * 1000) / 1000;
+  let count = 0;
+
+  for (const [i, bus] of buses.entries()) {
+    const expected = Number(bus.busModel.expectedEfficiency ?? 3);
+    const tank = Number(bus.busModel.tankCapacity ?? 400);
+    const trips = 14;
+    // Tramos de ~1,000–1,300 km cada 6 días, hacia atrás desde el odómetro actual
+    const legs = Array.from({ length: trips }, (_, k) => 1000 + ((i * 37 + k * 53) % 300));
+    let km = bus.odometerKm - legs.reduce((a, b) => a + b, 0);
+    const rows: Prisma.FuelLoadCreateManyInput[] = [];
+    for (let k = 0; k < trips; k++) {
+      km += legs[k];
+      const days = -6 * (trips - k);
+      const drop = bus.economicNumber === '1002' && k >= trips - 2 ? 0.78 : 1;
+      const eff = expected * drop * (0.96 + ((i + k) % 5) * 0.02);
+      const liters = Math.min(tank, Math.round((legs[k] / eff) * 100) / 100);
+      // Cada cuarto tramo se parte: una parcial a medio camino y el lleno al final
+      if (k % 4 === 2 && k < trips - 2) {
+        const part = Math.round(liters * 0.4 * 100) / 100;
+        rows.push({
+          busId: bus.id,
+          fuelTypeId: bus.busModel.fuelTypeId,
+          loadedAt: at(days - 3, 13),
+          quantity: part,
+          unitPrice: price(days - 3),
+          total: fuelTotal(part, price(days - 3)),
+          odometerKm: km - Math.round(legs[k] / 2),
+          isFullTank: false,
+          station: stations[(i + k + 1) % stations.length],
+          recordedBy: recorder.id,
+          reviewedBy: recorder.id,
+          reviewedAt: at(days - 3, 14),
+        });
+        rows.push({
+          busId: bus.id,
+          fuelTypeId: bus.busModel.fuelTypeId,
+          loadedAt: at(days, 8),
+          quantity: liters - part,
+          unitPrice: price(days),
+          total: fuelTotal(liters - part, price(days)),
+          odometerKm: km,
+          station: stations[(i + k) % stations.length],
+          ticket: `T-${bus.economicNumber}-${k}`,
+          recordedBy: recorder.id,
+          reviewedBy: recorder.id,
+          reviewedAt: at(days, 9),
+        });
+        continue;
+      }
+      rows.push({
+        busId: bus.id,
+        fuelTypeId: bus.busModel.fuelTypeId,
+        loadedAt: at(days, 8),
+        quantity: liters,
+        unitPrice: price(days),
+        total: fuelTotal(liters, price(days)),
+        odometerKm: km,
+        station: stations[(i + k) % stations.length],
+        ticket: `T-${bus.economicNumber}-${k}`,
+        recordedBy: recorder.id,
+        reviewedBy: recorder.id,
+        reviewedAt: at(days, 9),
+      });
+    }
+    const measures = measureLoads(
+      rows.map((r, n) => ({ id: String(n), odometerKm: r.odometerKm, quantity: Number(r.quantity), isFullTank: r.isFullTank ?? true })),
+    );
+    await prisma.fuelLoad.createMany({ data: rows.map((r, n) => ({ ...r, ...measures.get(String(n)) })) });
+    count += rows.length;
+
+    // Dos cargas del conductor esperando confirmación
+    if (driver && i < 2) {
+      const liters = Math.round((900 / expected) * 100) / 100;
+      await prisma.fuelLoad.create({
+        data: {
+          busId: bus.id,
+          fuelTypeId: bus.busModel.fuelTypeId,
+          loadedAt: at(-i, 7),
+          quantity: liters,
+          unitPrice: price(-i),
+          total: fuelTotal(liters, price(-i)),
+          odometerKm: bus.odometerKm + 900,
+          station: stations[i],
+          ticket: `T-${bus.economicNumber}-C`,
+          status: 'pending',
+          recordedBy: driver.id,
+        },
+      });
+      count++;
+    }
+  }
+  console.log(`Combustible demo: ${count} cargas`);
 }
 
 async function main() {

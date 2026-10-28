@@ -224,3 +224,44 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
 - **Demo**: `--fleet` agrega 4 incidencias: una crítica sin revisar (unidad fuera de servicio), una en revisión ligada a la orden de aire acondicionado y dos cerradas (una, accidente con siniestro).
 - **Unitarias**: `incident-rules.spec.ts`.
 - **E2E**: `test/incidents.e2e-spec.ts`: alcance del conductor, datos de siniestro, crítica → orden → resuelta y disponible, dos críticas abiertas y bajar la gravedad.
+
+## 3.4 Combustible (rama `feat/m3-combustible`)
+### Decisiones del usuario
+- **Rendimiento**: se mide de **tanque lleno a tanque lleno**. Las cargas parciales se suman al siguiente lleno; el primer lleno solo abre la medición.
+- **Precio**: se captura en cada carga porque cambia por día. El formulario propone el último precio usado de ese combustible.
+- **Cargas del conductor**: entran **por confirmar**. Coordinación las confirma o las rechaza con motivo. Mientras están pendientes no mueven el odómetro ni cuentan en gasto, rendimiento ni alertas.
+- **Alerta**: rendimiento 15 % o más por debajo del esperado del modelo, en el parámetro `fleet.fuel_efficiency_alert_pct` (Alertas de flota).
+
+### Datos
+- **`fuel_loads`**:
+  - Unidad, combustible (el del modelo al momento de la carga), fecha y hora, cantidad, precio por unidad, total, odómetro, tanque lleno o parcial, estación, ticket y notas.
+  - Estado: por confirmar, confirmada o rechazada (con motivo), quién registró y quién revisó.
+  - Medida del tramo, solo en tanques llenos que cierran uno: `trip_km`, `trip_quantity` y `efficiency` (km por unidad del combustible).
+
+### Reglas (`fuel-rules.ts`, con pruebas)
+- **Validación**: cantidad y precio positivos, sin pasar el tanque del modelo, y el odómetro tiene que ser mayor al de la última carga confirmada de la unidad. Al confirmar una pendiente se vuelve a validar.
+- **Odómetro**: al confirmarse, la carga avanza el odómetro de la unidad si es mayor (lectura con origen `fuel`).
+- **Recalcular**: cada alta, corrección, confirmación o borrado vuelve a medir todas las cargas confirmadas de la unidad.
+- **Corregir o eliminar**: la pendiente, quien la registró o coordinación; la confirmada, solo coordinación y solo si es la última de la unidad (la lista marca `isLastConfirmed`). Las rechazadas no se tocan. El odómetro nunca regresa.
+- **Rendimiento bajo**: se juzga con la última medición de cada unidad.
+
+### Permisos
+- **Registran**: coordinación (confirmadas) y el conductor (por confirmar, solo ve las suyas).
+- **Consultan**: supervisión ve todo pero no registra.
+- **Confirman y rechazan**: coordinación. El admin siempre pasa; RR. HH. y mecánico no participan.
+
+### API (`/fleet/fuel`)
+- `GET /` (filtros por estado, unidad, terminal, fechas y búsqueda por unidad, estación o ticket), `GET /:id`, `GET summary`, `GET efficiency?busId=` y `GET form-options` (unidades con combustible, tanque, odómetro y última carga, y últimos precios).
+- `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/confirm` y `POST /:id/reject`.
+
+### Pantallas
+- **`/flota/combustible`**: banda con litros y gasto del mes, rendimiento promedio y "por confirmar · bajas"; pestañas **Cargas** (confirmar, rechazar, corregir) y **Rendimiento** (esperado, última medición, promedio de 90 días y variación por unidad). El conductor ve "Mis cargas de combustible" con el estado y el motivo de rechazo.
+- **Unidad**: pestaña **Combustible** con el rendimiento contra el esperado, alerta si está bajo y el historial. Se abre directo con `?tab=fuel`.
+- **Inicio**: en Pendientes salen las unidades con rendimiento bajo y, para coordinación y admin, las cargas por confirmar.
+- **Ctrl+K**: acción "Registrar carga de combustible" (`?nueva=1`).
+- **Parámetros**: la tarjeta de flota ahora se llama "Alertas de flota" (el cambio estaba pendiente desde la 3.3).
+
+### Demo y pruebas
+- **Demo**: `--fleet` agrega unas 200 cargas de ~3 meses que terminan en el odómetro actual de cada unidad, con parciales de vez en cuando. La 1002 cae en sus últimos tanques para que salga la alerta. Si existe un conductor demo, deja dos cargas por confirmar. `--clean` las borra.
+- **Unitarias**: `fuel-rules.spec.ts`.
+- **E2E**: `test/fuel.e2e-spec.ts`: permisos, total, tope del tanque, odómetro, parcial y lleno, corrección solo de la última, alerta en Pendientes, flujo del conductor (pendiente, confirmar, rechazar) y opciones del formulario.

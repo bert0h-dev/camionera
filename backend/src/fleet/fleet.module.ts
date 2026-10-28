@@ -3,6 +3,8 @@ import { SettingsModule } from '../settings/settings.module.js';
 import { BusModelsService } from './bus-models.service.js';
 import { BusesController } from './buses.controller.js';
 import { BusesService } from './buses.service.js';
+import { FuelController } from './fuel.controller.js';
+import { FuelService } from './fuel.service.js';
 import { IncidentsController } from './incidents.controller.js';
 import { IncidentsService } from './incidents.service.js';
 import { MaintenanceController } from './maintenance.controller.js';
@@ -21,6 +23,7 @@ import {
     BusesController,
     MaintenanceController,
     IncidentsController,
+    FuelController,
   ],
   providers: [
     CatalogsService,
@@ -28,6 +31,7 @@ import {
     BusesService,
     MaintenanceService,
     IncidentsService,
+    FuelService,
   ],
   exports: [
     CatalogsService,
@@ -35,6 +39,7 @@ import {
     BusesService,
     MaintenanceService,
     IncidentsService,
+    FuelService,
   ],
 })
 export class FleetModule {}

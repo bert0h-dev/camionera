@@ -1,7 +1,19 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Armchair, FileText, Gauge, History, Info, Pencil, Plus, RefreshCw, TriangleAlert, Wrench } from 'lucide-react'
+import {
+  Armchair,
+  FileText,
+  Fuel,
+  Gauge,
+  History,
+  Info,
+  Pencil,
+  Plus,
+  RefreshCw,
+  TriangleAlert,
+  Wrench,
+} from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { daysLabel, formatDate } from '../../lib/format'
 import {
@@ -26,13 +38,15 @@ import { Table, type Column } from '../../components/ui/Table'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { DocumentModal, OdometerModal, SeatModal, StatusModal } from './BusModals'
+import { BusFuelTab } from './BusFuelTab'
 import { BusIncidentsTab } from './BusIncidentsTab'
 import { BusMaintenanceTab } from './BusMaintenanceTab'
 import { BusSeatMap } from './BusSeatMap'
 import { BusStatusBadge, FitBadge } from './BusStatusBadge'
 import { useCanEditFleet } from './useFleet'
 
-type TabKey = 'general' | 'seats' | 'documents' | 'maintenance' | 'incidents' | 'history'
+type TabKey = 'general' | 'seats' | 'documents' | 'maintenance' | 'incidents' | 'fuel' | 'history'
+const TAB_KEYS: TabKey[] = ['general', 'seats', 'documents', 'maintenance', 'incidents', 'fuel', 'history']
 
 const formatKm = (km: number) => `${km.toLocaleString('es-MX')} km`
 
@@ -40,7 +54,12 @@ function BusDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const canEdit = useCanEditFleet()
-  const [tab, setTab] = useState<TabKey>('general')
+  const [params] = useSearchParams()
+  // Inicio abre directo una pestaña con ?tab=fuel
+  const [tab, setTab] = useState<TabKey>(() => {
+    const t = params.get('tab') as TabKey
+    return TAB_KEYS.includes(t) ? t : 'general'
+  })
   const [statusOpen, setStatusOpen] = useState(false)
   const [odometerOpen, setOdometerOpen] = useState(false)
   const [seat, setSeat] = useState<BusSeat | null>(null)
@@ -87,6 +106,7 @@ function BusDetailPage() {
     { key: 'documents', label: 'Documentos', icon: FileText, badge: docAlerts || undefined },
     { key: 'maintenance', label: 'Mantenimiento', icon: Wrench },
     { key: 'incidents', label: 'Incidencias', icon: TriangleAlert },
+    { key: 'fuel', label: 'Combustible', icon: Fuel },
     { key: 'history', label: 'Historial', icon: History },
   ]
 
@@ -301,6 +321,8 @@ function BusDetailPage() {
       {tab === 'maintenance' && <BusMaintenanceTab busId={bus.id} />}
 
       {tab === 'incidents' && <BusIncidentsTab busId={bus.id} />}
+
+      {tab === 'fuel' && <BusFuelTab busId={bus.id} />}
 
       {tab === 'history' &&
         (history.isLoading ? (

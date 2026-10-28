@@ -335,6 +335,16 @@ export const SETTINGS = {
     description:
       'Kilómetros antes del próximo servicio preventivo para marcarlo como próximo',
   },
+  'fleet.fuel_efficiency_alert_pct': {
+    type: 'number',
+    default: 15,
+    min: 1,
+    max: 90,
+    label: 'Aviso de rendimiento de combustible bajo',
+    unit: '%',
+    description:
+      'Porcentaje por debajo del rendimiento esperado del modelo para marcar la unidad con rendimiento bajo',
+  },
 
   // ---------- Recorridos (se usarán en el Módulo 4) ----------
   'trips.unit_turnaround_minutes': {

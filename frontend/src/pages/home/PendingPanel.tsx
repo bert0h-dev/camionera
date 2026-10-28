@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bus, CheckCircle2, ChevronDown, FileText, TriangleAlert, Wrench, type LucideIcon } from 'lucide-react'
+import { Bus, CheckCircle2, ChevronDown, FileText, Fuel, TriangleAlert, Wrench, type LucideIcon } from 'lucide-react'
 import { api } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { daysLabel, formatDate } from '../../lib/format'
@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 
-type Area = 'staff' | 'fleet' | 'maintenance' | 'incident'
+type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel'
 
 interface PendingItem {
   id: string
@@ -27,18 +27,26 @@ const AREA_ICON: Record<Area, LucideIcon> = {
   fleet: Bus,
   maintenance: Wrench,
   incident: TriangleAlert,
+  fuel: Fuel,
 }
 const AREA_LABEL: Record<Area, string> = {
   staff: 'Personal',
   fleet: 'Unidad',
   maintenance: 'Taller',
   incident: 'Incidencia',
+  fuel: 'Combustible',
 }
 
-/** Las incidencias no vencen: se cuenta cuánto llevan abiertas. */
-function ageLabel(daysOpen: number) {
-  if (daysOpen === 0) return 'Abierta hoy'
-  return daysOpen === 1 ? 'Abierta desde ayer' : `Abierta hace ${daysOpen} días`
+/** Las incidencias y las cargas por confirmar no vencen: se cuenta cuánto llevan esperando. */
+function ageLabel(daysOpen: number, verb = 'Abierta') {
+  if (daysOpen === 0) return `${verb} hoy`
+  return daysOpen === 1 ? `${verb} desde ayer` : `${verb} hace ${daysOpen} días`
+}
+
+function badgeLabel(i: PendingItem) {
+  if (i.area === 'incident') return i.severity === 'overdue' ? 'Urgente' : 'Abierta'
+  if (i.area === 'fuel') return i.id.startsWith('fuel-low') ? 'Rendimiento bajo' : 'Por confirmar'
+  return i.severity === 'overdue' ? 'Vencido' : 'Por vencer'
 }
 
 type Filter = 'all' | 'staff' | 'fleet'
@@ -137,17 +145,17 @@ export function PendingPanel() {
                     <div className="hidden text-right text-xs text-fg-muted sm:block">
                       {i.date && <div>{formatDate(i.date)}</div>}
                       {i.daysLeft !== null && (
-                        <div>{i.area === 'incident' ? ageLabel(-i.daysLeft) : daysLabel(i.daysLeft)}</div>
+                        <div>
+                          {i.area === 'incident'
+                            ? ageLabel(-i.daysLeft)
+                            : i.area === 'fuel'
+                              ? ageLabel(-i.daysLeft, 'Registrada')
+                              : daysLabel(i.daysLeft)}
+                        </div>
                       )}
                     </div>
                     <Badge tone={i.severity === 'overdue' ? 'danger' : 'warning'} dot>
-                      {i.area === 'incident'
-                        ? i.severity === 'overdue'
-                          ? 'Urgente'
-                          : 'Abierta'
-                        : i.severity === 'overdue'
-                          ? 'Vencido'
-                          : 'Por vencer'}
+                      {badgeLabel(i)}
                     </Badge>
                   </Link>
                 </li>

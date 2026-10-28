@@ -1,23 +1,23 @@
 # Estado del proyecto y siguientes pasos
 
-**Última actualización:** 2026-10-27
+**Última actualización:** 2026-10-28
 
 ## Dónde nos quedamos
 - **Módulo 1, Gestión de Personal**: ✅ completo y fusionado en `main` (docs 03–09).
 - **Módulo 2, Administración del Sistema**: ✅ completo y fusionado (doc 10).
 - **Rediseño**: dirección D aplicada a todo, D5 terminada (buscador Ctrl+K y carga diferida).
-- **Módulo 3, Gestión de Flota** (doc 12):
+- **Módulo 3, Gestión de Flota** (doc 12): ✅ completo con la 3.4.
   - 3.0 catálogos, modelos y terminales con mapa ✅ fusionada (PR #8).
   - 3.1 Unidades ✅ fusionada (PR #9).
   - 3.2 Mantenimientos ✅ fusionada (PR #10).
   - 3.3 Incidencias ✅ fusionada (PR #13).
+  - 3.4 Combustible ✅ en la rama `feat/m3-combustible`, PR por fusionar.
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 3**: sigue 3.4 Combustible (ver doc 12).
-2. **Módulo 4, Rutas**: origen, destino y paradas entre terminales con ubicación; precios por tramo, horarios, cancelación y temporadas.
-3. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
+1. **Módulo 4, Rutas**: origen, destino y paradas entre terminales con ubicación; precios por tramo, horarios, cancelación y temporadas.
+2. Después vienen los Módulos 5 (Recorridos), 6 (Boletos) y 7 (Reportes).
    - Los parámetros `trips.*` y `tickets.*` ya están listos.
 
 ## Pendientes y decisiones abiertas
@@ -28,7 +28,7 @@
 - **Datos demo**: siguen cargados en Neon (`npm run seed:demo -w backend`) y **no se borran hasta que el usuario lo pida**.
   - `-- --clean` los borra.
   - `-- --payroll` agrega solo la nómina demo.
-  - `-- --fleet` agrega solo la flota demo (no toca al personal).
+  - `-- --fleet` agrega solo la flota demo (no toca al personal), incluidas las cargas de combustible.
 - Del contexto, aún abiertos para módulos futuros: venta por tramos, carrito u orden, terminales y andenes, y tipo de pasajero.
 
 ## Forma de trabajo acordada

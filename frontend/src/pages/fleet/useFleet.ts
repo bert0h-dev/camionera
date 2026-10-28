@@ -3,6 +3,8 @@ import { api } from '../../lib/api'
 import type {
   BusSummary,
   City,
+  FuelEfficiencyRow,
+  FuelSummary,
   FuelType,
   IncidentCategory,
   IncidentSummary,
@@ -33,9 +35,10 @@ export const useCities = (includeInactive = false) =>
     queryFn: async () => (await api.get<City[]>('/fleet/cities', { params: { includeInactive } })).data,
   })
 
-export const useTerminals = (includeInactive = false) =>
+export const useTerminals = (includeInactive = false, enabled = true) =>
   useQuery({
     queryKey: ['fleet', 'terminals', includeInactive],
+    enabled,
     queryFn: async () => (await api.get<Terminal[]>('/fleet/terminals', { params: { includeInactive } })).data,
   })
 
@@ -99,3 +102,31 @@ export const useServicePlan = (enabled = true) =>
     queryFn: async () => (await api.get<ServicePlanRow[]>('/fleet/maintenance/plan')).data,
     enabled,
   })
+
+/**
+ * Coordinación (y admin) registra cargas confirmadas y revisa las del conductor;
+ * supervisión consulta. El conductor registra cargas por confirmar y ve solo las suyas.
+ */
+export function useFuelRole() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'admin' || user?.role === 'coordinator'
+  const canRead = canManage || user?.role === 'supervisor'
+  return { canManage, canRead, canRecord: canManage || user?.role === 'driver', isDriver: user?.role === 'driver' }
+}
+
+export const useFuelSummary = () =>
+  useQuery({
+    queryKey: ['fleet', 'fuel', 'summary'],
+    queryFn: async () => (await api.get<FuelSummary>('/fleet/fuel/summary')).data,
+  })
+
+export const useFuelEfficiency = (busId?: string, enabled = true) =>
+  useQuery({
+    queryKey: ['fleet', 'fuel', 'efficiency', busId ?? 'all'],
+    enabled,
+    queryFn: async () => (await api.get<FuelEfficiencyRow[]>('/fleet/fuel/efficiency', { params: { busId } })).data,
+  })
+
+/** Rendimiento con su unidad de medida: 3.25 km/L */
+export const formatEfficiency = (value: number | string | null, unit = 'L') =>
+  value === null ? '—' : `${Number(value).toLocaleString('es-MX', { maximumFractionDigits: 2 })} km/${unit}`

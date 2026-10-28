@@ -32,6 +32,7 @@ export const loaders = {
   maintenanceOrder: () => import('../pages/fleet/MaintenanceOrderPage'),
   incidents: () => import('../pages/fleet/IncidentsPage'),
   incidentDetail: () => import('../pages/fleet/IncidentDetailPage'),
+  fuel: () => import('../pages/fleet/FuelPage'),
 } satisfies Record<string, Loader>
 
 export type PageKey = keyof typeof loaders
@@ -55,6 +56,7 @@ const BY_SEGMENT: Record<string, PageKey> = {
   'flota/unidades': 'buses',
   'flota/mantenimiento': 'maintenance',
   'flota/incidencias': 'incidents',
+  'flota/combustible': 'fuel',
 }
 
 const requested = new Set<PageKey>()

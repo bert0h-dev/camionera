@@ -71,8 +71,8 @@ const GROUPS: {
   {
     group: 'fleet',
     module: 'fleet',
-    title: 'Documentos de unidades',
-    description: 'Alertas de seguros, tarjetas de circulación, permisos y verificaciones',
+    title: 'Alertas de flota',
+    description: 'Documentos de unidades por vencer, preventivo próximo y rendimiento de combustible bajo',
     icon: Bus,
   },
   {

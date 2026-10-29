@@ -157,7 +157,7 @@ Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras cla
 - 📜 **Auditoría**: los cambios relevantes quedan registrados en `audit_logs`, con los valores anteriores y nuevos.
 - ⚙️ **Parámetros configurables**: tolerancias, horas máximas y umbrales de alerta viven en `system_settings`, con valores por defecto tipados (`settings.registry.ts`). El admin los edita todos; RR. HH., solo los de su área.
 - 📌 **Pendientes**: lo que hay que atender de cada área (documentos, preventivos, incidencias, combustible) sale en una sola lista en Inicio (`PendingService`), según el rol.
-- 🕒 **Zona horaria**: las reglas de negocio se calculan en `America/Mexico_City`; las fechas se guardan como `timestamptz`.
+- 🕒 **Zona horaria**: la de la central se configura en *Configuración › Empresa* (`company.timezone`, por defecto `America/Mexico_City`) y define "hoy", el cierre de asistencias y las horas que se muestran. Las fechas se guardan como `timestamptz`. Las salidas y llegadas de las rutas usan la zona de la ciudad de cada terminal.
 
 ---
 

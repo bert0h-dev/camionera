@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { KeyRound, Lock, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
 import { useAuth } from '../../auth/useAuth'
 import { api, apiErrorMessage } from '../../lib/api'
-import { formatDate } from '../../lib/format'
+import { businessFormat, formatDate } from '../../lib/format'
 import { ROLE_LABELS, type UserSession } from '../../lib/types'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
@@ -18,11 +18,7 @@ import { NewPasswordFields } from '../auth/NewPasswordFields'
 import { passwordChecks } from '../auth/passwordRules'
 import { SessionList } from './SessionList'
 
-const DATE_TIME = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-  timeZone: 'America/Mexico_City',
-})
+const DATE_TIME = businessFormat({ dateStyle: 'long', timeStyle: 'short' })
 
 function AccountPage() {
   const { user } = useAuth()

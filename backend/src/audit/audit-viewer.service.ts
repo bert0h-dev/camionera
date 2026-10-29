@@ -6,6 +6,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { SecurityEventType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { DEFAULT_BUSINESS_TIMEZONE } from '../common/dates.js';
 import {
   AuditLogQueryDto,
   SecurityEventQueryDto,
@@ -170,7 +171,7 @@ export class AuditViewerService {
   }
 
   /** Borra lo que pasó el periodo de retención. Corre todas las noches. */
-  @Cron('0 3 * * *', { timeZone: 'America/Mexico_City' })
+  @Cron('0 3 * * *', { timeZone: DEFAULT_BUSINESS_TIMEZONE })
   async purge() {
     const days = await this.settings.get('audit.retention_days');
     const cutoff = addDays(today(), -days);

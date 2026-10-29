@@ -6,6 +6,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { PrismaExceptionFilter } from './../src/common/filters/prisma-exception.filter.js';
 import { createValidationPipe } from './../src/common/validation/validation-pipe.js';
+import { businessTimezone } from './../src/common/dates.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
 
 const KEYS = [
@@ -13,6 +14,7 @@ const KEYS = [
   'company.rfc',
   'taxes.vat_rate',
   'commissions.vendor_percent',
+  'company.timezone',
 ];
 
 describe('Configuración general (e2e)', () => {
@@ -164,5 +166,24 @@ describe('Configuración general (e2e)', () => {
     await api(token, 'patch', '/settings')
       .send({ values: { 'tickets.refund_percent': 50 } })
       .expect(403);
+  });
+
+  it('la zona horaria de la central se guarda, cambia las fechas al momento y solo acepta zonas de México', async () => {
+    await api(adminToken, 'patch', '/settings')
+      .send({ values: { 'company.timezone': 'Europe/Madrid' } })
+      .expect(400);
+    await api(adminToken, 'patch', '/settings')
+      .send({ values: { 'company.timezone': 'America/Tijuana' } })
+      .expect(200);
+    expect(businessTimezone()).toBe('America/Tijuana');
+    const company = await api(adminToken, 'get', '/settings/company').expect(
+      200,
+    );
+    expect(company.body['company.timezone']).toBe('America/Tijuana');
+    const list = await api(adminToken, 'get', '/settings').expect(200);
+    const tz = list.body.find(
+      (s: { key: string }) => s.key === 'company.timezone',
+    );
+    expect(tz.options).toContain('America/Hermosillo');
   });
 });

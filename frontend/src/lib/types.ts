@@ -516,6 +516,8 @@ export interface SettingItem {
   max?: number
   decimals: number
   maxLength?: number
+  /** Valores permitidos; se muestra como lista */
+  options: string[] | null
   updatedAt: string | null
   updatedBy: string | null
 }

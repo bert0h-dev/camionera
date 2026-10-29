@@ -47,6 +47,8 @@ export function validateSetting(
   const value = raw.trim();
   if (def.maxLength !== undefined && value.length > def.maxLength)
     return { ok: false, error: `${name}: máximo ${def.maxLength} caracteres` };
+  if (def.options && !def.options.includes(value))
+    return { ok: false, error: `${name}: elige una opción de la lista` };
   // Vacío está permitido: significa "sin capturar"
   if (value && def.pattern && !new RegExp(def.pattern).test(value))
     return {

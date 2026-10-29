@@ -3,7 +3,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  type OnModuleInit,
 } from '@nestjs/common';
+import { setBusinessTimezone } from '../common/dates.js';
 import { AuditService } from '../audit/audit.service.js';
 import { ActionType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -28,11 +30,16 @@ const parse = (def: SettingDefinition, raw: string) =>
 const PUBLIC_GROUPS = ['company', 'taxes', 'commissions'];
 
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  /** La zona horaria de la central se usa en funciones síncronas de fechas: se carga en memoria. */
+  async onModuleInit() {
+    setBusinessTimezone(await this.get('company.timezone'));
+  }
 
   async get<K extends SettingKey>(key: K): Promise<SettingValue<K>> {
     const def: SettingDefinition = SETTINGS[key];
@@ -66,6 +73,7 @@ export class SettingsService {
           max: def.max,
           decimals: def.decimals ?? 0,
           maxLength: def.maxLength,
+          options: def.options ?? null,
           updatedAt: row?.updatedAt ?? null,
           updatedBy: row?.updatedBy?.fullName ?? null,
         };
@@ -137,6 +145,7 @@ export class SettingsService {
         newValues: { [key]: value },
       });
       results.push({ key, value });
+      if (key === 'company.timezone') setBusinessTimezone(String(value));
     }
     return results;
   }

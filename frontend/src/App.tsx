@@ -39,6 +39,7 @@ const FuelPage = lazyPage('fuel')
 const RoutesPage = lazyPage('routes')
 const RouteDetailPage = lazyPage('routeDetail')
 const SeasonsPage = lazyPage('seasons')
+const DeparturesSearchPage = lazyPage('departures')
 
 function App() {
   return (
@@ -85,6 +86,7 @@ function App() {
             <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'vendor']} />}>
               <Route path="/rutas" element={<RoutesPage />} />
               <Route path="/rutas/temporadas" element={<SeasonsPage />} />
+              <Route path="/rutas/buscar" element={<DeparturesSearchPage />} />
               <Route path="/rutas/:id" element={<RouteDetailPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['coordinator']} />}>

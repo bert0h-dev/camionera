@@ -1156,3 +1156,40 @@ export interface RouteFares {
   segments: { from: number; to: number; base: number; price: number }[]
   fullFare: { base: number; price: number }
 }
+
+export interface DeparturePoint {
+  terminalId: string
+  code: string
+  name: string
+  cityId: string
+  cityName: string
+  timezone: string
+  minutes: number
+  priceFromOrigin: number
+  at: string
+  localDate: string
+  localTime: string
+}
+
+export interface DepartureResult {
+  routeId: string
+  routeCode: string
+  routeName: string
+  scheduleId: string
+  tripDate: string
+  boardIndex: number
+  alightIndex: number
+  board: DeparturePoint
+  alight: DeparturePoint & { dayOffset: number }
+  durationMinutes: number
+  intermediateStops: number
+  basePrice: number
+  price: number
+  season: { name: string; priceModifierPercent: number } | null
+}
+
+export interface DepartureSearch {
+  results: DepartureResult[]
+  /** Rutas que unen las ciudades aunque no salgan esa fecha */
+  connectingRoutes: number
+}

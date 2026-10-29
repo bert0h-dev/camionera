@@ -24,6 +24,8 @@ import {
 import { CreateSchedulesDto, UpdateScheduleDto } from './dto/schedule.dto.js';
 import { ReplaceStopsDto } from './dto/stop.dto.js';
 import { FaresQueryDto } from './dto/season.dto.js';
+import { SearchDeparturesDto } from './dto/search.dto.js';
+import { SearchService } from './search.service.js';
 import { RoutesService } from './routes.service.js';
 import { SchedulesService } from './schedules.service.js';
 
@@ -43,12 +45,26 @@ export class RoutesController {
   constructor(
     private readonly routes: RoutesService,
     private readonly schedules: SchedulesService,
+    private readonly searchService: SearchService,
   ) {}
 
   @Get('summary')
   @Roles(...ROUTE_READERS)
   summary() {
     return this.routes.summary();
+  }
+
+  // Antes de :id para que /routes/search no se lea como un id
+  @Get('search/cities')
+  @Roles(...ROUTE_READERS)
+  searchCities() {
+    return this.searchService.cities();
+  }
+
+  @Get('search')
+  @Roles(...ROUTE_READERS)
+  search(@Query() q: SearchDeparturesDto) {
+    return this.searchService.search(q);
   }
 
   @Get('form-options')

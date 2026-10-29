@@ -18,6 +18,7 @@
   - 4.3 Paradas ✅ fusionada (PR #19).
   - 4.4 Temporadas ✅ en la rama `feat/m4-temporadas`.
   - Con la 4.1: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
+- **Zona horaria de la central** configurable (rama `feat/zona-horaria-central`): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–3, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
@@ -49,6 +50,10 @@
 - **Docs en cada PR**: además del doc de la fase y este doc 11, revisar los docs anteriores que el cambio deje obsoletos (reglas, pantallas, parámetros) y corregirlos en el mismo PR.
 - **Modales**: no se cierran con clic en el fondo, para no perder lo capturado; solo con la X, Cancelar o Esc.
 - **Fechas en el frontend**: `formatDate` solo para columnas de fecha (`@db.Date`); para instantes (`Timestamptz`) usar `formatInstantDate` y `formatTime`, que usan la zona de la central.
+- **Zona horaria de la central**: nunca escribir `America/Mexico_City` fijo.
+  - Backend: `businessTimezone()` y las funciones de `common/dates.ts` (la carga `SettingsService` al arrancar y al guardar `company.timezone`).
+  - Frontend: `businessFormat({...})` y `todayKey()` de `lib/format.ts` (la fija `AppLayout` con `/settings/company`).
+  - El cierre diario de asistencias corre cada hora y actúa a las 02:00 locales; la purga de bitácora sigue a las 03:00 del centro (no importa la hora exacta).
 - **Revisión visual en Chrome** en cada fase.
   - Antes, apagar los procesos node del proyecto filtrando por `Repos\camionera` **y** por puerto (3002 y 5173): `node dist/main` no lleva la ruta en su línea de comandos.
   - Verificar que una ruta nueva responda 401 y no 404.

@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
+import { businessFormat } from '../../lib/format'
 
-const TIME = new Intl.DateTimeFormat('es-MX', {
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-  timeZone: 'America/Mexico_City',
-})
+const TIME = businessFormat({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 
-/** Hora de la central (CDMX) en ámbar, como en un tablero de andén. */
+/** Hora de la central (zona configurada en Parámetros) en ámbar, como en un tablero de andén. */
 export function LiveClock() {
   const [now, setNow] = useState(() => new Date())
 

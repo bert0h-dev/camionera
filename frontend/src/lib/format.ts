@@ -22,32 +22,45 @@ export function daysLabel(days: number | null) {
   return days === -1 ? 'Venció ayer' : `Venció hace ${-days} días`
 }
 
-const BUSINESS_TIMEZONE = 'America/Mexico_City'
+// Zona horaria de la central: la fija AppLayout con el parámetro company.timezone
+let businessTz = 'America/Mexico_City'
+export const getBusinessTimezone = () => businessTz
+export function setBusinessTimezone(tz: string | null | undefined) {
+  if (tz) businessTz = tz
+}
+
+const formatters = new Map<string, Intl.DateTimeFormat>()
+
+/**
+ * Formateador en la zona de la central. Se usa como `Intl.DateTimeFormat` (`.format(fecha)`),
+ * pero toma la zona vigente en cada llamada.
+ */
+export function businessFormat(options: Intl.DateTimeFormatOptions, locale = 'es-MX') {
+  return {
+    format(date: Date | number) {
+      const key = `${locale}|${businessTz}|${JSON.stringify(options)}`
+      let f = formatters.get(key)
+      if (!f) {
+        f = new Intl.DateTimeFormat(locale, { ...options, timeZone: businessTz })
+        formatters.set(key, f)
+      }
+      return f.format(date)
+    },
+  }
+}
+
+const TIME = businessFormat({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const INSTANT_DATE = businessFormat({ day: '2-digit', month: '2-digit', year: 'numeric' })
+const DAY_KEY = businessFormat({}, 'en-CA')
 
 /** Hora local de la central (HH:mm) de un instante ISO. */
-export const formatTime = (iso: string | null | undefined) =>
-  iso
-    ? new Intl.DateTimeFormat('es-MX', {
-        timeZone: BUSINESS_TIMEZONE,
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-      }).format(new Date(iso))
-    : ''
+export const formatTime = (iso: string | null | undefined) => (iso ? TIME.format(new Date(iso)) : '')
 
 /** Fecha local de la central (DD/MM/AAAA) de un instante ISO; `formatDate` es solo para columnas de fecha. */
-export const formatInstantDate = (iso: string | null | undefined) =>
-  iso
-    ? new Intl.DateTimeFormat('es-MX', {
-        timeZone: BUSINESS_TIMEZONE,
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }).format(new Date(iso))
-    : '—'
+export const formatInstantDate = (iso: string | null | undefined) => (iso ? INSTANT_DATE.format(new Date(iso)) : '—')
 
 /** Hoy en la central como 'AAAA-MM-DD'. */
-export const todayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: BUSINESS_TIMEZONE }).format(new Date())
+export const todayKey = () => DAY_KEY.format(new Date())
 
 /** Suma días a una fecha 'AAAA-MM-DD'. */
 export function addDaysKey(key: string, days: number) {

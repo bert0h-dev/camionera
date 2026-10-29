@@ -10,7 +10,8 @@ import { AuditService } from '../../audit/audit.service.js';
 import type { AuthUser } from '../../auth/auth.types.js';
 import {
   addDays,
-  BUSINESS_TIMEZONE,
+  businessHour,
+  businessTimezone,
   dateKey,
   toDate,
   today,
@@ -246,7 +247,7 @@ export class AttendanceService {
     const current = (d: Date | null) =>
       d
         ? new Intl.DateTimeFormat('en-GB', {
-            timeZone: BUSINESS_TIMEZONE,
+            timeZone: businessTimezone(),
             hour: '2-digit',
             minute: '2-digit',
             hourCycle: 'h23',
@@ -492,11 +493,15 @@ export class AttendanceService {
     return { date, absent, excused };
   }
 
-  /** Todos los días a las 02:00 (hora de la central) se cierra el día anterior. */
-  @Cron('0 2 * * *', {
-    timeZone: BUSINESS_TIMEZONE,
-    name: 'attendance-close-day',
-  })
+  /**
+   * Todos los días a las 02:00 (hora de la central) se cierra el día anterior. Corre cada hora
+   * y revisa la hora local, así respeta la zona configurada sin reprogramar el cron.
+   */
+  @Cron('0 * * * *', { name: 'attendance-close-day' })
+  async closeYesterdayIfDue() {
+    if (businessHour() === 2) await this.closeYesterday();
+  }
+
   async closeYesterday() {
     const yesterday = dateKey(addDays(today(), -1));
     try {

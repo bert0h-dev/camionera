@@ -1,5 +1,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api'
+import { getBusinessTimezone, setBusinessTimezone } from '../../lib/format'
 import { cn } from '../../lib/cn'
 import { LoadingBlock } from '../ui/Spinner'
 import { CommandPalette } from '../command/CommandPalette'
@@ -20,6 +23,14 @@ export function AppLayout() {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const { pathname } = useLocation()
+  // Zona horaria de la central (Parámetros › Empresa): fechas, horas y "hoy" la usan
+  const company = useQuery({
+    queryKey: ['settings', 'company'],
+    queryFn: async () => (await api.get<Record<string, unknown>>('/settings/company')).data,
+    staleTime: 10 * 60_000,
+  })
+  setBusinessTimezone(company.data?.['company.timezone'] as string | undefined)
+  const timezone = getBusinessTimezone()
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -72,7 +83,8 @@ export function AppLayout() {
         <CommandPalette />
         <main className="w-full flex-1 p-4 md:p-8">
           <Suspense fallback={<LoadingBlock text="Cargando pantalla…" className="py-24" />}>
-            <Outlet />
+            {/* Al cambiar la zona se vuelve a pintar la pantalla con las horas correctas */}
+            <Outlet key={timezone} />
           </Suspense>
         </main>
       </div>

@@ -1,11 +1,8 @@
 import type { BadgeTone } from '../../components/ui/Badge'
 import type { SecurityEventType } from '../../lib/types'
+import { businessFormat } from '../../lib/format'
 
-export const DATE_TIME = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'medium',
-  timeStyle: 'medium',
-  timeZone: 'America/Mexico_City',
-})
+export const DATE_TIME = businessFormat({ dateStyle: 'medium', timeStyle: 'medium' })
 
 export const ACTION_META: Record<'insert' | 'update' | 'delete', { label: string; tone: BadgeTone }> = {
   insert: { label: 'Alta', tone: 'success' },

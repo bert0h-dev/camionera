@@ -1,13 +1,34 @@
 // Utilidades para columnas @db.Date, que se manejan como medianoche UTC
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const BUSINESS_TIMEZONE = 'America/Mexico_City';
+/** Zona por defecto; la real viene del parámetro `company.timezone` (ver SettingsService). */
+export const DEFAULT_BUSINESS_TIMEZONE = 'America/Mexico_City';
+let businessTz = DEFAULT_BUSINESS_TIMEZONE;
+
+/** Zona horaria de la central configurada en Parámetros › Empresa. */
+export const businessTimezone = () => businessTz;
+
+/** La fija SettingsService al arrancar y cada vez que se guarda el parámetro. */
+export function setBusinessTimezone(tz: string) {
+  businessTz = tz || DEFAULT_BUSINESS_TIMEZONE;
+}
+
+/** Hora local (0–23) de la central en este momento. */
+export function businessHour(at = new Date()) {
+  return Number(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: businessTz,
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(at),
+  );
+}
 
 /** 'AAAA-MM-DD' a Date en UTC. */
 export const toDate = (value: string) => new Date(`${value}T00:00:00Z`);
 
 /** Fecha de hoy en la zona horaria del negocio, como medianoche UTC. */
-export function today(timeZone = BUSINESS_TIMEZONE): Date {
+export function today(timeZone = businessTimezone()): Date {
   // en-CA formatea como AAAA-MM-DD
   return toDate(
     new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date()),
@@ -52,7 +73,7 @@ function tzOffsetMs(at: Date, timeZone: string) {
 export function zonedDateTime(
   date: string,
   time: string,
-  timeZone = BUSINESS_TIMEZONE,
+  timeZone = businessTimezone(),
 ): Date {
   const naive = new Date(`${date}T${time}:00Z`);
   // Dos pasadas para cubrir cambios de horario

@@ -20,10 +20,10 @@ import { MyPayslipsCard } from './home/MyPayslipsCard'
 import { MyShiftCard } from './home/MyShiftCard'
 import { PendingPanel } from './home/PendingPanel'
 import { TeamDashboard } from './home/TeamDashboard'
+import { businessFormat } from '../lib/format'
 
 const STAFF_READERS: UserRole[] = ['admin', 'hr', 'supervisor', 'coordinator']
 const FLEET_READERS: UserRole[] = ['admin', 'coordinator', 'supervisor']
-const TZ = 'America/Mexico_City'
 const AREA_KEY = 'home.area'
 
 type Section = 'pending' | 'me' | 'staff' | 'fleet' | 'myOrders'
@@ -38,14 +38,11 @@ const SECTION_LABELS: Record<Section, { label: string; hint: string }> = {
 }
 
 function greeting() {
-  const h = Number(
-    new Intl.DateTimeFormat('es-MX', { hour: 'numeric', hourCycle: 'h23', timeZone: TZ }).format(new Date()),
-  )
+  const h = Number(businessFormat({ hour: 'numeric', hourCycle: 'h23' }).format(new Date()))
   return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
 }
 
-const todayLabel = () =>
-  new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }).format(new Date())
+const todayLabel = () => businessFormat({ weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
 
 type Team = NonNullable<DashboardSummary['team']>
 

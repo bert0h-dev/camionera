@@ -7,14 +7,13 @@ import type { SettingItem, SettingValue } from '../../lib/types'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
-import { Input, Textarea } from '../../components/ui/Field'
+import { Alert } from '../../components/ui/Alert'
+import { Input, Select, Textarea } from '../../components/ui/Field'
+import { localClock, MX_TIMEZONES } from '../../lib/timezones'
 import { useToast } from '../../components/ui/toast-context'
+import { businessFormat } from '../../lib/format'
 
-const DATE_TIME = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'America/Mexico_City',
-})
+const DATE_TIME = businessFormat({ dateStyle: 'medium', timeStyle: 'short' })
 
 interface Props {
   title: ReactNode
@@ -160,6 +159,33 @@ function SettingField({
         </span>
       </label>
     )
+
+  if (item.options) {
+    const labels: Record<string, string> = Object.fromEntries(MX_TIMEZONES.map((z) => [z.id, z.label]))
+    const isZone = item.key === 'company.timezone'
+    return (
+      <div className="space-y-2">
+        <Select
+          label={label}
+          value={value as string}
+          onChange={(e) => onChange(e.target.value)}
+          hint={isZone ? `Hora local ahora: ${localClock(value as string)}. ${item.description}` : item.description}
+        >
+          {item.options.map((o) => (
+            <option key={o} value={o}>
+              {labels[o] ?? o}
+            </option>
+          ))}
+        </Select>
+        {isZone && value !== item.value && (
+          <Alert tone="warning">
+            Al guardar cambia qué día es &quot;hoy&quot;, el cierre diario de asistencias y las horas que se muestran en
+            toda la app. Los registros guardados no cambian.
+          </Alert>
+        )}
+      </div>
+    )
+  }
 
   if (item.type === 'number')
     return (

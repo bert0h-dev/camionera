@@ -1,4 +1,6 @@
 // Parámetros configurables del sistema con su valor por defecto.
+import { MX_TIMEZONES } from '../common/timezones.js';
+
 // Si no hay fila en system_settings se usa el default.
 
 export interface SettingDefinition {
@@ -17,6 +19,8 @@ export interface SettingDefinition {
   /** Formato obligatorio para textos no vacíos */
   pattern?: string;
   patternMessage?: string;
+  /** Valores permitidos (se muestra como lista de opciones) */
+  options?: readonly string[];
 }
 
 /** Grupo del parámetro: la parte antes del primer punto de la clave. */
@@ -196,6 +200,14 @@ export const SETTINGS = {
     pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
     patternMessage: 'Correo inválido',
     description: 'Correo de atención a clientes',
+  },
+  'company.timezone': {
+    type: 'string',
+    default: 'America/Mexico_City',
+    label: 'Zona horaria de la central',
+    options: MX_TIMEZONES,
+    description:
+      'Define qué día es "hoy", el cierre diario de asistencias y las horas que se muestran. Las horas guardadas no cambian',
   },
   'company.website': {
     type: 'string',

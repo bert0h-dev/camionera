@@ -3,12 +3,9 @@ import { describeDevice, isMobile } from '../../lib/device'
 import type { UserSession } from '../../lib/types'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
+import { businessFormat } from '../../lib/format'
 
-const DATE_TIME = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'America/Mexico_City',
-})
+const DATE_TIME = businessFormat({ dateStyle: 'medium', timeStyle: 'short' })
 
 /** Lista de sesiones abiertas; `onRevoke` habilita el botón para cerrar cada una. */
 export function SessionList({

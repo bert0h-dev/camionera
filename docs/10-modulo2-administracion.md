@@ -20,7 +20,7 @@
 - **Sesiones**: cada refresh token pertenece a una sesión (`session_started_at`, que se hereda al rotar).
 
 ## 2.2 Configuración general (`/configuracion`, admin)
-- **Empresa**: razón social, nombre comercial, RFC (con formato), régimen, domicilio, teléfono, correo y sitio.
+- **Empresa**: razón social, nombre comercial, RFC (con formato), régimen, domicilio, teléfono, correo, sitio y **zona horaria de la central** (`company.timezone`, lista de zonas de México; por defecto `America/Mexico_City`). Se agregó después del Módulo 4: ver la sección de zona horaria en el doc 11.
 - **Impuestos**: IVA (16 %) y si las tarifas ya lo incluyen.
 - **Comisiones**: vendedor en taquilla y cargo en línea, en %, con hasta 2 decimales.
 - **Guardado**: `PATCH /settings` guarda una sección completa o nada.

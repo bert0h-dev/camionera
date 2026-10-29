@@ -55,4 +55,14 @@ describe('validateSetting', () => {
     );
     expect(validateSetting(SETTINGS['taxes.vat_rate'], '16').ok).toBe(false);
   });
+
+  it('la zona horaria solo acepta zonas de la lista', () => {
+    const def = SETTINGS['company.timezone'];
+    expect(validateSetting(def, 'America/Tijuana')).toEqual({
+      ok: true,
+      value: 'America/Tijuana',
+    });
+    expect(validateSetting(def, 'Europe/Madrid').ok).toBe(false);
+    expect(validateSetting(def, '').ok).toBe(false);
+  });
 });

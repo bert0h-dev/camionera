@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../auth/useAuth'
 import { api, apiErrorMessage } from '../../lib/api'
-import { formatDate, staffFullName } from '../../lib/format'
+import { businessFormat, formatDate, staffFullName } from '../../lib/format'
 import { ROLE_LABELS, STAFF_ROLE_LABELS, type UserDetail } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
 import { Avatar } from '../../components/ui/Avatar'
@@ -36,11 +36,7 @@ import { ResetPasswordModal } from './ResetPasswordModal'
 import { UserFormModal } from './UserFormModal'
 
 const ACTION_LABELS = { insert: 'creó', update: 'modificó', delete: 'eliminó' } as const
-const DATE_TIME = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'America/Mexico_City',
-})
+const DATE_TIME = businessFormat({ dateStyle: 'medium', timeStyle: 'short' })
 
 type Confirm = 'force' | 'sessions' | 'toggle' | null
 

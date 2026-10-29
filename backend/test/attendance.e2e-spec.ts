@@ -4,7 +4,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
-import { addDays, BUSINESS_TIMEZONE, dateKey, today } from './../src/common/dates.js';
+import { addDays, businessTimezone, dateKey, today } from './../src/common/dates.js';
 import { PrismaExceptionFilter } from './../src/common/filters/prisma-exception.filter.js';
 import { createValidationPipe } from './../src/common/validation/validation-pipe.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
@@ -12,7 +12,7 @@ import { PrismaService } from './../src/prisma/prisma.service.js';
 /** Hora local de la central desplazada `minutes` desde ahora, como "HH:mm". */
 const localTime = (minutes: number) =>
   new Intl.DateTimeFormat('en-GB', {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: businessTimezone(),
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',

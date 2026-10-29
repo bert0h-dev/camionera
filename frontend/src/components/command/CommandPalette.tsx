@@ -99,6 +99,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const canIncidents = canOrders || role === 'driver'
   const canFuel = !!role && ['admin', 'coordinator', 'driver'].includes(role)
   const canEditRoutes = role === 'admin' || role === 'coordinator'
+  const canSearchRoutes = canEditRoutes || role === 'supervisor' || role === 'vendor'
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), SEARCH_DELAY_MS)
@@ -250,6 +251,18 @@ function Palette({ onClose }: { onClose: () => void }) {
             },
           ]
         : []),
+      ...(canSearchRoutes
+        ? [
+            {
+              id: 'action:search-departures',
+              section: 'Acciones rápidas',
+              label: 'Buscar salidas',
+              icon: Route,
+              keywords: 'salidas horarios viaje boleto taquilla origen destino tramo precio',
+              to: '/rutas/buscar',
+            },
+          ]
+        : []),
       ...(canEditRoutes
         ? [
             {
@@ -367,6 +380,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     canIncidents,
     canFuel,
     canEditRoutes,
+    canSearchRoutes,
   ])
 
   // Si cambia la lista, el resaltado vuelve al primer resultado

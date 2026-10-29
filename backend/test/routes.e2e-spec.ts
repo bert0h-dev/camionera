@@ -549,4 +549,103 @@ describe('Rutas (e2e)', () => {
       await call('delete', `/seasons/${low}`, coordinatorToken).expect(204);
     });
   });
+
+  describe('búsqueda de salidas', () => {
+    // Próximo miércoles (la ruta de prueba opera de lunes a viernes)
+    const wednesday = () => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + ((3 - d.getUTCDay() + 7) % 7 || 7));
+      return d.toISOString().slice(0, 10);
+    };
+    const plusDays = (date: string, n: number) =>
+      new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000)
+        .toISOString()
+        .slice(0, 10);
+    const search = (token: string, params: Record<string, string>) =>
+      call(
+        'get',
+        `/routes/search?${new URLSearchParams(params).toString()}`,
+        token,
+      );
+
+    it('encuentra las salidas del día con hora local y el precio vigente', async () => {
+      const date = wednesday();
+      const res = await search(vendorToken, {
+        originCityId: cityA,
+        destinationCityId: cityB,
+        date,
+      }).expect(200);
+      const mine = res.body.results.filter(
+        (r: { routeId: string }) => r.routeId === ids.routes[0],
+      );
+      expect(
+        mine.map((r: { board: { localTime: string } }) => r.board.localTime),
+      ).toEqual(['06:30', '10:00']);
+      const fares = await call(
+        'get',
+        `/routes/${ids.routes[0]}/fares?date=${date}`,
+        vendorToken,
+      ).expect(200);
+      expect(mine[0].price).toBe(fares.body.fullFare.price);
+      expect(mine[0].alight.timezone).toBe('America/Tijuana');
+    });
+
+    it('explica cuando hay rutas pero no salen ese día, y no sirve al revés', async () => {
+      const saturday = plusDays(wednesday(), 3);
+      const res = await search(vendorToken, {
+        originCityId: cityA,
+        destinationCityId: cityB,
+        date: saturday,
+      }).expect(200);
+      expect(
+        res.body.results.filter(
+          (r: { routeId: string }) => r.routeId === ids.routes[0],
+        ),
+      ).toEqual([]);
+      expect(res.body.connectingRoutes).toBeGreaterThanOrEqual(1);
+
+      const back = await search(vendorToken, {
+        originCityId: cityB,
+        destinationCityId: cityA,
+        date: wednesday(),
+      }).expect(200);
+      expect(
+        back.body.results.filter(
+          (r: { routeId: string }) => r.routeId === ids.routes[0],
+        ),
+      ).toEqual([]);
+    });
+
+    it('filtra por horario y lista las ciudades con rutas; RRHH no entra', async () => {
+      const res = await search(vendorToken, {
+        originCityId: cityA,
+        destinationCityId: cityB,
+        date: wednesday(),
+        timeFrom: '09:00',
+      }).expect(200);
+      expect(
+        res.body.results
+          .filter((r: { routeId: string }) => r.routeId === ids.routes[0])
+          .map((r: { board: { localTime: string } }) => r.board.localTime),
+      ).toEqual(['10:00']);
+      const cities = await call(
+        'get',
+        '/routes/search/cities',
+        vendorToken,
+      ).expect(200);
+      expect(cities.body.map((c: { id: string }) => c.id)).toEqual(
+        expect.arrayContaining([cityA, cityB]),
+      );
+      await search(hrToken, {
+        originCityId: cityA,
+        destinationCityId: cityB,
+        date: wednesday(),
+      }).expect(403);
+      await search(vendorToken, {
+        originCityId: cityA,
+        destinationCityId: cityB,
+        date: 'mañana',
+      }).expect(400);
+    });
+  });
 });

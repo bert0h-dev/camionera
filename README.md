@@ -45,8 +45,8 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 |  1  | **Gestión de Personal**        | ✅ Completado |
 |  2  | **Administración del Sistema** | ✅ Completado |
 |  3  | **Gestión de Flota**           | ✅ Completado |
-|  4  | **Gestión de Rutas**           | 🚧 En curso   |
-|  5  | Gestión de Recorridos          | ⏳ Pendiente  |
+|  4  | **Gestión de Rutas**           | ✅ Completado |
+|  5  | Gestión de Recorridos          | ⏳ Siguiente  |
 |  6  | Gestión de Boletos             | ⏳ Pendiente  |
 |  7  | Reportes y Analytics           | ⏳ Pendiente  |
 
@@ -92,7 +92,7 @@ Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras cla
 | 4.2 | **Horarios**: alta de varias salidas a la vez, días, vigencia sin choques, vista semanal y llegada en hora local del destino | ✅ |
 | 4.3 | **Paradas**: itinerario con km por tramo, tiempo y precio desde el origen; precio por tramo y distancia de la ruta calculada | ✅ |
 | 4.4 | **Temporadas**: ajustes globales sin solapes por fecha del viaje, calendario anual y precio por tramo redondeado a peso entero | ✅ |
-| 4.5 | **Búsqueda**: rutas entre ciudades con horarios y precio vigente | ⏳ |
+| 4.5 | **Búsqueda de salidas**: directas y por tramo entre ciudades, con hora local, precio vigente e itinerario del viaje | ✅ |
 
 ---
 

@@ -19,8 +19,8 @@
 | 4.1 | Rutas: CRUD, clave única, activar y desactivar, zona horaria en ciudades | ✅ PR #17 |
 | 4.2 | Horarios: días de la semana, vigencia, sin choques; llegada en hora local | ✅ PR #18 |
 | 4.3 | Paradas: km por tramo, tiempo y precio desde el origen; la distancia de la ruta se calcula | ✅ PR #19 |
-| 4.4 | Temporadas globales y cálculo del precio vigente | ✅ esta rama |
-| 4.5 | Búsqueda entre ciudades (directas y por tramo) para taquilla | ⏳ |
+| 4.4 | Temporadas globales y cálculo del precio vigente | ✅ PR #20 |
+| 4.5 | Búsqueda entre ciudades (directas y por tramo) para taquilla | ✅ esta rama |
 
 ## Esquema (migración `20261028191101_routes` en la 4.1; `20261028195738_route_stops_km` en la 4.3)
 - `cities.timezone` (nuevo campo).
@@ -151,3 +151,31 @@ Cada alta y cambio queda en la bitácora (`routes`).
 
 ### Datos demo
 Baja de otoño (−10 %, 1 oct–30 nov 2026, vigente hoy), Navidad y Año Nuevo (+25 %), Semana Santa 2027 (+20 %) y Verano 2027 (+10 %). Se reconocen por la descripción "Demo · …" y `--clean` las borra.
+
+## 4.5 Búsqueda de salidas
+
+### Reglas (`backend/src/routes/search-rules.ts`, con pruebas)
+- Una ruta activa sirve si la ciudad de origen aparece en su itinerario (origen o parada) **antes** que la de destino; así se encuentran rutas directas y tramos dentro de rutas más largas.
+- La fecha buscada es la de **abordaje** en la ciudad de origen. Si se aborda después de medianoche, se revisa la salida de la ruta del día (o días) anterior; `tripDate` es la fecha en que la ruta sale de su origen.
+- Un horario opera en `tripDate` si está activo, vigente y ese día de la semana está en sus días.
+- Salida desde la ciudad = salida de la ruta + minutos hasta esa parada, en hora local de la terminal de abordaje; la llegada va en hora local del destino con `dayOffset`.
+- Precio del tramo = diferencia de precios desde el origen, con la temporada de `tripDate`, redondeado a peso.
+- No se muestran las salidas que ya pasaron. Filtros: horario (desde/hasta), solo directos (sin paradas entre abordaje y descenso) y precio máximo. Orden por salida, precio o duración.
+
+### API
+| Método | Ruta | Roles |
+| --- | --- | --- |
+| GET | `/routes/search?originCityId&destinationCityId&date&timeFrom&timeTo&directOnly&maxPrice&sort` | lectores (taquilla incluida); devuelve `results` y `connectingRoutes` (rutas que unen las ciudades aunque no salgan esa fecha, para explicar un resultado vacío) |
+| GET | `/routes/search/cities` | ciudades con rutas activas |
+
+### Pantalla "Buscar salidas" (`/rutas/buscar`, primera opción del menú Rutas)
+- Origen ⇄ destino, fecha con atajos Hoy y Mañana; la búsqueda vive en la URL.
+- Filtros por horario (madrugada, mañana, tarde, noche), precio máximo, orden y solo directos.
+- Tarjetas con salida → llegada en hora local, duración, paradas intermedias y precio (tachado el base cuando la temporada ajusta). Al abrirlas, el itinerario del viaje con "Sube" y "Baja" resaltados y enlace a la ruta.
+- Sin resultados, explica si no hay rutas entre esas ciudades o si las hay pero no salen esa fecha.
+- Ctrl+K: "Buscar salidas" para admin, coordinación, supervisión y taquilla.
+- Asientos disponibles: "se confirmarán con los recorridos (Módulo 5)".
+
+## Lo que deja listo el Módulo 4 para los siguientes
+- **Módulo 5 (Recorridos)**: cada resultado de búsqueda ya trae `scheduleId` + `tripDate`, que es justo la llave de un recorrido (un horario en una fecha). La generación de recorridos debe usar `runsOn` de `search-rules.ts` y `zonedInstant` de `route-rules.ts` para crear las salidas en hora local del origen. Los parámetros `trips.*` ya existen.
+- **Módulo 6 (Boletos)**: el precio de un boleto es el de `segmentPrice` + temporada (`applySeason`) con `tripDate`, igual que `/routes/:id/fares` y la búsqueda.

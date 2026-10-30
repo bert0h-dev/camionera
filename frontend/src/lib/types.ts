@@ -1428,6 +1428,8 @@ export interface OrderTicket {
   boardTerminal: { code: string; name: string }
   alightTerminal: { code: string; name: string }
   passengerType: { id: string; name: string }
+  passengerName: string
+  passengerDocument: string | null
 }
 
 export interface Order {
@@ -1443,7 +1445,36 @@ export interface Order {
   expiresAt: string | null
   createdAt: string
   canExtend: boolean
+  contactEmail: string | null
+  contactPhone: string | null
+  paidAt: string | null
   tickets: OrderTicket[]
+  /** Cambio a entregar (solo en la respuesta del cobro) */
+  change?: number
+}
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mercadopago'
+
+/** Venta del día (Venta › Ventas) */
+export interface SaleListItem {
+  id: string
+  orderNumber: string
+  status: OrderStatus
+  total: string
+  paidAt: string
+  contactEmail: string | null
+  seller: { id: string; fullName: string } | null
+  payments: { method: PaymentMethod; amount: string }[]
+  tickets: {
+    id: string
+    ticketNumber: string
+    seatNumber: string
+    passengerName: string
+    status: TicketStatus
+    trip: { id: string; tripNumber: string; departureAt: string }
+    boardTerminal: { code: string }
+    alightTerminal: { code: string }
+  }[]
 }
 
 export interface TripOccupancy {

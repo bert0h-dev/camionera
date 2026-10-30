@@ -1597,3 +1597,23 @@ model TicketEvent {
   @@index([type, createdAt])
   @@map("ticket_events")
 }
+
+// =====================================================
+// ARCHIVOS
+// =====================================================
+
+/// Archivos pequeños guardados en la base (logo de la empresa). Para archivos grandes se usaría S3/R2.
+model StoredFile {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  /// Para qué se usa (p. ej. company_logo)
+  purpose     String   @db.VarChar(40)
+  fileName    String   @map("file_name") @db.VarChar(255)
+  contentType String   @map("content_type") @db.VarChar(100)
+  size        Int
+  data        Bytes
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([purpose])
+  @@map("stored_files")
+}

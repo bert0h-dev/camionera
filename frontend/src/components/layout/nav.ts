@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Fuel,
   LayoutDashboard,
+  Receipt,
   Route,
   Search,
   ShieldCheck,
@@ -79,7 +80,10 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Venta',
-    items: [{ to: '/taquilla', label: 'Taquilla', icon: Ticket, roles: TRIP_READERS }],
+    items: [
+      { to: '/taquilla', label: 'Taquilla', icon: Ticket, roles: TRIP_READERS },
+      { to: '/ventas', label: 'Ventas', icon: Receipt, roles: TRIP_READERS },
+    ],
   },
   {
     label: 'Operación',
@@ -131,6 +135,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   recorridos: 'Recorridos',
   'mis-recorridos': 'Mis recorridos',
   taquilla: 'Taquilla',
+  ventas: 'Ventas',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

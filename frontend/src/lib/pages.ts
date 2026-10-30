@@ -41,6 +41,7 @@ export const loaders = {
   tripDetail: () => import('../pages/trips/TripDetailPage'),
   myTrips: () => import('../pages/trips/MyTripsPage'),
   ticketOffice: () => import('../pages/tickets/TicketOfficePage'),
+  sales: () => import('../pages/tickets/SalesPage'),
 } satisfies Record<string, Loader>
 
 export type PageKey = keyof typeof loaders
@@ -71,6 +72,7 @@ const BY_SEGMENT: Record<string, PageKey> = {
   recorridos: 'trips',
   'mis-recorridos': 'myTrips',
   taquilla: 'ticketOffice',
+  ventas: 'sales',
 }
 
 const requested = new Set<PageKey>()

@@ -286,6 +286,7 @@ Archivo `backend/.env` (plantilla en [`backend/.env.example`](backend/.env.examp
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | Administrador inicial |
 | `RESEND_API_KEY` | Llave de Resend para enviar correos |
 | `MAIL_FROM` | Remitente de los correos (requiere un dominio verificado en Resend) |
+| `TICKET_QR_SECRET` | Firma de los códigos QR de los boletos (obligatoria) |
 
 > 🔒 **Nunca** subas `.env` al repositorio; ya está en `.gitignore`.
 

@@ -1,6 +1,6 @@
 # Estado del proyecto y siguientes pasos
 
-**Última actualización:** 2026-10-28
+**Última actualización:** 2026-10-30
 
 ## Dónde nos quedamos
 - **Módulo 1, Gestión de Personal**: ✅ completo y fusionado en `main` (docs 03–09).
@@ -17,8 +17,10 @@
   - 4.2 Horarios ✅ fusionada (PR #18).
   - 4.3 Paradas ✅ fusionada (PR #19).
   - 4.4 Temporadas ✅ fusionada (PR #20).
-  - 4.5 Búsqueda de salidas ✅ en la rama `feat/m4-busqueda`.
+  - 4.5 Búsqueda de salidas ✅ fusionada (PR #22).
   - Con la 4.1: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
+- **Módulo 5, Gestión de Recorridos** (doc 16): 🚧 en curso.
+  - 5.1 Generación automática, extras y pantalla Recorridos ✅ en la rama `feat/m5-generacion`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
@@ -27,7 +29,7 @@
 ## Lo que sigue
 1. **Módulo 5, Recorridos**: generar los viajes de cada día a partir de los horarios, asignar unidad y conductor, y sus estados (ver "Lo que deja listo el Módulo 4" en el doc 15).
 2. Después vienen los Módulos 6 (Boletos) y 7 (Reportes).
-   - Los parámetros `trips.*` y `tickets.*` ya están listos.
+   - Los parámetros `tickets.*` ya están listos.
 
 ## Pendientes y decisiones abiertas
 - **Resend**: verificar un dominio propio y cambiar `MAIL_FROM`. Con `onboarding@resend.dev` solo llega a la dirección dueña de la cuenta. También corregir el typo "Cental" en `backend/.env`.

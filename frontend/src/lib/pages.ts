@@ -37,6 +37,8 @@ export const loaders = {
   routeDetail: () => import('../pages/routes/RouteDetailPage'),
   seasons: () => import('../pages/routes/SeasonsPage'),
   departures: () => import('../pages/routes/DeparturesSearchPage'),
+  trips: () => import('../pages/trips/TripsPage'),
+  tripDetail: () => import('../pages/trips/TripDetailPage'),
 } satisfies Record<string, Loader>
 
 export type PageKey = keyof typeof loaders
@@ -64,6 +66,7 @@ const BY_SEGMENT: Record<string, PageKey> = {
   rutas: 'routes',
   'rutas/temporadas': 'seasons',
   'rutas/buscar': 'departures',
+  recorridos: 'trips',
 }
 
 const requested = new Set<PageKey>()

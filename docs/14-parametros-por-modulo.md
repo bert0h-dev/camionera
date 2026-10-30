@@ -8,7 +8,8 @@
   - **Flota**: Alertas de flota (aviso de documentos de unidades por vencer, umbrales de preventivo próximo en días y km, y rendimiento de combustible bajo en %). Se llamaba "Documentos de unidades"; el cambio de nombre quedó pendiente en la 3.3 y se aplicó en la 3.4.
   - **Rutas**: Horarios de ruta (`routes.schedule_expiry_alert_days`, 7 días: aviso en Pendientes de los horarios cuya vigencia termina). Desde la 4.2.
   - **Sistema**: Seguridad de acceso y Bitácora.
-  - **Próximamente**: Recorridos (Módulo 5) y Boletos (Módulo 6). Va colapsado y atenuado porque aún no se aplica.
+  - **Recorridos**: días generados por adelantado y descansos entre recorridos (Módulo 5).
+  - **Próximamente**: Boletos (Módulo 6). Va colapsado y atenuado porque aún no se aplica.
 - **Navegación**: un menú lateral fijo con los módulos y sus grupos; en pantallas chicas se vuelve una fila de chips. Cada enlace salta a su tarjeta y, si está en "Próximamente", la abre.
 - **Buscador**: filtra por nombre o descripción del parámetro, o por título del grupo, sin distinguir acentos ni mayúsculas. Los campos que no coinciden se ocultan sin perder lo que se esté editando.
 - **Modificado**: cada parámetro con un valor distinto del de fábrica lleva esa etiqueta, y el menú muestra cuántos hay modificados por módulo.

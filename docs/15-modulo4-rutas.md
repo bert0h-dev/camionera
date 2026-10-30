@@ -73,7 +73,7 @@ Cada alta y cambio queda en la bitácora (`routes`).
 - **Sin choques**: dos horarios activos de la misma ruta no pueden tener la misma hora con algún día en común y vigencias que se crucen. El error dice con cuál choca. Uno inactivo no choca.
 - Situación calculada en la fecha local del origen: Vigente, Próximo, Vencido o Inactivo.
 - El alta acepta varias horas con los mismos días y vigencia, en una transacción: si una choca no se guarda ninguna.
-- Se pueden borrar mientras no haya recorridos; en el Módulo 5, un horario con recorridos solo se podrá desactivar.
+- Al borrar un horario se borran sus recorridos futuros sin asignar; si le quedan otros (asignados, cancelados o pasados) solo se puede desactivar (doc 16).
 
 ### API
 | Método | Ruta | Roles |

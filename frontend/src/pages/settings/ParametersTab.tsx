@@ -21,13 +21,14 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Field'
 import { SettingsForm } from './SettingsForm'
 
-type ModuleKey = 'staff' | 'fleet' | 'routes' | 'system' | 'upcoming'
+type ModuleKey = 'staff' | 'fleet' | 'routes' | 'trips' | 'system' | 'upcoming'
 
 // Orden de los módulos; "upcoming" agrupa lo que aún no se aplica y va colapsado al final
 const MODULES: { key: ModuleKey; title: string }[] = [
   { key: 'staff', title: 'Personal' },
   { key: 'fleet', title: 'Flota' },
   { key: 'routes', title: 'Rutas' },
+  { key: 'trips', title: 'Recorridos' },
   { key: 'system', title: 'Sistema' },
   { key: 'upcoming', title: 'Próximamente' },
 ]
@@ -99,9 +100,9 @@ const GROUPS: {
   },
   {
     group: 'trips',
-    module: 'upcoming',
+    module: 'trips',
     title: 'Recorridos',
-    description: 'Se aplicarán al asignar unidades y conductores (Módulo 5)',
+    description: 'Generación por adelantado y descanso mínimo de unidades y conductores entre recorridos',
     icon: Route,
   },
   {

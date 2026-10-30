@@ -11,6 +11,7 @@ import {
   QueryRoutesDto,
   UpdateRouteDto,
 } from './dto/route.dto.js';
+import { TripsService } from '../trips/trips.service.js';
 import { ReplaceStopsDto } from './dto/stop.dto.js';
 import { routeError } from './route-rules.js';
 import { checkItinerary } from './stop-rules.js';
@@ -66,6 +67,7 @@ export class RoutesService {
     private readonly catalogs: CatalogsService,
     private readonly schedules: SchedulesService,
     private readonly seasons: SeasonsService,
+    private readonly trips: TripsService,
   ) {}
 
   /**
@@ -287,6 +289,13 @@ export class RoutesService {
       oldValues: before,
       newValues: row,
     });
+    // La hora de salida (zona del origen), la llegada o si opera cambian los recorridos sin asignar
+    if (
+      row.isActive !== before.isActive ||
+      row.estimatedDurationMinutes !== before.estimatedDurationMinutes ||
+      row.originTerminalId !== before.originTerminalId
+    )
+      await this.trips.syncRoute(id);
     return this.findOne(id);
   }
 

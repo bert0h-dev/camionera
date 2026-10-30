@@ -87,6 +87,17 @@ async function clean() {
   await prisma.maintenanceOrder.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.busIncident.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
   await prisma.fuelLoad.deleteMany({ where: { bus: { plates: { startsWith: 'DEM' } } } });
+  // Recorridos de las rutas demo y los que usan unidades o personal demo (historial en cascada)
+  await prisma.trip.deleteMany({
+    where: {
+      OR: [
+        { route: { code: { startsWith: 'DEM-' } } },
+        { bus: { plates: { startsWith: 'DEM' } } },
+        { driverId: { in: ids } },
+        { collectorId: { in: ids } },
+      ],
+    },
+  });
   await prisma.route.deleteMany({ where: { code: { startsWith: 'DEM-' } } }); // paradas y horarios en cascada
   await prisma.season.deleteMany({ where: { description: { startsWith: 'Demo · ' } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada

@@ -46,7 +46,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 |  2  | **Administración del Sistema** | ✅ Completado |
 |  3  | **Gestión de Flota**           | ✅ Completado |
 |  4  | **Gestión de Rutas**           | ✅ Completado |
-|  5  | Gestión de Recorridos          | ⏳ Siguiente  |
+|  5  | Gestión de Recorridos          | 🚧 En curso   |
 |  6  | Gestión de Boletos             | ⏳ Pendiente  |
 |  7  | Reportes y Analytics           | ⏳ Pendiente  |
 

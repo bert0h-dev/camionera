@@ -1193,3 +1193,107 @@ export interface DepartureSearch {
   /** Rutas que unen las ciudades aunque no salgan esa fecha */
   connectingRoutes: number
 }
+
+// ---------- Recorridos (Módulo 5) ----------
+
+export type TripStatus = 'scheduled' | 'boarding' | 'in_transit' | 'delayed' | 'completed' | 'cancelled'
+
+export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
+  scheduled: 'Programado',
+  boarding: 'Abordando',
+  in_transit: 'En ruta',
+  delayed: 'Retrasado',
+  completed: 'Terminado',
+  cancelled: 'Cancelado',
+}
+
+export interface TripTerminal {
+  id: string
+  code: string
+  name: string
+  city: { name: string; timezone: string }
+}
+
+export interface TripPerson {
+  id: string
+  employeeNumber: string
+  firstName: string
+  lastName: string
+  secondLastName: string | null
+}
+
+export interface TripListItem {
+  id: string
+  tripNumber: string
+  routeId: string
+  routeScheduleId: string | null
+  tripDate: string
+  departureAt: string
+  arrivalAt: string
+  durationMinutes: number
+  status: TripStatus
+  busId: string | null
+  driverId: string | null
+  collectorId: string | null
+  notes: string | null
+  route: { id: string; code: string; name: string; originTerminal: TripTerminal; destinationTerminal: TripTerminal }
+  bus: { id: string; economicNumber: string } | null
+  driver: TripPerson | null
+  collector: TripPerson | null
+}
+
+export interface TripStatusLogEntry {
+  id: string
+  fromStatus: TripStatus | null
+  toStatus: TripStatus
+  reason: string | null
+  changedAt: string
+  changedBy: { id: string; fullName: string } | null
+}
+
+export interface TripDetail extends TripListItem {
+  overrideReason: string | null
+  actualDepartureAt: string | null
+  actualArrivalAt: string | null
+  startOdometerKm: number | null
+  endOdometerKm: number | null
+  cancelReason: string | null
+  cancelledAt: string | null
+  createdAt: string
+  createdBy: { id: string; fullName: string } | null
+  cancelledBy: { id: string; fullName: string } | null
+  schedule: { id: string; departureTime: string; daysOfWeek: number[]; isActive: boolean } | null
+  statusLog: TripStatusLogEntry[]
+  local: {
+    departure: { date: string; time: string }
+    arrival: { date: string; time: string }
+  }
+}
+
+export interface TripSummary {
+  date: string
+  total: number
+  byStatus: Record<TripStatus, number>
+  unassigned: number
+  extras: number
+  horizon: { from: string; to: string }
+  generatedUntil: string | null
+}
+
+export interface TripRouteOption {
+  id: string
+  code: string
+  name: string
+  isActive: boolean
+  estimatedDurationMinutes: number
+  originTerminal: TripTerminal
+  destinationTerminal: TripTerminal
+}
+
+export interface GenerateTripsResult {
+  from: string
+  to: string
+  created: number
+  removed: number
+  stale: number
+}

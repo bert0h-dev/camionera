@@ -24,22 +24,25 @@
   - 5.2 Asignación de unidad, conductor y cobrador con validaciones y Pendientes ✅ fusionada (PR #24).
   - 5.3 Estados, tiempos reales, odómetro y Mis recorridos ✅ fusionada (PR #25).
   - 5.4 Incidencias del recorrido, aviso por correo y pestaña Recorridos en Inicio ✅ fusionada (PR #26).
-- **Módulo 6, Gestión de Boletos** (doc 17): 🚧 en curso, plan 6.0–6.7 aprobado.
+- **Módulo 6, Gestión de Boletos** (doc 17): ✅ completo para taquilla (6.0–6.6); la 6.7 (venta en línea) está pospuesta.
   - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ fusionada (PR #27).
   - 6.1 Disponibilidad por tramo, mapa de asientos, apartado y pantalla Taquilla ✅ fusionada (PR #28).
   - 6.2 Pasajeros, cobro en taquilla, boleto con QR en PDF, correo, Ventas y logo ✅ fusionada (PR #29).
   - 6.3 Caja, corte con arqueo y desglose, comisión, PDF del corte y Pendientes de caja ✅ fusionada (PR #30).
   - 6.4 Cancelaciones, cambios, reembolsos, recorrido cancelado y extras en la venta ✅ fusionada (PR #31).
   - 6.5 Abordaje con QR o folio, manifiesto en PDF y no presentados ✅ fusionada (PR #32).
-  - 6.6 Promociones (acumulables con el tipo de pasajero) y clientes ✅ en la rama `feat/m6-promociones`.
+  - 6.6 Promociones (acumulables con el tipo de pasajero) y clientes ✅ fusionada (PR #33).
+  - 6.7 Venta en línea con Mercado Pago ⏸️ **pospuesta** por decisión del usuario; se retoma cuando haya llaves de prueba. El resto del módulo funciona sin ella.
+- **Módulo 7, Reportes y analytics** (doc 18): 🚧 en curso, plan 7.1–7.5 aprobado.
+  - 7.1 Base de reportes y ventas (Excel y PDF) ✅ en la rama `feat/m7-ventas`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 6, Boletos**: sigue la 6.7 (venta en línea con Mercado Pago; hay que pedir las llaves de prueba). Fases y decisiones en el doc 17.
-2. Después viene el Módulo 7 (Reportes); el M6 deja los precios congelados y `ticket_events` para sus cifras.
+1. **Módulo 7, Reportes**: sigue la 7.2 (ocupación). Fases y decisiones en el doc 18.
+2. **Pospuesto**: 6.7 venta en línea (Mercado Pago, pedir llaves de prueba).
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 
 ## Pendientes y decisiones abiertas

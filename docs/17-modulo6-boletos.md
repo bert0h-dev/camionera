@@ -12,8 +12,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 | 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ fusionada (PR #30) |
 | 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ✅ fusionada (PR #31) |
 | 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ✅ fusionada (PR #32) |
-| 6.6 | Promociones y clientes | ✅ rama `feat/m6-promociones` |
-| 6.7 | Venta en línea (portal público `/viajar`) con Mercado Pago y webhooks; consulta y cancelación por folio + correo | ⏳ |
+| 6.6 | Promociones y clientes | ✅ fusionada (PR #33) |
+| 6.7 | Venta en línea (portal público `/viajar`) con Mercado Pago y webhooks; consulta y cancelación por folio + correo | ⏸️ pospuesta (2026-10-30): sin llaves de Mercado Pago; se retoma después |
 
 Decisiones:
 - **Venta por tramos con reutilización de asiento**: A→B y B→C pueden usar el mismo asiento; A→C y B→D no.

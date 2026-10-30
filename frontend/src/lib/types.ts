@@ -1733,3 +1733,40 @@ export interface CustomerDetail extends Customer {
     }[]
   }[]
 }
+
+// ---------- Reportes (Módulo 7) ----------
+
+export interface SalesReport {
+  range: { from: string; to: string; timezone: string }
+  filters: { routeId: string | null; sellerId: string | null; channel: 'counter' | 'online' | null }
+  vendorPercent: number
+  summary: {
+    gross: number
+    refunds: number
+    net: number
+    orders: number
+    tickets: number
+    avgTicket: number
+    vat: number
+    passengerDiscounts: number
+    promoDiscounts: number
+    previous: { from: string; to: string; gross: number; refunds: number; net: number; tickets: number }
+    change: { gross: number | null; net: number | null; tickets: number | null }
+  }
+  days: { date: string; gross: number; refunds: number; net: number; tickets: number }[]
+  byMethod: { method: PaymentMethod; sales: number; refunds: number; net: number }[]
+  byChannel: { channel: 'counter' | 'online'; gross: number }[]
+  bySeller: {
+    sellerId: string | null
+    name: string
+    gross: number
+    refunds: number
+    net: number
+    orders: number
+    commission: number
+  }[]
+  byRoute: { routeId: string; code: string; name: string; tickets: number; revenue: number; share: number }[]
+  byLeg: { leg: string; tickets: number; revenue: number }[]
+  byPassengerType: { type: string; tickets: number; discount: number; revenue: number }[]
+  byPromotion: { code: string; name: string; orders: number; discount: number }[]
+}

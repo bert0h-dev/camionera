@@ -3,6 +3,9 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsInt,
+  Max,
+  Min,
   IsOptional,
   IsString,
   IsUUID,
@@ -67,6 +70,39 @@ export class GenerateTripsDto {
   @IsOptional()
   @IsUUID()
   routeId?: string;
+}
+
+export class ChangeTripStatusDto {
+  @ApiProperty({ enum: TripStatus })
+  @IsEnum(TripStatus)
+  status: TripStatus;
+
+  @ApiPropertyOptional({ description: 'Obligatorio al retrasar o cancelar' })
+  @Transform(trimOrNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string | null;
+
+  @ApiPropertyOptional({ description: 'Al salir (opcional)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9_999_999)
+  startOdometerKm?: number | null;
+
+  @ApiPropertyOptional({ description: 'Obligatorio al terminar' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9_999_999)
+  endOdometerKm?: number | null;
+}
+
+export class MineQueryDto {
+  @ApiProperty({ example: '2026-10-30' })
+  @Matches(DATE, { message: 'Fecha inválida' })
+  date: string;
 }
 
 export class AssignTripDto {

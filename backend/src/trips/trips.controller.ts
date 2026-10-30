@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -17,12 +18,15 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../generated/prisma/enums.js';
 import {
   AssignTripDto,
+  ChangeTripStatusDto,
+  MineQueryDto,
   CreateExtraTripDto,
   GenerateTripsDto,
   QueryTripsDto,
   SummaryQueryDto,
 } from './dto/trip.dto.js';
 import { TripAssignmentService } from './trip-assignment.service.js';
+import { TripStatusService } from './trip-status.service.js';
 import { TripsService } from './trips.service.js';
 
 /** Coordinación (y admin) gestiona los recorridos; supervisión y taquilla los consultan. */
@@ -41,6 +45,7 @@ export class TripsController {
   constructor(
     private readonly trips: TripsService,
     private readonly assignment: TripAssignmentService,
+    private readonly status: TripStatusService,
   ) {}
 
   @Get('summary')
@@ -53,6 +58,13 @@ export class TripsController {
   @Roles(...TRIP_READERS)
   routeOptions() {
     return this.trips.routeOptions();
+  }
+
+  // Antes de :id para que /trips/mine no se lea como un id
+  @Get('mine')
+  @Roles(UserRole.driver, UserRole.collector)
+  mine(@Query() q: MineQueryDto, @CurrentUser() actor: AuthUser) {
+    return this.status.mine(actor, q);
   }
 
   @Get()
@@ -72,9 +84,24 @@ export class TripsController {
   }
 
   @Get(':id')
-  @Roles(...TRIP_READERS)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  @Roles(...TRIP_READERS, UserRole.driver, UserRole.collector)
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    await this.status.assertCanView(id, actor);
     return this.trips.findOne(id);
+  }
+
+  /** El conductor opera sus propios recorridos (sin cancelar); lo valida el servicio. */
+  @Patch(':id/status')
+  @Roles(...TRIP_EDITORS, UserRole.driver)
+  changeStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ChangeTripStatusDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.status.change(id, dto, actor);
   }
 
   @Get(':id/candidates')

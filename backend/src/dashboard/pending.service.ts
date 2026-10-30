@@ -21,6 +21,7 @@ import { SchedulesService } from '../routes/schedules.service.js';
 import { dateKey, daysBetween, today } from '../common/dates.js';
 import { wallTime } from '../routes/route-rules.js';
 import { TripAssignmentService } from '../trips/trip-assignment.service.js';
+import { TripStatusService } from '../trips/trip-status.service.js';
 import { TripsService } from '../trips/trips.service.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
@@ -89,6 +90,7 @@ export class PendingService {
     private readonly schedules: SchedulesService,
     private readonly trips: TripsService,
     private readonly assignment: TripAssignmentService,
+    private readonly tripStatus: TripStatusService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
@@ -110,6 +112,8 @@ export class PendingService {
       unassigned,
       unfit,
       stale,
+      lateDepartures,
+      openArrivals,
     ] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
@@ -124,6 +128,8 @@ export class PendingService {
         : null,
       fleet ? this.assignment.busesNoLongerFit() : null,
       routes ? this.trips.staleTrips() : null,
+      fleet ? this.tripStatus.lateDepartures() : null,
+      fleet ? this.tripStatus.openArrivals() : null,
     ]);
     const now = Date.now();
 
@@ -280,6 +286,28 @@ export class PendingService {
         severity: 'soon' as const,
         title: `Horario cambiado · ${t.tripNumber}`,
         detail: `Ya está asignado; su horario cambió o se desactivó · ${t.route.name}`,
+        date: null,
+        daysLeft: null,
+        link: `/recorridos/${t.id}`,
+      })),
+      ...(lateDepartures ?? []).map((t) => ({
+        id: `trip-late-${t.id}`,
+        area: 'trip' as const,
+        severity: 'overdue' as const,
+        title: `Debió salir · ${t.tripNumber}`,
+        detail: `Salida ${departure(t.departureAt, t.route)} · sigue ${
+          t.status === 'boarding' ? 'abordando' : 'programado'
+        } · ${t.route.name}`,
+        date: null,
+        daysLeft: null,
+        link: `/recorridos/${t.id}`,
+      })),
+      ...(openArrivals ?? []).map((t) => ({
+        id: `trip-open-${t.id}`,
+        area: 'trip' as const,
+        severity: 'overdue' as const,
+        title: `Sin cerrar · ${t.tripNumber}`,
+        detail: `Debió llegar ${departure(t.arrivalAt, { originTerminal: t.route.destinationTerminal })} · captura la llegada y el odómetro`,
         date: null,
         daysLeft: null,
         link: `/recorridos/${t.id}`,

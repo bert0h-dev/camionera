@@ -7,8 +7,8 @@ Un **recorrido** es un horario de ruta en una fecha concreta (o un extra sin hor
 | Fase | Contenido | Estado |
 |---|---|---|
 | 5.1 | Generación automática, extras, pantalla Recorridos y ficha | ✅ fusionada (PR #23) |
-| 5.2 | Asignación de unidad, conductor y cobrador con validaciones; Pendientes | ✅ rama `feat/m5-asignacion` |
-| 5.3 | Estados, tiempos reales, odómetro, Mis recorridos (conductor) | ⏳ |
+| 5.2 | Asignación de unidad, conductor y cobrador con validaciones; Pendientes | ✅ fusionada (PR #24) |
+| 5.3 | Estados, tiempos reales, odómetro, Mis recorridos (conductor) | ✅ rama `feat/m5-estados` |
 | 5.4 | Incidencias del recorrido (en `bus_incidents`), avisos y pestaña en Inicio | ⏳ |
 
 Decisiones:
@@ -56,6 +56,27 @@ Decisiones:
   - Asignados cuyo horario cambió o se desactivó (solo admin y coordinator).
   - La hora se muestra en la de la terminal de origen, igual que en Recorridos.
 
+## 5.3 Estados
+- Máquina de estados en `backend/src/trips/status-rules.ts` (con pruebas):
+
+| Desde | Puede pasar a |
+|---|---|
+| scheduled | boarding, delayed, cancelled |
+| boarding | in_transit, delayed, cancelled |
+| in_transit | completed, delayed |
+| delayed | antes de salir: boarding, in_transit, cancelled · ya en ruta: in_transit, completed |
+| completed, cancelled | — (finales) |
+
+- **Abordar**: pide unidad y conductor, y se abre `trips.boarding_open_minutes` antes de la salida (30 por defecto, Parámetros › Recorridos).
+- **Salir**: registra la hora real (`actual_departure_at`) y, opcional, el odómetro de salida. La unidad pasa a **en servicio** (y se guarda `first_service_at` si es la primera vez). Una unidad en mantenimiento o fuera de servicio no puede abordar ni salir.
+- **Retrasar** y **cancelar** piden motivo, que queda en el historial. Ya en ruta no se puede cancelar.
+- **Terminar**: registra la llegada real y exige el odómetro de llegada (no menor al de salida ni al de la unidad). La unidad regresa a **disponible** si seguía en servicio (si una incidencia la sacó de servicio, se respeta).
+- Las lecturas de odómetro se guardan en Flota con origen `trip`.
+- Cada cambio queda en `trip_status_log` y en la bitácora.
+- **Cancelar** libera la unidad y al personal (las exclusion constraints no cuentan los cancelados). `onTripCancelled` queda como gancho para que el Módulo 6 cancele los boletos.
+- **Conductor**: solo opera **sus** recorridos y no puede cancelar. Conductor y cobrador solo ven la ficha de sus propios recorridos.
+- **Pendientes**: recorridos que debieron salir hace más de 15 min y siguen programados o abordando, y los que debieron llegar hace más de una hora y no se han cerrado.
+
 ## API
 | Método | Ruta | Roles |
 |---|---|---|
@@ -64,11 +85,15 @@ Decisiones:
 | POST | `/trips/generate` · `/trips/extra` | coordinator |
 | GET | `/trips/:id/candidates` (unidades, conductores y cobradores con sus observaciones) | coordinator |
 | PUT | `/trips/:id/assignment` (`busId`, `driverId`, `collectorId`; null = quitar; `overrideReason` solo admin) | coordinator |
+| PATCH | `/trips/:id/status` (`status`, `reason`, `startOdometerKm`, `endOdometerKm`) | coordinator; driver en los suyos |
+| GET | `/trips/mine?date=` | driver, collector |
 | DELETE | `/trips/:id` (solo extras sin asignar) | coordinator |
 
 ## Pantallas
 - **Operación › Recorridos** (`/recorridos`): banda con selector de día (`?fecha=`), cifras (del día, sin asignar, en operación, cancelados), filtros por ruta, estado y "solo sin asignar". La salida se muestra en hora del origen y la llegada en hora del destino (`+1` si cae otro día).
 - **Ficha** (`/recorridos/:id`): horas locales, unidad y conductor, horario de origen, alta (sistema o usuario) e historial de estados. Botón **Asignar / Cambiar asignación**: un modal con unidad, conductor y cobrador. Las opciones no aptas salen deshabilitadas con su motivo; debajo de cada selección se ven sus avisos.
+- Botones de estado en la banda de la ficha: abrir abordaje, registrar salida y llegada, marcar retraso y cancelar. Los que piden datos abren un diálogo. La ficha muestra la salida real (con los minutos de retraso), la llegada real y los km recorridos.
+- **Operación › Mis recorridos** (`/mis-recorridos`, conductor y cobrador): tarjetas del día con horas, unidad y los botones de estado (solo el conductor). Se refresca cada minuto.
 - Buscador Ctrl+K: "Recorridos de hoy".
 
 ## Datos demo

@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2, UserCog } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
+import { localClock } from '../../lib/timezones'
+import { useAuth } from '../../auth/useAuth'
 import { dayLabel, formatInstantDate, formatMinutes, formatTime, staffFullName } from '../../lib/format'
 import { TRIP_STATUS_LABELS, type TripDetail } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
@@ -17,6 +19,7 @@ import { useToast } from '../../components/ui/toast-context'
 import { daysText } from '../routes/useRoutes'
 import { AssignTripModal } from './AssignTripModal'
 import { TripStatusBadge } from './TripBadges'
+import { TripStatusActions } from './TripStatusActions'
 import { tripTimes, useCanManageTrips } from './useTrips'
 
 const dateTime = (iso: string) => `${formatInstantDate(iso)} · ${formatTime(iso)}`
@@ -27,6 +30,7 @@ function TripDetailPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const canManage = useCanManageTrips()
+  const { user } = useAuth()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [assigning, setAssigning] = useState(false)
 
@@ -58,6 +62,13 @@ function TripDetailPage() {
   const isExtra = !trip.routeScheduleId
   // Antes de salir todavía se puede cambiar la unidad o el personal
   const canAssign = canManage && ['scheduled', 'boarding', 'delayed'].includes(trip.status)
+  // El conductor solo llega a la ficha de sus propios recorridos (lo valida el servidor)
+  const canOperate = canManage || user?.role === 'driver'
+  const late =
+    trip.actualDepartureAt &&
+    Math.max(0, Math.round((Date.parse(trip.actualDepartureAt) - Date.parse(trip.departureAt)) / 60000))
+  const kmDriven =
+    trip.startOdometerKm !== null && trip.endOdometerKm !== null ? trip.endOdometerKm - trip.startOdometerKm : null
   const canDelete =
     canManage && isExtra && trip.status === 'scheduled' && !trip.busId && !trip.driverId && !trip.collectorId
 
@@ -85,10 +96,11 @@ function TripDetailPage() {
               </Button>
             )}
             {canAssign && (
-              <Button variant="accent" icon={UserCog} onClick={() => setAssigning(true)}>
+              <Button variant="glass" icon={UserCog} onClick={() => setAssigning(true)}>
                 {trip.busId || trip.driverId ? 'Cambiar asignación' : 'Asignar'}
               </Button>
             )}
+            {canOperate && <TripStatusActions trip={trip} inBand />}
           </>
         }
         stats={
@@ -97,19 +109,27 @@ function TripDetailPage() {
               label={`Sale de ${origin.city.name}`}
               value={times.departure}
               tone="primary"
-              hint={`${origin.code} · hora local`}
+              hint={
+                trip.actualDepartureAt
+                  ? `salió ${localClock(origin.city.timezone, new Date(trip.actualDepartureAt))}${late ? ` · ${late} min tarde` : ' a tiempo'}`
+                  : `${origin.code} · hora local`
+              }
             />
             <HeroStat
               label={`Llega a ${destination.city.name}`}
               value={times.dayOffset > 0 ? `${times.arrival} (+${times.dayOffset})` : times.arrival}
-              hint={`${destination.code} · ${formatMinutes(trip.durationMinutes)} de viaje`}
+              hint={
+                trip.actualArrivalAt
+                  ? `llegó ${localClock(destination.city.timezone, new Date(trip.actualArrivalAt))}${kmDriven !== null ? ` · ${kmDriven.toLocaleString('es-MX')} km` : ''}`
+                  : `${destination.code} · ${formatMinutes(trip.durationMinutes)} de viaje`
+              }
             />
             <HeroStat
               label="Unidad"
               value={trip.bus?.economicNumber ?? '—'}
               tone={trip.bus ? 'neutral' : 'warning'}
               hint={trip.bus ? 'asignada' : 'sin asignar'}
-              to={trip.bus ? `/flota/unidades/${trip.bus.id}` : undefined}
+              to={trip.bus && canManage ? `/flota/unidades/${trip.bus.id}` : undefined}
             />
             <HeroStat
               label="Conductor"
@@ -146,9 +166,13 @@ function TripDetailPage() {
               <div>
                 <dt className="text-xs text-fg-muted">Ruta</dt>
                 <dd>
-                  <Link className="text-primary hover:underline" to={`/rutas/${trip.route.id}`}>
-                    {trip.route.name}
-                  </Link>{' '}
+                  {canManage ? (
+                    <Link className="text-primary hover:underline" to={`/rutas/${trip.route.id}`}>
+                      {trip.route.name}
+                    </Link>
+                  ) : (
+                    trip.route.name
+                  )}{' '}
                   <span className="font-data text-xs text-fg-muted">{trip.route.code}</span>
                 </dd>
               </div>
@@ -186,6 +210,18 @@ function TripDetailPage() {
                 <div className="sm:col-span-2">
                   <dt className="text-xs text-fg-muted">Notas</dt>
                   <dd className="whitespace-pre-line">{trip.notes}</dd>
+                </div>
+              )}
+              {(trip.startOdometerKm !== null || trip.endOdometerKm !== null) && (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs text-fg-muted">Odómetro</dt>
+                  <dd className="font-data">
+                    {trip.startOdometerKm?.toLocaleString('es-MX') ?? '—'} →{' '}
+                    {trip.endOdometerKm?.toLocaleString('es-MX') ?? '—'} km
+                    {kmDriven !== null && (
+                      <span className="text-fg-muted"> · {kmDriven.toLocaleString('es-MX')} km recorridos</span>
+                    )}
+                  </dd>
                 </div>
               )}
               <div className="sm:col-span-2">

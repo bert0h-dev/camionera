@@ -8,8 +8,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 |---|---|---|
 | 6.0 | Esquema completo, reglas puras (precio, disponibilidad, cancelación, estados) y catálogo de tipos de pasajero | ✅ fusionada (PR #27) |
 | 6.1 | Disponibilidad por tramo, mapa de asientos y apartado temporal con vencimiento automático | ✅ fusionada (PR #28) |
-| 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ✅ rama `feat/m6-venta` |
-| 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ⏳ |
+| 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ✅ fusionada (PR #29) |
+| 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ rama `feat/m6-caja` |
 | 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ⏳ |
 | 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ⏳ |
 | 6.6 | Promociones y clientes | ⏳ |
@@ -81,7 +81,31 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 - **Logo de la empresa**: tabla `stored_files` (migración `stored_files`, bytea en la base). PNG, JPG o WebP de hasta 512 KB (`files/file-rules.ts`). El PDF solo dibuja PNG y JPG.
   - `GET /files/company-logo` es público (va en `<img>`, correos y la venta en línea). `GET /files/company-logo/info`, `PUT` (data URL) y `DELETE` son de admin. El límite del cuerpo JSON subió a 1 MB por el data URL.
 
+## 6.3 Caja, corte y comisión
+- **No se cobra sin caja abierta**. Aplica a todos los que cobran (vendor, coordinator y admin); apartar sí se puede. El cobro revisa la caja antes y dentro de su transacción.
+- **Apertura** (`POST /cash/open`): fondo inicial (propone `cash.default_float`) y terminal opcional. Una sola caja abierta por usuario (índice parcial de la 6.0; si se intenta otra, 409).
+- **Al cobrar**: cada pago crea un movimiento `sale` con su método, y el pago y la compra guardan `cash_session_id`. Los reembolsos de la 6.4 entrarán como `refund`.
+- **Retiros e ingresos** (`POST /cash/movements`): solo efectivo, con motivo. Un retiro no puede pasar del efectivo que hay.
+- **Reglas** (`cash/cash-rules.ts`, con pruebas):
+  - Esperado = fondo + ventas en efectivo − reembolsos en efectivo − retiros + ingresos.
+  - Desglose por billetes de $1000 a $20 y monedas de $10 a $0.50.
+  - Diferencia contra la tolerancia `cash.difference_tolerance`; fuera de ella, el motivo es obligatorio.
+  - Comisión = `commissions.vendor_percent` sobre lo vendido neto de la caja (ventas − reembolsos, todos los métodos), nunca negativa.
+- **Corte** (`POST /cash/:id/close`): conteo por desglose o total. Congela esperado, contado, diferencia, motivo, % y monto de comisión, y un `summary` (jsonb) con los totales por método, compras, boletos, el desglose y la tolerancia. Así un cambio posterior de parámetros no altera cortes pasados.
+  - Lo puede hacer el dueño o **supervisión** (supervisor y admin), por ejemplo si el vendedor se fue sin cortar. Queda `closed_by` y la bitácora marca `byOther`.
+  - Si dos personas cortan a la vez, la segunda recibe 409.
+- **Reporte de corte en PDF** (`GET /cash/:id/pdf`, carta): ventas por método, arqueo, desglose, comisión, retiros e ingresos y líneas de firma (entrega y recibe).
+- **Pendientes** (supervisor y admin, área *Caja*): cajas abiertas por más de `cash.max_open_hours` (urgente) y cortes de los últimos 7 días con diferencia fuera de la tolerancia.
+- **Migración `cash_close_summary`**: `commission_percent`, `commission_amount` y `summary` en `cash_sessions`.
+
 ## Pantallas
+- **Venta › Caja** (`/caja`):
+  - **Mi caja**: sin caja abierta, una tarjeta para abrirla con el fondo propuesto. Con caja abierta, la banda muestra efectivo esperado, vendido neto, boletos y comisión, con los botones *Retiro*, *Ingreso* y *Hacer corte*. Abajo van el arqueo, las ventas por método y los movimientos (se refresca cada 30 s), y después *Mis cortes*.
+  - **Corte**: desglose por billetes y monedas (o solo el total), con esperado, contado y diferencia en vivo; pide motivo si pasa la tolerancia. Al terminar abre la ficha del corte con su PDF.
+  - **Todas las cajas** (supervisor y admin): lista con filtros de estado y día. Desde la ficha de una caja abierta se puede hacer su corte.
+  - `?id=` abre la ficha de una caja (lo usan los Pendientes).
+- **Taquilla**: sin caja abierta, el cobro muestra un aviso con liga para abrirla en otra pestaña y *Cobrar* queda deshabilitado.
+- **Ventas**: cifra *Mi caja* con el efectivo esperado o "Cerrada", con liga a la caja.
 - **Venta › Taquilla** (`/taquilla`; coordinator, supervisor y vendor; el supervisor ve pero no aparta):
   1. Salida: origen, destino y fecha, con lugares libres y botón *Elegir asientos* (o el motivo si no se vende).
   2. Asientos: mapa del tramo (se refresca cada 15 s), itinerario con el tramo resaltado y total estimado; *Apartar*.
@@ -103,6 +127,9 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 | POST · PATCH · DELETE | `/tickets/holds` · `/tickets/holds/:id` | coordinator, vendor |
 | PUT · POST | `/tickets/orders/:id/passengers` · `/tickets/orders/:id/pay` | coordinator, vendor |
 | GET · POST | `/tickets/orders` · `/tickets/orders/:id/pdf` · `/tickets/orders/:id/send` | coordinator, supervisor, vendor |
+| GET | `/cash/current` · `/cash` (las propias; supervisión ve todas) · `/cash/:id` · `/cash/:id/pdf` | coordinator, supervisor, vendor |
+| POST | `/cash/open` · `/cash/movements` | coordinator, vendor |
+| POST | `/cash/:id/close` (la propia; supervisión cualquiera) | coordinator, supervisor, vendor |
 | GET | `/files/company-logo` | público |
 | GET · PUT · DELETE | `/files/company-logo/info` · `/files/company-logo` | admin |
 

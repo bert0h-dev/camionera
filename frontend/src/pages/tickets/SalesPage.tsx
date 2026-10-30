@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { FileDown, Mail, Receipt, Search } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMoney, formatTime, todayKey } from '../../lib/format'
-import type { Paginated, SaleListItem } from '../../lib/types'
+import type { CashCurrent, Paginated, SaleListItem } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 import { BandStepper } from '../../components/ui/BandStepper'
 import { Badge } from '../../components/ui/Badge'
@@ -45,6 +45,11 @@ function SalesPage() {
           params: { date, search: search || undefined, mine: mine || undefined, page, limit: 20 },
         })
       ).data,
+  })
+  const cash = useQuery({
+    queryKey: ['cash', 'current'],
+    enabled: user?.role !== 'supervisor',
+    queryFn: async () => (await api.get<CashCurrent>('/cash/current')).data,
   })
   const pdf = useMutation({
     mutationFn: (id: string) => openOrderPdf(id),
@@ -163,6 +168,15 @@ function SalesPage() {
             />
             <HeroStat label="Compras" value={data?.summary.orders ?? 0} loading={isLoading} hint="cobradas" />
             <HeroStat label="Boletos" value={tickets} loading={isLoading} hint="en esta página" />
+            {cash.data && (
+              <HeroStat
+                label="Mi caja"
+                value={cash.data.session ? formatMoney(cash.data.session.live.totals.expectedCash) : 'Cerrada'}
+                hint={cash.data.session ? 'efectivo esperado' : 'ábrela para cobrar'}
+                tone={cash.data.session ? 'neutral' : 'warning'}
+                to="/caja"
+              />
+            )}
           </>
         }
       />

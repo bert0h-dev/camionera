@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { Banknote, CreditCard, Landmark, Plus, Trash2, Users, Wallet } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { formatMoney } from '../../lib/format'
-import type { Order, PaymentMethod, TripSeatMap } from '../../lib/types'
+import type { CashCurrent, Order, PaymentMethod, TripSeatMap } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
@@ -124,6 +125,12 @@ export function Checkout({
   )
   const diff = total - paid
   const typeOf = (id: string) => passengerTypes.find((t) => t.id === id)
+  // Sin caja abierta no se cobra (6.3)
+  const cash = useQuery({
+    queryKey: ['cash', 'current'],
+    queryFn: async () => (await api.get<CashCurrent>('/cash/current')).data,
+  })
+  const noCash = cash.isSuccess && !cash.data.session
 
   return (
     <div className="space-y-4">
@@ -230,6 +237,19 @@ export function Checkout({
           }
         />
         <CardBody>
+          {noCash && (
+            <Alert
+              tone="warning"
+              className="mb-3"
+              action={
+                <Link to="/caja" target="_blank" className="font-medium text-link hover:underline">
+                  Abrir caja
+                </Link>
+              }
+            >
+              No tienes caja abierta. Ábrela para poder cobrar; el apartado sigue corriendo.
+            </Alert>
+          )}
           <fieldset disabled={!confirmed} className="space-y-3">
             {payments.map((p, i) => {
               const Icon = METHOD_ICONS[p.method]
@@ -325,7 +345,7 @@ export function Checkout({
             <Button
               className="w-full"
 
-              disabled={!confirmed || diff !== 0}
+              disabled={!confirmed || diff !== 0 || noCash}
               loading={pay.isPending}
               onClick={() => pay.mutate()}
             >

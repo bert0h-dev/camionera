@@ -346,6 +346,39 @@ export const SETTINGS = {
     description: 'Máximo de boletos en una sola compra',
   },
 
+  // ---------- Caja (Módulo 6) ----------
+  'cash.default_float': {
+    type: 'number',
+    default: 500,
+    min: 0,
+    max: 100000,
+    decimals: 2,
+    label: 'Fondo propuesto al abrir',
+    unit: '$',
+    description: 'Efectivo para cambio que se propone al abrir una caja',
+  },
+  'cash.difference_tolerance': {
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 1000,
+    decimals: 2,
+    label: 'Tolerancia en el corte',
+    unit: '$',
+    description:
+      'Diferencia entre lo contado y lo esperado que se acepta sin escribir un motivo',
+  },
+  'cash.max_open_hours': {
+    type: 'number',
+    default: 12,
+    min: 1,
+    max: 48,
+    label: 'Aviso de caja abierta',
+    unit: 'h',
+    description:
+      'Horas tras las que una caja sin corte aparece en Pendientes de supervisión',
+  },
+
   // ---------- Flota ----------
   'fleet.document_alert_days': {
     type: 'number',

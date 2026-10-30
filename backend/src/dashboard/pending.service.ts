@@ -22,11 +22,19 @@ import { dateKey, daysBetween, today } from '../common/dates.js';
 import { wallTime } from '../routes/route-rules.js';
 import { TripAssignmentService } from '../trips/trip-assignment.service.js';
 import { TripStatusService } from '../trips/trip-status.service.js';
+import { CASH_SUPERVISORS, CashService } from '../cash/cash.service.js';
 import { TripsService } from '../trips/trips.service.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
 export type PendingArea =
-  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip';
+  | 'staff'
+  | 'fleet'
+  | 'maintenance'
+  | 'incident'
+  | 'fuel'
+  | 'route'
+  | 'trip'
+  | 'cash';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -91,12 +99,14 @@ export class PendingService {
     private readonly trips: TripsService,
     private readonly assignment: TripAssignmentService,
     private readonly tripStatus: TripStatusService,
+    private readonly cash: CashService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
     const staff = STAFF_AREA.includes(user.role);
     const fleet = FLEET_AREA.includes(user.role);
     const fuelManager = FUEL_MANAGERS.includes(user.role);
+    const cashSupervisor = CASH_SUPERVISORS.includes(user.role);
     const routes =
       user.role === UserRole.admin ||
       (ROUTE_EDITORS as UserRole[]).includes(user.role);
@@ -114,6 +124,8 @@ export class PendingService {
       stale,
       lateDepartures,
       openArrivals,
+      openCash,
+      cashDiffs,
     ] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
@@ -130,6 +142,8 @@ export class PendingService {
       routes ? this.trips.staleTrips() : null,
       fleet ? this.tripStatus.lateDepartures() : null,
       fleet ? this.tripStatus.openArrivals() : null,
+      cashSupervisor ? this.cash.openTooLong() : null,
+      cashSupervisor ? this.cash.recentDifferences() : null,
     ]);
     const now = Date.now();
 
@@ -312,6 +326,29 @@ export class PendingService {
         daysLeft: null,
         link: `/recorridos/${t.id}`,
       })),
+      ...(openCash ?? []).map((c) => ({
+        id: `cash-open-${c.id}`,
+        area: 'cash' as const,
+        severity: 'overdue' as const,
+        title: `Caja sin corte · ${c.user.fullName}`,
+        detail: `Abierta hace ${Math.floor((now - c.openedAt.getTime()) / 3_600_000)} h${c.terminal ? ` · ${c.terminal.code}` : ''}`,
+        date: c.openedAt,
+        daysLeft: null,
+        link: `/caja?id=${c.id}`,
+      })),
+      ...(cashDiffs ?? []).map((c) => {
+        const diff = Number(c.difference);
+        return {
+          id: `cash-diff-${c.id}`,
+          area: 'cash' as const,
+          severity: 'soon' as const,
+          title: `Corte con ${diff < 0 ? 'faltante' : 'sobrante'} · ${c.user.fullName}`,
+          detail: `${diff < 0 ? '−' : '+'}$${Math.abs(diff).toFixed(2)}${c.closingNotes ? ` · ${c.closingNotes}` : ''}`,
+          date: c.closedAt,
+          daysLeft: null,
+          link: `/caja?id=${c.id}`,
+        };
+      }),
     ];
 
     const rank = (i: PendingItem) => (i.severity === 'overdue' ? 0 : 1);

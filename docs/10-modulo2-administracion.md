@@ -7,7 +7,7 @@
   - Sin dominio verificado, `onboarding@resend.dev` solo entrega a la dirección dueña de la cuenta de Resend.
 - **Comisiones**: solo en **porcentaje**.
 - **Respaldos**: fuera por ahora; la restauración se hace con Neon.
-- **Logo de la empresa**: pospuesto hasta que exista almacenamiento de archivos (Módulo 6).
+- **Logo de la empresa**: se agregó en la 6.2 (Configuración › Empresa, tabla `stored_files`; ver doc 17).
 
 ## 2.1 Usuarios y cuentas
 - **Bloqueo temporal**: tras N intentos fallidos (`security.max_failed_logins`, 5) la cuenta se bloquea M minutos (`security.lockout_minutes`, 15). El admin puede desbloquearla antes.

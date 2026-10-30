@@ -26,21 +26,23 @@
   - 5.4 Incidencias del recorrido, aviso por correo y pestaña Recorridos en Inicio ✅ fusionada (PR #26).
 - **Módulo 6, Gestión de Boletos** (doc 17): 🚧 en curso, plan 6.0–6.7 aprobado.
   - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ fusionada (PR #27).
-  - 6.1 Disponibilidad por tramo, mapa de asientos, apartado y pantalla Taquilla ✅ en la rama `feat/m6-disponibilidad`.
+  - 6.1 Disponibilidad por tramo, mapa de asientos, apartado y pantalla Taquilla ✅ fusionada (PR #28).
+  - 6.2 Pasajeros, cobro en taquilla, boleto con QR en PDF, correo, Ventas y logo ✅ en la rama `feat/m6-venta`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 6, Boletos**: sigue la 6.2 (pasajeros, cobro en taquilla y boleto con QR en PDF). Fases y decisiones en el doc 17.
+1. **Módulo 6, Boletos**: sigue la 6.3 (caja, corte y comisión del vendedor). Fases y decisiones en el doc 17.
 2. Después viene el Módulo 7 (Reportes); el M6 deja los precios congelados y `ticket_events` para sus cifras.
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 
 ## Pendientes y decisiones abiertas
 - **Resend**: verificar un dominio propio y cambiar `MAIL_FROM`. Con `onboarding@resend.dev` solo llega a la dirección dueña de la cuenta. También corregir el typo "Cental" en `backend/.env`.
 - **Neon**: cambiar la contraseña de la base de datos, porque se compartió en el chat al inicio del proyecto.
-- **Logo de la empresa**: se agrega junto con el almacenamiento de archivos en la 6.2 (lo necesita el boleto en PDF).
+- **Logo de la empresa**: ✅ desde la 6.2 en Configuración › Empresa (tabla `stored_files`). Falta que el usuario suba el logo real.
+- **`TICKET_QR_SECRET`**: variable nueva en `backend/.env` (ya generada en local); en producción debe definirse con su propio valor.
 - **Respaldos (2.5)**: fuera por decisión del usuario; se usa la restauración de Neon.
 - **Datos demo**: siguen cargados en Neon (`npm run seed:demo -w backend`) y **no se borran hasta que el usuario lo pida**.
   - `-- --clean` los borra.

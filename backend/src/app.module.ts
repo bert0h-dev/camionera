@@ -11,6 +11,7 @@ import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RoutesModule } from './routes/routes.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { FilesModule } from './files/files.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { TripsModule } from './trips/trips.module.js';
 import { StaffModule } from './staff/staff.module.js';
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module.js';
     MailModule,
     AuditModule,
     SettingsModule,
+    FilesModule,
     AuthModule,
     UsersModule,
     StaffModule,

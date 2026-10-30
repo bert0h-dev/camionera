@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
@@ -6,7 +7,9 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter.
 import { createValidationPipe } from './common/validation/validation-pipe.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // El logo se sube como data URL (hasta 512 KB, ~700 KB en base64)
+  app.useBodyParser('json', { limit: '1mb' });
 
   app.setGlobalPrefix('api');
   app.use(cookieParser());

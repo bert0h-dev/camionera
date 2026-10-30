@@ -119,7 +119,7 @@ export class AvailabilityService {
     private readonly audit: AuditService,
   ) {}
 
-  private async loadTrip(tripId: string): Promise<TripRow> {
+  async loadTrip(tripId: string): Promise<TripRow> {
     const trip = await this.prisma.trip.findUnique({
       where: { id: tripId },
       include: tripInclude,
@@ -128,7 +128,7 @@ export class AvailabilityService {
     return trip;
   }
 
-  private itinerary(trip: TripRow): ItineraryPoint[] {
+  itinerary(trip: TripRow): ItineraryPoint[] {
     const r = trip.route;
     return tripItinerary(
       trip.departureAt,
@@ -146,7 +146,7 @@ export class AvailabilityService {
     );
   }
 
-  private async seasonOf(tripDate: Date) {
+  async seasonOf(tripDate: Date) {
     const date = dateKey(tripDate);
     const seasons = await this.prisma.season.findMany({
       where: {
@@ -391,7 +391,7 @@ export class AvailabilityService {
     }
   }
 
-  private async pricingContext() {
+  async pricingContext() {
     const [vatRate, pricesIncludeVat, onlinePercent, defaultType] =
       await Promise.all([
         this.settings.get('taxes.vat_rate'),
@@ -522,7 +522,7 @@ export class AvailabilityService {
     }
   }
 
-  private async ownPendingOrder(orderId: string, user: AuthUser) {
+  async ownPendingOrder(orderId: string, user: AuthUser) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { tickets: true },

@@ -7,6 +7,8 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
+  Res,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -24,6 +26,14 @@ import { SearchDeparturesDto } from '../routes/dto/search.dto.js';
 import { AvailabilityService } from './availability.service.js';
 import { DeparturesService } from './departures.service.js';
 import { HoldDto, SegmentQueryDto, UpdateHoldDto } from './dto/hold.dto.js';
+import {
+  PayDto,
+  QueryOrdersDto,
+  SendTicketsDto,
+  SetPassengersDto,
+} from './dto/sale.dto.js';
+import { SaleService } from './sale.service.js';
+import type { Response } from 'express';
 
 /** Quienes venden o supervisan la venta consultan; las políticas de precio las define el admin. */
 export const TICKET_READERS = [
@@ -44,6 +54,7 @@ export class TicketsController {
     private readonly passengerTypes: PassengerTypesService,
     private readonly availability: AvailabilityService,
     private readonly departures: DeparturesService,
+    private readonly sale: SaleService,
   ) {}
 
   @Get('passenger-types')
@@ -116,5 +127,56 @@ export class TicketsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.availability.release(id, user);
+  }
+
+  // ---------- Venta ----------
+
+  @Get('orders')
+  @Roles(...TICKET_READERS)
+  orders(@Query() q: QueryOrdersDto, @CurrentUser() user: AuthUser) {
+    return this.sale.list(q, user);
+  }
+
+  @Put('orders/:id/passengers')
+  @Roles(...TICKET_SELLERS)
+  passengers(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetPassengersDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.sale.setPassengers(id, dto, user);
+  }
+
+  @Post('orders/:id/pay')
+  @Roles(...TICKET_SELLERS)
+  pay(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PayDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.sale.pay(id, dto, user);
+  }
+
+  @Get('orders/:id/pdf')
+  @Roles(...TICKET_READERS)
+  async pdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+  ) {
+    const { buffer, fileName } = await this.sale.pdf(id, user);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.send(buffer);
+  }
+
+  @Post('orders/:id/send')
+  @Roles(...TICKET_READERS)
+  send(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SendTicketsDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.sale.resend(id, dto.email, user);
   }
 }

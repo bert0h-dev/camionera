@@ -16,6 +16,8 @@ import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
+import { Checkout } from './Checkout'
+import { SaleDone } from './SaleDone'
 import { SeatPicker } from './SeatPicker'
 
 const localTime = (iso: string, tz: string) =>
@@ -86,7 +88,7 @@ function DepartureRow({ r, onPick }: { r: SellableDeparture; onPick: () => void 
   )
 }
 
-/** Resumen del apartado con su tiempo restante; el cobro llega en la 6.2. */
+/** Resumen del apartado con su tiempo restante mientras se capturan pasajeros y se cobra. */
 function HoldPanel({ order, onDone }: { order: Order; onDone: () => void }) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -153,7 +155,9 @@ function HoldPanel({ order, onDone }: { order: Order; onDone: () => void }) {
                     <span className="font-data">
                       {t.boardTerminal.code} → {t.alightTerminal.code}
                     </span>
-                    <span className="block text-xs text-fg-muted">{t.passengerType.name} (se captura al cobrar)</span>
+                    <span className="block text-xs text-fg-muted">
+                      {t.passengerName ? `${t.passengerName} · ${t.passengerType.name}` : 'Pasajero por capturar'}
+                    </span>
                   </span>
                   <span className="font-data font-semibold">{formatMoney(t.total)}</span>
                   {order.tickets.length > 1 && (
@@ -178,10 +182,6 @@ function HoldPanel({ order, onDone }: { order: Order; onDone: () => void }) {
                 <dd className="font-data text-primary">{formatMoney(order.total)}</dd>
               </div>
             </dl>
-            <Alert tone="info">
-              La captura de pasajeros y el cobro llegan en la siguiente fase (6.2). Por ahora el apartado solo reserva
-              los asientos.
-            </Alert>
           </>
         )}
         <div className="flex flex-wrap justify-end gap-2">
@@ -220,6 +220,8 @@ function TicketOfficePage() {
   const alight = params.get('baja') ?? ''
   const orderId = params.get('compra') ?? ''
   const [selected, setSelected] = useState<string[]>([])
+  // Venta recién cobrada (con el cambio a entregar); se muestra hasta empezar otra
+  const [paid, setPaid] = useState<Order | null>(null)
 
   const update = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params)
@@ -259,6 +261,7 @@ function TicketOfficePage() {
     enabled: !!orderId,
     queryFn: async () => (await api.get<Order>(`/tickets/orders/${orderId}`)).data,
   })
+  const holdLeft = useCountdown(order.data?.status === 'pending' ? order.data.expiresAt : null)
 
   const hold = useMutation({
     mutationFn: async () =>
@@ -290,6 +293,10 @@ function TicketOfficePage() {
     setSelected([])
     update({ viaje: '', sube: '', baja: '', compra: '' })
   }
+  const newSale = () => {
+    setPaid(null)
+    back()
+  }
   const toggle = (n: string) => setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
 
   const m = map.data
@@ -306,7 +313,7 @@ function TicketOfficePage() {
       ))}
     </>
   )
-  const stepLabel = !tripId ? '1 · Salida' : orderId ? '3 · Pasajeros y cobro' : '2 · Asientos'
+  const stepLabel = paid ? 'Venta lista' : !tripId ? '1 · Salida' : orderId ? '3 · Pasajeros y cobro' : '2 · Asientos'
 
   return (
     <div className="space-y-6">
@@ -343,7 +350,7 @@ function TicketOfficePage() {
         }
       />
 
-      {!tripId && (
+      {!tripId && !paid && (
         <>
           <Card>
             <CardBody>
@@ -412,7 +419,9 @@ function TicketOfficePage() {
         </>
       )}
 
-      {tripId && (
+      {paid && <SaleDone order={paid} onNew={newSale} />}
+
+      {tripId && !paid && (
         <div className="space-y-4">
           <Button variant="ghost" icon={ArrowLeft} onClick={back}>
             Cambiar salida
@@ -423,29 +432,41 @@ function TicketOfficePage() {
             <Alert tone="danger">{apiErrorMessage(map.error)}</Alert>
           ) : (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-              <Card>
-                <CardHeader
-                  title={`${m.trip.route.code} · ${m.trip.route.name}`}
-                  description={
-                    m.bus
-                      ? `Unidad ${m.bus.economicNumber} · ${m.bus.model.brand} ${m.bus.model.model}`
-                      : 'Sin unidad asignada'
-                  }
+              {orderId && order.data?.status === 'pending' && holdLeft > 0 ? (
+                <Checkout
+                  key={order.data.id}
+                  order={order.data}
+                  passengerTypes={m.passengerTypes}
+                  onPaid={(o) => {
+                    setPaid(o)
+                    update({ viaje: '', sube: '', baja: '', compra: '' })
+                  }}
                 />
-                <CardBody>
-                  {m.bus ? (
-                    <SeatPicker
-                      layout={m.bus.model.layout}
-                      seats={m.seats}
-                      selected={selected}
-                      onToggle={toggle}
-                      disabled={!m.sellable || !!orderId}
-                    />
-                  ) : (
-                    <Alert tone="warning">{m.notSellableReason}</Alert>
-                  )}
-                </CardBody>
-              </Card>
+              ) : (
+                <Card>
+                  <CardHeader
+                    title={`${m.trip.route.code} · ${m.trip.route.name}`}
+                    description={
+                      m.bus
+                        ? `Unidad ${m.bus.economicNumber} · ${m.bus.model.brand} ${m.bus.model.model}`
+                        : 'Sin unidad asignada'
+                    }
+                  />
+                  <CardBody>
+                    {m.bus ? (
+                      <SeatPicker
+                        layout={m.bus.model.layout}
+                        seats={m.seats}
+                        selected={selected}
+                        onToggle={toggle}
+                        disabled={!m.sellable || !!orderId}
+                      />
+                    ) : (
+                      <Alert tone="warning">{m.notSellableReason}</Alert>
+                    )}
+                  </CardBody>
+                </Card>
+              )}
 
               <div className="space-y-4">
                 {!m.sellable && m.bus && <Alert tone="warning">{m.notSellableReason}</Alert>}

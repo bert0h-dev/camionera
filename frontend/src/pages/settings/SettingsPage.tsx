@@ -9,6 +9,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { SettingsForm } from './SettingsForm'
+import { LogoCard } from './LogoCard'
 import { ParametersTab } from './ParametersTab'
 import { useAuth } from '../../auth/useAuth'
 
@@ -122,18 +123,21 @@ function SettingsPage() {
       ) : tab === 'params' ? (
         <ParametersTab settings={all} />
       ) : tab === 'company' ? (
-        <SettingsForm
-          key={`company-${data?.length}-${company.map((s) => s.updatedAt).join()}`}
-          title="Datos de la empresa"
-          description="Aparecerán en boletos, recibos y reportes. El logo se agregará junto con los boletos."
-          items={company}
-          wide={['company.legal_name', 'company.address']}
-        />
+        <div className="space-y-6">
+          <SettingsForm
+            key={`company-${data?.length}-${company.map((s) => s.updatedAt).join()}`}
+            title="Datos de la empresa"
+            description="Aparecen en los boletos, recibos y reportes."
+            items={company}
+            wide={['company.legal_name', 'company.address']}
+          />
+          <LogoCard />
+        </div>
       ) : (
         <SettingsForm
           key={`taxes-${[...of('taxes'), ...of('commissions')].map((s) => s.updatedAt).join()}`}
           title="Impuestos y comisiones"
-          description="Se aplicarán en la venta de boletos (Módulo 6). Revisa el ejemplo antes de guardar."
+          description="Se aplican en la venta de boletos. Revisa el ejemplo antes de guardar."
           items={[...of('taxes'), ...of('commissions')]}
           preview={(values) => <TaxPreview values={values} />}
         />

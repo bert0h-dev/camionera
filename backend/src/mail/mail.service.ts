@@ -6,6 +6,8 @@ export interface MailMessage {
   subject: string;
   html: string;
   text: string;
+  /** Adjuntos en base64 (Resend los acepta tal cual) */
+  attachments?: { filename: string; content: string }[];
 }
 
 const RESEND_URL = 'https://api.resend.com/emails';

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { FileDown, FileSpreadsheet, Gauge, ReceiptText } from 'lucide-react'
+import { Ban, FileDown, FileSpreadsheet, Gauge, ReceiptText } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { useAuth } from '../../auth/useAuth'
 import { Button } from '../../components/ui/Button'
@@ -9,22 +9,25 @@ import { FilterBar } from '../../components/ui/FilterBar'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
+import { CancellationReportTab, CancellationStats } from './CancellationReportTab'
 import { OccupancyReportTab, OccupancyStats } from './OccupancyReportTab'
 import { RangePicker } from './ReportFilters'
 import { SalesReportTab, SalesStats } from './SalesReportTab'
-import { presetRange, useOccupancyReport, useSalesReport, type SalesFilters } from './useReports'
+import { presetRange, useCancellationReport, useOccupancyReport, useSalesReport, type SalesFilters } from './useReports'
 
-type TabKey = 'sales' | 'occupancy'
+type TabKey = 'sales' | 'occupancy' | 'cancellations'
 
 const TABS: (TabItem<TabKey> & { operation?: boolean })[] = [
   { key: 'sales', label: 'Ventas', icon: ReceiptText },
   { key: 'occupancy', label: 'Ocupación', icon: Gauge, operation: true },
+  { key: 'cancellations', label: 'Cancelaciones', icon: Ban, operation: true },
 ]
 
 /** Exportación de cada pestaña. */
 const EXPORTS: Record<TabKey, { url: string; name: string }> = {
   sales: { url: '/reports/sales/export', name: 'ventas' },
   occupancy: { url: '/reports/occupancy/export', name: 'ocupacion' },
+  cancellations: { url: '/reports/cancellations/export', name: 'cancelaciones' },
 }
 
 /** Descarga un archivo del API (lleva el token, por eso no es un enlace directo). */
@@ -69,7 +72,8 @@ function ReportsPage() {
 
   const sales = useSalesReport(f)
   const occupancy = useOccupancyReport({ from: f.from, to: f.to, routeId: f.routeId }, tab === 'occupancy')
-  const active = tab === 'sales' ? sales : occupancy
+  const cancellations = useCancellationReport({ from: f.from, to: f.to, routeId: f.routeId }, tab === 'cancellations')
+  const active = tab === 'sales' ? sales : tab === 'occupancy' ? occupancy : cancellations
   const routes = useQuery({
     queryKey: ['trips', 'route-options'],
     queryFn: async () => (await api.get<{ id: string; code: string; name: string }[]>('/trips/route-options')).data,
@@ -122,8 +126,10 @@ function ReportsPage() {
         stats={
           tab === 'sales' ? (
             <SalesStats data={sales.data} loading={sales.isLoading} />
-          ) : (
+          ) : tab === 'occupancy' ? (
             <OccupancyStats data={occupancy.data} loading={occupancy.isLoading} />
+          ) : (
+            <CancellationStats data={cancellations.data} loading={cancellations.isLoading} />
           )
         }
         bottom={
@@ -163,6 +169,7 @@ function ReportsPage() {
 
       {tab === 'sales' && <SalesReportTab query={sales} />}
       {tab === 'occupancy' && <OccupancyReportTab query={occupancy} />}
+      {tab === 'cancellations' && <CancellationReportTab query={cancellations} />}
     </div>
   )
 }

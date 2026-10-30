@@ -7,8 +7,8 @@ Pantalla única **Análisis › Reportes** (`/reportes`) con una pestaña por á
 | Fase | Contenido | Estado |
 |---|---|---|
 | 7.1 | Base de reportes y **ventas** | ✅ fusionada (PR #34) |
-| 7.2 | **Ocupación** por recorrido, ruta, horario y tramo; ventas en SQL | ✅ rama `feat/m7-ocupacion` |
-| 7.3 | **Cancelaciones y no presentados** | ⏳ |
+| 7.2 | **Ocupación** por recorrido, ruta, horario y tramo; ventas en SQL | ✅ fusionada (PR #35) |
+| 7.3 | **Cancelaciones y no presentados** | ✅ rama `feat/m7-cancelaciones` |
 | 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ⏳ |
 | 7.5 | **Tablero ejecutivo** (pestaña en Inicio) | ⏳ |
 
@@ -50,11 +50,32 @@ Decisiones:
 - Lo ven admin, supervisor y coordinator; el vendor no ve la pestaña.
 - Verificado contra un conteo directo en la base (octubre: 437 recorridos, 12,231 boletos y 18,904 asientos).
 
+## 7.3 Cancelaciones y no presentados (`GET /reports/cancellations` y `/reports/cancellations/export`)
+- **Dos bases de fecha**:
+  - Las **tasas** son por **fecha de salida**: boletos cancelados por el pasajero o no presentados entre los vendidos para los recorridos del periodo (sin contar los cancelados por la empresa).
+  - La **anticipación**, los **motivos**, los **reembolsos** y los **cambios** cuentan por la fecha en que pasaron, como el dinero de ventas.
+- **Reglas** (`cancellation-report-rules.ts`, con pruebas): rangos de anticipación (menos de 2 h, 2–24 h, 1–3 días, más de 3 días), motivos normalizados (sin acentos, mayúsculas ni punto final), tasas y origen del reembolso (pasajero, recorrido cancelado o diferencia de un cambio).
+- **Cifras**:
+  - Tasa de cancelación y de no presentados, con el cambio en puntos contra el periodo anterior.
+  - Reembolsado y saldo por devolver de recorridos cancelados.
+  - Cancelaciones dentro y fuera de plazo (`tickets.cancellation_hours`).
+  - **Ingreso de no presentados**: lo cobrado por asientos que viajaron vacíos (no se reembolsa).
+- **Desgloses**:
+  - Por día de salida y por ruta, con las dos tasas.
+  - Horarios con más no presentados (los que tienen al menos 20 boletos) y por tipo de pasajero.
+  - Reembolsos por origen, método y quién los hizo.
+  - **Recorridos cancelados por la empresa** con boletos afectados, saldo generado, reembolsado, reubicados y pendiente.
+  - **Cambios**: cantidad, reubicaciones, diferencias cobradas y devueltas, y cargos.
+- **Motivos fijos al cancelar**: el diálogo de cancelación ahora pide el motivo de una lista (el pasajero ya no viaja, cambio de planes, enfermedad, compró otro horario, error en la compra) o "Otro…" con texto libre. Así el reporte agrupa mejor; los textos libres anteriores se siguen agrupando normalizados.
+- Lo ven admin, supervisor y coordinator.
+- Verificado contra un conteo directo en la base (octubre: 13,001 vendidos, 770 cancelados, 856 no presentados y $485,396.50 reembolsados). Un mes responde en menos de 1 s.
+
 ## Pantalla
 - Banda: neto, vendido (con el cambio contra el periodo anterior), reembolsos y boletos; botones *Excel* y *PDF*; pestañas.
 - Filtros: periodo, ruta y vendedor (este último no lo ve el vendor).
 - Contenido: gráfica por día, dona por método, rutas con más ingreso, tablas por vendedor y por ruta, origen → destino, canal y descuentos, tipo de pasajero y promoción.
 - Pestaña **Ocupación** (`?vista=occupancy`): aviso de cómo se mide, línea por día, barras por ruta, mapa de calor (cuadrícula propia en índigo), tabla de horarios con barra de ocupación, trechos proporcionales a sus km y detalle paginado. El filtro de vendedor solo aparece en Ventas.
+- Pestaña **Cancelaciones** (`?vista=cancellations`): aviso de las dos bases de fecha, barras por día (cancelados y no presentados), anticipación, motivos, tabla por ruta, horarios con más no presentados, reembolsos por origen y método, recorridos cancelados por la empresa (con liga a su ficha) y cambios.
 
 ## Datos demo para reportes
 `npm run seed:demo -w backend -- --sales` (`prisma/seed-sales.ts`) genera historia en las rutas demo con las mismas reglas de la taquilla (temporada, tipo de pasajero, promoción, IVA y política de cancelación).
@@ -71,3 +92,4 @@ Decisiones:
 | GET | `/reports/sales?from=&to=&routeId=&sellerId=&channel=` | admin, supervisor, coordinator; vendor (solo lo suyo) |
 | GET | `/reports/sales/export?format=xlsx\|pdf&…` | igual |
 | GET | `/reports/occupancy?from=&to=&routeId=` · `/reports/occupancy/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |
+| GET | `/reports/cancellations?from=&to=&routeId=` · `/reports/cancellations/export?format=xlsx|pdf&…` | admin, supervisor, coordinator |

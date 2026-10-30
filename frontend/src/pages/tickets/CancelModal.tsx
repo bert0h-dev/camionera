@@ -6,11 +6,21 @@ import { businessFormat, formatMoney } from '../../lib/format'
 import type { CancelQuote } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
-import { Input, Textarea } from '../../components/ui/Field'
+import { Input, Select, Textarea } from '../../components/ui/Field'
 import { Modal } from '../../components/ui/Modal'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
 import { RefundFields, type RefundDraft } from './RefundFields'
+
+/** Motivos de cancelación del pasajero (el reporte de la 7.3 los agrupa). */
+const CANCEL_REASONS = [
+  'El pasajero ya no viaja',
+  'Cambio de planes',
+  'Enfermedad',
+  'Compró otro horario',
+  'Error en la compra',
+]
+const OTHER = '__otro__'
 
 const WHEN = businessFormat({ dateStyle: 'medium', timeStyle: 'short' })
 
@@ -30,6 +40,9 @@ export function CancelModal({
   const toast = useToast()
   const queryClient = useQueryClient()
   const [reason, setReason] = useState(refundOnly ? 'Reembolso por recorrido cancelado' : '')
+  // Motivos fijos para que el reporte de cancelaciones agrupe bien; "Otro" pide texto libre
+  const [motive, setMotive] = useState('')
+  const finalReason = refundOnly || motive === OTHER ? reason : motive
   const [refund, setRefund] = useState<RefundDraft>({ method: 'cash', reference: '' })
   const [override, setOverride] = useState('')
   const quote = useQuery({
@@ -45,7 +58,7 @@ export function CancelModal({
       (
         await api.post<{ refund: number }>('/tickets/cancel', {
           ticketIds,
-          reason,
+          reason: finalReason,
           refund: amount > 0 ? { method: refund.method, reference: refund.reference || null } : undefined,
           overrideAmount: late ? Number(override || 0) : undefined,
         })
@@ -133,14 +146,27 @@ export function CancelModal({
             )}
           </div>
           {amount > 0 && <RefundFields value={refund} onChange={setRefund} />}
-          <Textarea
-            label="Motivo"
-            required
-            minLength={3}
-            rows={2}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
+          {!refundOnly && (
+            <Select label="Motivo" required value={motive} onChange={(e) => setMotive(e.target.value)}>
+              <option value="">Selecciona…</option>
+              {CANCEL_REASONS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+              <option value={OTHER}>Otro…</option>
+            </Select>
+          )}
+          {(refundOnly || motive === OTHER) && (
+            <Textarea
+              label={refundOnly ? 'Motivo' : 'Describe el motivo'}
+              required
+              minLength={3}
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose}>
               Volver

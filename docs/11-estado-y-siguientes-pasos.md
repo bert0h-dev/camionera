@@ -35,14 +35,15 @@
   - 6.7 Venta en línea con Mercado Pago ⏸️ **pospuesta** por decisión del usuario; se retoma cuando haya llaves de prueba. El resto del módulo funciona sin ella.
 - **Módulo 7, Reportes y analytics** (doc 18): 🚧 en curso, plan 7.1–7.5 aprobado.
   - 7.1 Base de reportes y ventas (Excel y PDF) ✅ fusionada (PR #34), con la semilla `--sales`.
-  - 7.2 Ocupación por asiento-km, mapa de calor, horarios y trechos; ventas en SQL ✅ en la rama `feat/m7-ocupacion`.
+  - 7.2 Ocupación por asiento-km, mapa de calor, horarios y trechos; ventas en SQL ✅ fusionada (PR #35).
+  - 7.3 Cancelaciones, no presentados, reembolsos y cambios; motivos fijos al cancelar ✅ en la rama `feat/m7-cancelaciones`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 7, Reportes**: sigue la 7.3 (cancelaciones y no presentados). Fases y decisiones en el doc 18.
+1. **Módulo 7, Reportes**: sigue la 7.4 (flota y personal). Fases y decisiones en el doc 18.
 2. **Pospuesto**: 6.7 venta en línea (Mercado Pago, pedir llaves de prueba).
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 

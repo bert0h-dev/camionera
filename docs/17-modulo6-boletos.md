@@ -180,7 +180,7 @@ Decisiones (2026-10-30): las promociones las crean **admin y coordinator** (taqu
 - **Ventas** (6.4): clic en una compra (o `?compra=`) abre su **ficha**: boletos en cualquier estado con su historial, pagos y reembolsos.
   - Por boleto: *Cambiar*, *Cancelar* y, con saldo de un recorrido cancelado, *Reubicar sin cargo* y *Reembolsar saldo*. Con varios boletos vigentes se pueden seleccionar y cancelar juntos.
   - Campo **Folio o código QR** para abrir la compra del pasajero que llega al mostrador (`GET /tickets/lookup`).
-- **Cancelar o reembolsar**: diálogo con la cotización por boleto (plazo y monto), el monto que decide el admin fuera de plazo, cómo se devuelve y el motivo.
+- **Cancelar o reembolsar**: diálogo con la cotización por boleto (plazo y monto), el monto que decide el admin fuera de plazo, cómo se devuelve y el motivo. Desde la 7.3 el motivo se elige de una lista fija (o "Otro…" con texto libre) para el reporte de cancelaciones.
 - **Taquilla en modo cambio** (`/taquilla?cambio=<boleto>`): abre con origen, destino y fecha del boleto. Se elige un solo asiento; el paso 3 muestra el boleto nuevo, el anterior, el cargo y lo que se cobra o se devuelve.
 - **Ficha del recorrido cancelado**: tarjeta *Pasajeros por reembolsar o reubicar* con su contacto, el saldo y liga a su compra en Ventas.
 

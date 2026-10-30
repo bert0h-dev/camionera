@@ -7,6 +7,8 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../generated/prisma/enums.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { OccupancyReportDto, SalesReportDto } from './dto/report.dto.js';
+import { cancellationDocument } from './cancellation-document.js';
+import { CancellationReportService } from './cancellation-report.service.js';
 import { occupancyDocument } from './occupancy-document.js';
 import { OccupancyReportService } from './occupancy-report.service.js';
 import { reportPdf, reportXlsx, type ReportDocument } from './report-export.js';
@@ -30,6 +32,7 @@ export class ReportsController {
   constructor(
     private readonly sales: SalesReportService,
     private readonly occupancyReport: OccupancyReportService,
+    private readonly cancellationReport: CancellationReportService,
     private readonly settings: SettingsService,
   ) {}
 
@@ -99,6 +102,27 @@ export class ReportsController {
       res,
       occupancyDocument(data, await this.company()),
       `ocupacion-${data.range.from}-a-${data.range.to}`,
+      q.format,
+    );
+  }
+
+  @Get('cancellations')
+  @Roles(...OPERATION_READERS)
+  cancellations(@Query() q: OccupancyReportDto) {
+    return this.cancellationReport.cancellations(q);
+  }
+
+  @Get('cancellations/export')
+  @Roles(...OPERATION_READERS)
+  async cancellationsExport(
+    @Query() q: OccupancyReportDto & { format?: string },
+    @Res() res: Response,
+  ) {
+    const data = await this.cancellationReport.cancellations(q);
+    await this.send(
+      res,
+      cancellationDocument(data, await this.company()),
+      `cancelaciones-${data.range.from}-a-${data.range.to}`,
       q.format,
     );
   }

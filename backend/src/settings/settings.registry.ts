@@ -274,7 +274,38 @@ export const SETTINGS = {
       'Días que se conservan los cambios y eventos de seguridad; lo más antiguo se borra cada noche',
   },
 
-  // ---------- Boletos (se usarán en el Módulo 6) ----------
+  // ---------- Boletos (Módulo 6; se aplican conforme entran sus fases) ----------
+  'tickets.hold_minutes': {
+    type: 'number',
+    default: 10,
+    min: 2,
+    max: 60,
+    label: 'Apartado en taquilla',
+    unit: 'min',
+    description:
+      'Minutos que los asientos elegidos quedan apartados mientras se cobra en taquilla',
+  },
+  'tickets.online_hold_minutes': {
+    type: 'number',
+    default: 15,
+    min: 5,
+    max: 60,
+    label: 'Apartado en línea',
+    unit: 'min',
+    description:
+      'Minutos que los asientos quedan apartados mientras el cliente paga en línea',
+  },
+  'tickets.change_fee': {
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 5000,
+    decimals: 2,
+    label: 'Cargo por cambio',
+    unit: '$',
+    description:
+      'Cargo fijo por cambiar un boleto de horario o de asiento, además de la diferencia de precio',
+  },
   'tickets.cancellation_hours': {
     type: 'number',
     default: 2,

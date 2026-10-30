@@ -23,21 +23,23 @@
   - 5.1 Generación automática, extras y pantalla Recorridos ✅ fusionada (PR #23).
   - 5.2 Asignación de unidad, conductor y cobrador con validaciones y Pendientes ✅ fusionada (PR #24).
   - 5.3 Estados, tiempos reales, odómetro y Mis recorridos ✅ fusionada (PR #25).
-  - 5.4 Incidencias del recorrido, aviso por correo y pestaña Recorridos en Inicio ✅ en la rama `feat/m5-incidencias`.
+  - 5.4 Incidencias del recorrido, aviso por correo y pestaña Recorridos en Inicio ✅ fusionada (PR #26).
+- **Módulo 6, Gestión de Boletos** (doc 17): 🚧 en curso, plan 6.0–6.7 aprobado.
+  - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ en la rama `feat/m6-esquema`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 6, Boletos**: plan por hacer. El doc 16 tiene "Lo que deja listo para el 6".
-2. Después viene el Módulo 7 (Reportes).
-   - Los parámetros `tickets.*` ya están listos.
+1. **Módulo 6, Boletos**: sigue la 6.1 (disponibilidad, mapa de asientos y apartado). Fases y decisiones en el doc 17.
+2. Después viene el Módulo 7 (Reportes); el M6 deja los precios congelados y `ticket_events` para sus cifras.
+3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 
 ## Pendientes y decisiones abiertas
 - **Resend**: verificar un dominio propio y cambiar `MAIL_FROM`. Con `onboarding@resend.dev` solo llega a la dirección dueña de la cuenta. También corregir el typo "Cental" en `backend/.env`.
 - **Neon**: cambiar la contraseña de la base de datos, porque se compartió en el chat al inicio del proyecto.
-- **Logo de la empresa**: se agrega junto con el almacenamiento de archivos (Módulo 6).
+- **Logo de la empresa**: se agrega junto con el almacenamiento de archivos en la 6.2 (lo necesita el boleto en PDF).
 - **Respaldos (2.5)**: fuera por decisión del usuario; se usa la restauración de Neon.
 - **Datos demo**: siguen cargados en Neon (`npm run seed:demo -w backend`) y **no se borran hasta que el usuario lo pida**.
   - `-- --clean` los borra.
@@ -45,7 +47,7 @@
   - `-- --fleet` agrega solo la flota demo (no toca al personal), incluidas las cargas de combustible y las rutas demo.
   - `-- --routes` agrega solo las rutas demo (clave `DEM-…`).
 - **Zonas horarias**: las ciudades que no son demo quedaron en `America/Mexico_City`; revisar las del noroeste o el sureste (p. ej. Mexicali → `America/Tijuana`).
-- Del contexto, aún abiertos para módulos futuros: venta por tramos, carrito u orden, terminales y andenes, y tipo de pasajero.
+- Del contexto, resueltos en el M6: venta por tramos (con reutilización de asiento), carrito (`orders`) y tipo de pasajero. Sigue abierto: andenes de las terminales.
 
 ## Forma de trabajo acordada
 - **Lint**: el proyecto usa **oxlint** (`npm run lint`), no ESLint. Los avisos `no-misused-spread` de los servicios de flota son conocidos.

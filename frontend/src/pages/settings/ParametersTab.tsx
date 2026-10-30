@@ -19,9 +19,13 @@ import type { SettingItem } from '../../lib/types'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Field'
+import { PassengerTypesCard } from './PassengerTypesCard'
 import { SettingsForm } from './SettingsForm'
 
-type ModuleKey = 'staff' | 'fleet' | 'routes' | 'trips' | 'system' | 'upcoming'
+// Palabras con las que el buscador encuentra el catálogo de tipos de pasajero
+const PASSENGER_TYPES_TERMS = 'tipos de pasajero descuento inapam estudiante niño credencial cupo'
+
+type ModuleKey = 'staff' | 'fleet' | 'routes' | 'trips' | 'tickets' | 'system' | 'upcoming'
 
 // Orden de los módulos; "upcoming" agrupa lo que aún no se aplica y va colapsado al final
 const MODULES: { key: ModuleKey; title: string }[] = [
@@ -29,6 +33,7 @@ const MODULES: { key: ModuleKey; title: string }[] = [
   { key: 'fleet', title: 'Flota' },
   { key: 'routes', title: 'Rutas' },
   { key: 'trips', title: 'Recorridos' },
+  { key: 'tickets', title: 'Boletos' },
   { key: 'system', title: 'Sistema' },
   { key: 'upcoming', title: 'Próximamente' },
 ]
@@ -107,9 +112,9 @@ const GROUPS: {
   },
   {
     group: 'tickets',
-    module: 'upcoming',
-    title: 'Boletos',
-    description: 'Se aplicarán cuando entre la venta de boletos (Módulo 6)',
+    module: 'tickets',
+    title: 'Venta de boletos',
+    description: 'Apartado, cancelación, reembolso, cambios y check-in; se aplican conforme entra la venta (Módulo 6)',
     icon: Ticket,
   },
 ]
@@ -245,6 +250,11 @@ export function ParametersTab({ settings }: { settings: SettingItem[] }) {
             <div key={m.key} className="space-y-4">
               <h2 className="text-sm font-semibold tracking-wide text-fg-subtle uppercase">{m.title}</h2>
               {cards}
+              {m.key === 'tickets' && (!q || normalize(PASSENGER_TYPES_TERMS).includes(q)) && (
+                <section id="param-passenger-types" className="scroll-mt-4">
+                  <PassengerTypesCard />
+                </section>
+              )}
             </div>
           )
         })}

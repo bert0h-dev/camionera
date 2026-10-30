@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
-import { PrismaClient, ShiftType, StaffRole, UserRole } from '../src/generated/prisma/client.js';
+import { PrismaClient, SeasonType, ShiftType, StaffRole, UserRole } from '../src/generated/prisma/client.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -99,6 +99,24 @@ async function main() {
     await prisma.incidentCategory.upsert({ where: { name }, update: {}, create: { name, isAccident, sortOrder: (i + 1) * 10 } });
   }
   console.log(`Categorías de incidencia: ${categories.length}`);
+
+  // Tipos de pasajero (editables desde Configuración › Parámetros › Boletos)
+  const passengerTypes = [
+    { code: 'ADULTO', name: 'Adulto', discountPercent: 0, isDefault: true },
+    { code: 'NINO', name: 'Niño (3 a 11 años)', discountPercent: 50, requiresId: false },
+    { code: 'INAPAM', name: 'Adulto mayor (INAPAM)', discountPercent: 50, maxPerTrip: 4, requiresId: true },
+    {
+      code: 'ESTUDIANTE',
+      name: 'Estudiante o maestro',
+      discountPercent: 50,
+      requiresId: true,
+      seasonTypes: [SeasonType.high, SeasonType.holiday],
+    },
+  ];
+  for (const [i, t] of passengerTypes.entries()) {
+    await prisma.passengerType.upsert({ where: { code: t.code }, update: {}, create: { ...t, sortOrder: (i + 1) * 10 } });
+  }
+  console.log(`Tipos de pasajero: ${passengerTypes.length}`);
 }
 
 main()

@@ -47,7 +47,7 @@ El desarrollo avanza **por módulos**, siguiendo las reglas de negocio definidas
 |  3  | **Gestión de Flota**           | ✅ Completado |
 |  4  | **Gestión de Rutas**           | ✅ Completado |
 |  5  | **Gestión de Recorridos**      | ✅ Completado |
-|  6  | Gestión de Boletos             | ⏳ Pendiente  |
+|  6  | Gestión de Boletos             | 🚧 En curso   |
 |  7  | Reportes y Analytics           | ⏳ Pendiente  |
 
 Además de los módulos, la app tiene un **Inicio** ordenado por rol (cifras clave, una sola lista de **Pendientes** y pestañas por área), un **buscador Ctrl+K** con acciones rápidas y un rediseño visual aplicado a todas las pantallas.

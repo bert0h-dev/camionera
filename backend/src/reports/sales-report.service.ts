@@ -8,25 +8,18 @@ import {
   zonedDateTime,
 } from '../common/dates.js';
 import { Prisma } from '../generated/prisma/client.js';
-import {
-  PaymentStatus,
-  TicketStatus,
-  UserRole,
-} from '../generated/prisma/enums.js';
+import { UserRole } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { fromCents, toCents } from '../tickets/money.js';
 import { SalesReportDto } from './dto/report.dto.js';
 import {
   change,
-  dayIn,
   daysOf,
   previousRange,
   rangeError,
   sumBy,
 } from './report-rules.js';
-
-const n = (d: Prisma.Decimal | number | null | undefined) => Number(d ?? 0);
 
 /** Instantes [desde, hasta) de un periodo de días de la central. */
 export function instantsOf(from: string, to: string) {
@@ -36,10 +29,15 @@ export function instantsOf(from: string, to: string) {
   };
 }
 
+const num = (v: unknown) => Number(v ?? 0);
+
+/** Boletos que cuentan como vendidos: sin apartados ni cambiados (cuenta el que los reemplazó). */
+const SOLD = Prisma.sql`t.status NOT IN ('held', 'changed')`;
+
 /**
  * Reporte de ventas. Dinero que entra: pagos por fecha de cobro; dinero que sale: reembolsos en
- * su propia fecha (así cuadra con los cortes de caja). Boletos: los de compras cobradas en el
- * periodo, sin contar los cambiados (cuenta el boleto que los reemplazó).
+ * su propia fecha (así cuadra con los cortes de caja). Las sumas se hacen en SQL agrupadas por
+ * día de la central, para que un mes con decenas de miles de boletos responda en menos de un segundo.
  */
 @Injectable()
 export class SalesReportService {
@@ -53,43 +51,46 @@ export class SalesReportService {
     return user.role === UserRole.vendor ? { ...q, sellerId: user.id } : q;
   }
 
+  /** Condición sobre la compra `o` según los filtros (vendedor, canal, ruta). */
+  private orderCond(q: SalesReportDto) {
+    const parts = [Prisma.sql`TRUE`];
+    if (q.sellerId) parts.push(Prisma.sql`o.seller_id = ${q.sellerId}::uuid`);
+    if (q.channel)
+      parts.push(Prisma.sql`o.channel = ${q.channel}::"SaleChannel"`);
+    if (q.routeId)
+      parts.push(
+        Prisma.sql`EXISTS (SELECT 1 FROM tickets rt JOIN trips rtr ON rtr.id = rt.trip_id WHERE rt.order_id = o.id AND rtr.route_id = ${q.routeId}::uuid)`,
+      );
+    return Prisma.join(parts, ' AND ');
+  }
+
+  private routeCond(q: SalesReportDto) {
+    return q.routeId
+      ? Prisma.sql`tr.route_id = ${q.routeId}::uuid`
+      : Prisma.sql`TRUE`;
+  }
+
   private async totals(q: SalesReportDto, from: string, to: string) {
-    const when = instantsOf(from, to);
-    const orderWhere: Prisma.OrderWhereInput = {
-      sellerId: q.sellerId,
-      channel: q.channel,
-      ...(q.routeId
-        ? { tickets: { some: { trip: { routeId: q.routeId } } } }
-        : {}),
-    };
-    const [payments, refunds, tickets] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: {
-          status: PaymentStatus.approved,
-          paidAt: when,
-          order: orderWhere,
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.refund.aggregate({
-        where: { createdAt: when, order: orderWhere },
-        _sum: { amount: true },
-      }),
-      this.prisma.ticket.count({
-        where: {
-          order: { ...orderWhere, paidAt: when },
-          status: { notIn: [TicketStatus.held, TicketStatus.changed] },
-          ...(q.routeId ? { trip: { routeId: q.routeId } } : {}),
-        },
-      }),
+    const { gte, lt } = instantsOf(from, to);
+    const cond = this.orderCond(q);
+    const [[pay], [ref], [tix]] = await Promise.all([
+      this.prisma.$queryRaw<{ s: unknown }[]>`
+        SELECT SUM(p.amount) s FROM payments p JOIN orders o ON o.id = p.order_id
+        WHERE p.status = 'approved' AND p.paid_at >= ${gte} AND p.paid_at < ${lt} AND ${cond}`,
+      this.prisma.$queryRaw<{ s: unknown }[]>`
+        SELECT SUM(r.amount) s FROM refunds r JOIN orders o ON o.id = r.order_id
+        WHERE r.created_at >= ${gte} AND r.created_at < ${lt} AND ${cond}`,
+      this.prisma.$queryRaw<{ n: unknown }[]>`
+        SELECT COUNT(*) n FROM tickets t JOIN orders o ON o.id = t.order_id JOIN trips tr ON tr.id = t.trip_id
+        WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${SOLD} AND ${cond} AND ${this.routeCond(q)}`,
     ]);
-    const gross = n(payments._sum.amount);
-    const refunded = n(refunds._sum.amount);
+    const gross = num(pay.s);
+    const refunds = num(ref.s);
     return {
       gross,
-      refunds: refunded,
-      net: fromCents(toCents(gross) - toCents(refunded)),
-      tickets,
+      refunds,
+      net: fromCents(toCents(gross) - toCents(refunds)),
+      tickets: num(tix.n),
     };
   }
 
@@ -98,86 +99,103 @@ export class SalesReportService {
     const err = rangeError(q.from, q.to);
     if (err) throw new BadRequestException(err);
     const tz = businessTimezone();
-    const when = instantsOf(q.from, q.to);
-    const orderWhere: Prisma.OrderWhereInput = {
-      sellerId: q.sellerId,
-      channel: q.channel,
-      ...(q.routeId
-        ? { tickets: { some: { trip: { routeId: q.routeId } } } }
-        : {}),
+    const { gte, lt } = instantsOf(q.from, q.to);
+    const cond = this.orderCond(q);
+    const routeCond = this.routeCond(q);
+    const ticketsFrom = Prisma.sql`
+      FROM tickets t JOIN orders o ON o.id = t.order_id JOIN trips tr ON tr.id = t.trip_id
+      WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${SOLD} AND ${cond} AND ${routeCond}`;
+
+    type PayRow = {
+      day: string;
+      method: string;
+      channel: string;
+      seller: string | null;
+      s: unknown;
     };
+    type RefRow = {
+      day: string;
+      method: string;
+      by: string | null;
+      s: unknown;
+    };
+    const [
+      payRows,
+      refRows,
+      orderRows,
+      sellerNames,
+      ticketDays,
+      ticketTotals,
+      routeRows,
+      legRows,
+      typeRows,
+      promoRows,
+      vendorPercent,
+    ] = await Promise.all([
+      this.prisma.$queryRaw<PayRow[]>`
+          SELECT to_char(p.paid_at AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS day, p.method::text AS method,
+                 o.channel::text AS channel, o.seller_id::text AS seller, SUM(p.amount) s
+          FROM payments p JOIN orders o ON o.id = p.order_id
+          WHERE p.status = 'approved' AND p.paid_at >= ${gte} AND p.paid_at < ${lt} AND ${cond}
+          GROUP BY 1, 2, 3, 4`,
+      this.prisma.$queryRaw<RefRow[]>`
+          SELECT to_char(r.created_at AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS day, r.method::text AS method,
+                 r.created_by::text AS by, SUM(r.amount) s
+          FROM refunds r JOIN orders o ON o.id = r.order_id
+          WHERE r.created_at >= ${gte} AND r.created_at < ${lt} AND ${cond}
+          GROUP BY 1, 2, 3`,
+      // Compras distintas por vendedor (una compra con pago mixto cuenta una vez)
+      this.prisma.$queryRaw<{ seller: string | null; n: unknown }[]>`
+          SELECT o.seller_id::text AS seller, COUNT(DISTINCT p.order_id) n
+          FROM payments p JOIN orders o ON o.id = p.order_id
+          WHERE p.status = 'approved' AND p.paid_at >= ${gte} AND p.paid_at < ${lt} AND ${cond}
+          GROUP BY 1`,
+      this.prisma.user.findMany({ select: { id: true, fullName: true } }),
+      this.prisma.$queryRaw<{ day: string; n: unknown }[]>`
+          SELECT to_char(o.paid_at AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS day, COUNT(*) n ${ticketsFrom} GROUP BY 1`,
+      this.prisma.$queryRaw<
+        { n: unknown; fare: unknown; vat: unknown; pd: unknown; pr: unknown }[]
+      >`
+          SELECT COUNT(*) n, SUM(t.total) fare, SUM(t.vat) vat, SUM(t.passenger_discount) pd, SUM(t.promo_discount) pr
+          ${ticketsFrom}`,
+      this.prisma.$queryRaw<
+        { id: string; code: string; name: string; n: unknown; s: unknown }[]
+      >`
+          SELECT r.id::text AS id, r.code, r.name, COUNT(*) n, SUM(t.total) s
+          FROM tickets t JOIN orders o ON o.id = t.order_id JOIN trips tr ON tr.id = t.trip_id JOIN routes r ON r.id = tr.route_id
+          WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${SOLD} AND ${cond} AND ${routeCond}
+          GROUP BY 1, 2, 3 ORDER BY s DESC`,
+      this.prisma.$queryRaw<{ leg: string; n: unknown; s: unknown }[]>`
+          SELECT bc.name || ' → ' || ac.name AS leg, COUNT(*) n, SUM(t.total) s
+          FROM tickets t JOIN orders o ON o.id = t.order_id JOIN trips tr ON tr.id = t.trip_id
+          JOIN terminals bt ON bt.id = t.board_terminal_id JOIN cities bc ON bc.id = bt.city_id
+          JOIN terminals at ON at.id = t.alight_terminal_id JOIN cities ac ON ac.id = at.city_id
+          WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${SOLD} AND ${cond} AND ${routeCond}
+          GROUP BY 1 ORDER BY n DESC, s DESC LIMIT 20`,
+      this.prisma.$queryRaw<
+        { type: string; n: unknown; d: unknown; s: unknown }[]
+      >`
+          SELECT pt.name AS type, COUNT(*) n, SUM(t.passenger_discount) d, SUM(t.total) s
+          FROM tickets t JOIN orders o ON o.id = t.order_id JOIN trips tr ON tr.id = t.trip_id
+          JOIN passenger_types pt ON pt.id = t.passenger_type_id
+          WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${SOLD} AND ${cond} AND ${routeCond}
+          GROUP BY 1 ORDER BY n DESC`,
+      this.prisma.$queryRaw<
+        { code: string; name: string; n: unknown; d: unknown }[]
+      >`
+          SELECT pr.code, pr.name, COUNT(*) n, SUM(op.discount_applied) d
+          FROM order_promotions op JOIN orders o ON o.id = op.order_id JOIN promotions pr ON pr.id = op.promotion_id
+          WHERE o.paid_at >= ${gte} AND o.paid_at < ${lt} AND ${cond}
+          GROUP BY 1, 2 ORDER BY d DESC`,
+      this.settings.get('commissions.vendor_percent'),
+    ]);
 
-    const [payments, refunds, tickets, promos, vendorPercent] =
-      await Promise.all([
-        this.prisma.payment.findMany({
-          where: {
-            status: PaymentStatus.approved,
-            paidAt: when,
-            order: orderWhere,
-          },
-          select: {
-            amount: true,
-            method: true,
-            paidAt: true,
-            orderId: true,
-            order: {
-              select: {
-                channel: true,
-                sellerId: true,
-                seller: { select: { fullName: true } },
-              },
-            },
-          },
-        }),
-        this.prisma.refund.findMany({
-          where: { createdAt: when, order: orderWhere },
-          select: {
-            amount: true,
-            method: true,
-            createdAt: true,
-            createdById: true,
-            createdBy: { select: { fullName: true } },
-            order: { select: { channel: true } },
-          },
-        }),
-        this.prisma.ticket.findMany({
-          where: {
-            order: { ...orderWhere, paidAt: when },
-            status: { notIn: [TicketStatus.held, TicketStatus.changed] },
-            ...(q.routeId ? { trip: { routeId: q.routeId } } : {}),
-          },
-          select: {
-            total: true,
-            vat: true,
-            basePrice: true,
-            passengerDiscount: true,
-            promoDiscount: true,
-            status: true,
-            order: { select: { paidAt: true } },
-            passengerType: { select: { name: true } },
-            trip: {
-              select: {
-                route: { select: { id: true, code: true, name: true } },
-              },
-            },
-            boardTerminal: { select: { city: { select: { name: true } } } },
-            alightTerminal: { select: { city: { select: { name: true } } } },
-          },
-        }),
-        this.prisma.orderPromotion.findMany({
-          where: { order: { ...orderWhere, paidAt: when } },
-          select: {
-            discountApplied: true,
-            promotion: { select: { code: true, name: true } },
-          },
-        }),
-        this.settings.get('commissions.vendor_percent'),
-      ]);
-
-    const gross = payments.reduce((a, p) => a + toCents(n(p.amount)), 0);
-    const refunded = refunds.reduce((a, r) => a + toCents(n(r.amount)), 0);
-    const fare = tickets.reduce((a, t) => a + toCents(n(t.total)), 0);
-    const orders = new Set(payments.map((p) => p.orderId)).size;
+    const gross = payRows.reduce((a, r) => a + toCents(num(r.s)), 0);
+    const refunded = refRows.reduce((a, r) => a + toCents(num(r.s)), 0);
+    const [tt] = ticketTotals;
+    const tickets = num(tt.n);
+    const fare = toCents(num(tt.fare));
+    const orders = orderRows.reduce((a, r) => a + num(r.n), 0);
     const prev = previousRange(q.from, q.to);
     const before = await this.totals(q, prev.from, prev.to);
     const summary = {
@@ -185,56 +203,39 @@ export class SalesReportService {
       refunds: fromCents(refunded),
       net: fromCents(gross - refunded),
       orders,
-      tickets: tickets.length,
-      avgTicket: tickets.length
-        ? fromCents(Math.round(fare / tickets.length))
-        : 0,
-      vat: fromCents(tickets.reduce((a, t) => a + toCents(n(t.vat)), 0)),
-      passengerDiscounts: fromCents(
-        tickets.reduce((a, t) => a + toCents(n(t.passengerDiscount)), 0),
-      ),
-      promoDiscounts: fromCents(
-        tickets.reduce((a, t) => a + toCents(n(t.promoDiscount)), 0),
-      ),
+      tickets,
+      avgTicket: tickets ? fromCents(Math.round(fare / tickets)) : 0,
+      vat: num(tt.vat),
+      passengerDiscounts: num(tt.pd),
+      promoDiscounts: num(tt.pr),
       previous: { ...prev, ...before },
       change: {
         gross: change(fromCents(gross), before.gross),
         net: change(fromCents(gross - refunded), before.net),
-        tickets: change(tickets.length, before.tickets),
+        tickets: change(tickets, before.tickets),
       },
     };
 
-    // Por día (los días sin datos van en cero)
+    type DayVals = Record<'gross' | 'refunds' | 'tickets', number>;
     const days = sumBy<'gross' | 'refunds' | 'tickets'>([
-      ...daysOf(q.from, q.to).map(
-        (d) =>
-          [d, { gross: 0, refunds: 0, tickets: 0 }] as [
-            string,
-            Record<'gross' | 'refunds' | 'tickets', number>,
-          ],
-      ),
-      ...payments.map(
-        (p) =>
-          [
-            dayIn(p.paidAt!, tz),
-            { gross: n(p.amount), refunds: 0, tickets: 0 },
-          ] as [string, Record<'gross' | 'refunds' | 'tickets', number>],
-      ),
-      ...refunds.map(
-        (r) =>
-          [
-            dayIn(r.createdAt, tz),
-            { gross: 0, refunds: n(r.amount), tickets: 0 },
-          ] as [string, Record<'gross' | 'refunds' | 'tickets', number>],
-      ),
-      ...tickets.map(
-        (t) =>
-          [
-            dayIn(t.order.paidAt!, tz),
-            { gross: 0, refunds: 0, tickets: 1 },
-          ] as [string, Record<'gross' | 'refunds' | 'tickets', number>],
-      ),
+      ...daysOf(q.from, q.to).map((d): [string, DayVals] => [
+        d,
+        { gross: 0, refunds: 0, tickets: 0 },
+      ]),
+      ...payRows.map((r): [string, DayVals] => [
+        r.day,
+        { gross: num(r.s), refunds: 0, tickets: 0 },
+      ]),
+      ...refRows.map((r): [string, DayVals] => [
+        r.day,
+        { gross: 0, refunds: num(r.s), tickets: 0 },
+      ]),
+      ...ticketDays.map((r): [string, DayVals] => [
+        r.day,
+        { gross: 0, refunds: 0, tickets: num(r.n) },
+      ]),
     ])
+      .filter((d) => d.key >= q.from && d.key <= q.to)
       .sort((a, b) => a.key.localeCompare(b.key))
       .map((d) => ({
         date: d.key,
@@ -244,22 +245,17 @@ export class SalesReportService {
         tickets: d.tickets,
       }));
 
+    type MethodVals = Record<'sales' | 'refunds', number>;
     const byMethod = sumBy<'sales' | 'refunds'>(
       [
-        ...payments.map(
-          (p) =>
-            [p.method, { sales: n(p.amount), refunds: 0 }] as [
-              string,
-              Record<'sales' | 'refunds', number>,
-            ],
-        ),
-        ...refunds.map(
-          (r) =>
-            [r.method, { sales: 0, refunds: n(r.amount) }] as [
-              string,
-              Record<'sales' | 'refunds', number>,
-            ],
-        ),
+        ...payRows.map((r): [string, MethodVals] => [
+          r.method,
+          { sales: num(r.s), refunds: 0 },
+        ]),
+        ...refRows.map((r): [string, MethodVals] => [
+          r.method,
+          { sales: 0, refunds: num(r.s) },
+        ]),
       ],
       'sales',
     ).map((m) => ({
@@ -270,48 +266,37 @@ export class SalesReportService {
     }));
 
     const byChannel = sumBy<'gross'>(
-      payments.map((p) => [p.order.channel, { gross: n(p.amount) }]),
+      payRows.map((r) => [r.channel, { gross: num(r.s) }]),
       'gross',
-    ).map((c) => ({ channel: c.key, gross: c.gross }));
+    ).map((c) => ({
+      channel: c.key,
+      gross: c.gross,
+    }));
 
     // Por vendedor: ventas por quien vendió; reembolsos por quien los hizo (como en la caja)
-    const sellerNames = new Map<string, string>();
-    for (const p of payments)
-      if (p.order.sellerId)
-        sellerNames.set(p.order.sellerId, p.order.seller?.fullName ?? '—');
-    for (const r of refunds)
-      if (r.createdById)
-        sellerNames.set(r.createdById, r.createdBy?.fullName ?? '—');
+    const names = new Map(sellerNames.map((u) => [u.id, u.fullName]));
+    type SellerVals = Record<'gross' | 'refunds' | 'orders', number>;
     const bySeller = sumBy<'gross' | 'refunds' | 'orders'>(
       [
-        ...payments.map(
-          (p) =>
-            [
-              p.order.sellerId ?? 'online',
-              { gross: n(p.amount), refunds: 0, orders: 0 },
-            ] as [string, Record<'gross' | 'refunds' | 'orders', number>],
-        ),
-        ...refunds.map(
-          (r) =>
-            [
-              r.createdById ?? 'online',
-              { gross: 0, refunds: n(r.amount), orders: 0 },
-            ] as [string, Record<'gross' | 'refunds' | 'orders', number>],
-        ),
-        ...[...new Map(payments.map((p) => [p.orderId, p])).values()].map(
-          (p) =>
-            [
-              p.order.sellerId ?? 'online',
-              { gross: 0, refunds: 0, orders: 1 },
-            ] as [string, Record<'gross' | 'refunds' | 'orders', number>],
-        ),
+        ...payRows.map((r): [string, SellerVals] => [
+          r.seller ?? 'online',
+          { gross: num(r.s), refunds: 0, orders: 0 },
+        ]),
+        ...refRows.map((r): [string, SellerVals] => [
+          r.by ?? 'online',
+          { gross: 0, refunds: num(r.s), orders: 0 },
+        ]),
+        ...orderRows.map((r): [string, SellerVals] => [
+          r.seller ?? 'online',
+          { gross: 0, refunds: 0, orders: num(r.n) },
+        ]),
       ],
       'gross',
     ).map((s) => {
       const net = fromCents(toCents(s.gross) - toCents(s.refunds));
       return {
         sellerId: s.key === 'online' ? null : s.key,
-        name: s.key === 'online' ? 'En línea' : (sellerNames.get(s.key) ?? '—'),
+        name: s.key === 'online' ? 'En línea' : (names.get(s.key) ?? '—'),
         gross: s.gross,
         refunds: s.refunds,
         net,
@@ -324,58 +309,6 @@ export class SalesReportService {
                 Math.max(0, Math.round((toCents(net) * vendorPercent) / 100)),
               ),
       };
-    });
-
-    const byRoute = sumBy<'tickets' | 'revenue'>(
-      tickets.map((t) => [
-        t.trip.route.id,
-        { tickets: 1, revenue: n(t.total) },
-      ]),
-      'revenue',
-    ).map((r) => {
-      const route = tickets.find((t) => t.trip.route.id === r.key)!.trip.route;
-      return {
-        routeId: r.key,
-        code: route.code,
-        name: route.name,
-        tickets: r.tickets,
-        revenue: r.revenue,
-        share: fare ? Math.round((toCents(r.revenue) / fare) * 1000) / 10 : 0,
-      };
-    });
-
-    const byLeg = sumBy<'tickets' | 'revenue'>(
-      tickets.map((t) => [
-        `${t.boardTerminal.city.name} → ${t.alightTerminal.city.name}`,
-        { tickets: 1, revenue: n(t.total) },
-      ]),
-      'tickets',
-    )
-      .slice(0, 20)
-      .map((l) => ({ leg: l.key, tickets: l.tickets, revenue: l.revenue }));
-
-    const byPassengerType = sumBy<'tickets' | 'discount' | 'revenue'>(
-      tickets.map((t) => [
-        t.passengerType.name,
-        { tickets: 1, discount: n(t.passengerDiscount), revenue: n(t.total) },
-      ]),
-      'tickets',
-    ).map((p) => ({
-      type: p.key,
-      tickets: p.tickets,
-      discount: p.discount,
-      revenue: p.revenue,
-    }));
-
-    const byPromotion = sumBy<'orders' | 'discount'>(
-      promos.map((p) => [
-        `${p.promotion.code}|${p.promotion.name}`,
-        { orders: 1, discount: n(p.discountApplied) },
-      ]),
-      'discount',
-    ).map((p) => {
-      const [code, name] = p.key.split('|');
-      return { code, name, orders: p.orders, discount: p.discount };
     });
 
     return {
@@ -391,10 +324,31 @@ export class SalesReportService {
       byMethod,
       byChannel,
       bySeller,
-      byRoute,
-      byLeg,
-      byPassengerType,
-      byPromotion,
+      byRoute: routeRows.map((r) => ({
+        routeId: r.id,
+        code: r.code,
+        name: r.name,
+        tickets: num(r.n),
+        revenue: num(r.s),
+        share: fare ? Math.round((toCents(num(r.s)) / fare) * 1000) / 10 : 0,
+      })),
+      byLeg: legRows.map((l) => ({
+        leg: l.leg,
+        tickets: num(l.n),
+        revenue: num(l.s),
+      })),
+      byPassengerType: typeRows.map((t) => ({
+        type: t.type,
+        tickets: num(t.n),
+        discount: num(t.d),
+        revenue: num(t.s),
+      })),
+      byPromotion: promoRows.map((p) => ({
+        code: p.code,
+        name: p.name,
+        orders: num(p.n),
+        discount: num(p.d),
+      })),
     };
   }
 }

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { addDaysKey, todayKey } from '../../lib/format'
-import type { SalesReport } from '../../lib/types'
+import type { OccupancyReport, SalesReport } from '../../lib/types'
 
 export type Preset = 'today' | '7d' | 'month' | 'prev-month' | '30d' | 'custom'
 
@@ -54,6 +54,19 @@ export function useSalesReport(f: SalesFilters) {
             sellerId: f.sellerId || undefined,
             channel: f.channel || undefined,
           },
+        })
+      ).data,
+  })
+}
+
+export function useOccupancyReport(f: { from: string; to: string; routeId: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: ['reports', 'occupancy', f],
+    enabled,
+    queryFn: async () =>
+      (
+        await api.get<OccupancyReport>('/reports/occupancy', {
+          params: { from: f.from, to: f.to, routeId: f.routeId || undefined },
         })
       ).data,
   })

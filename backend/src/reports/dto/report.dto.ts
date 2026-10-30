@@ -30,3 +30,10 @@ export class SalesReportDto extends ReportRangeDto {
   @IsEnum(SaleChannel)
   channel?: SaleChannel;
 }
+
+export class OccupancyReportDto extends ReportRangeDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  routeId?: string;
+}

@@ -1770,3 +1770,69 @@ export interface SalesReport {
   byPassengerType: { type: string; tickets: number; discount: number; revenue: number }[]
   byPromotion: { code: string; name: string; orders: number; discount: number }[]
 }
+
+export interface OccupancyReport {
+  range: { from: string; to: string; timezone: string }
+  summary: {
+    trips: number
+    byKm: number
+    bySeats: number
+    seatsOffered: number
+    sold: number
+    boarded: number
+    noShow: number
+    noShowRate: number
+    boardedRate: number
+    revenuePerTrip: number
+    empty: number
+    full: number
+    previous: { from: string; to: string; byKm: number; trips: number }
+    change: { byKm: number | null; trips: number | null }
+  }
+  byDay: { date: string; trips: number; byKm: number; sold: number }[]
+  byRoute: {
+    routeId: string
+    code: string
+    name: string
+    trips: number
+    byKm: number
+    sold: number
+    revenuePerTrip: number
+  }[]
+  heatmap: { weekday: number; slot: number; fromHour: number; trips: number; byKm: number }[]
+  bySchedule: {
+    scheduleId: string | null
+    routeId: string
+    routeCode: string
+    routeName: string
+    departureTime: string
+    daysOfWeek: number[]
+    active: boolean
+    trips: number
+    byKm: number
+    avgSold: number
+    empty: number
+  }[]
+  byLeg: {
+    routeId: string
+    code: string
+    name: string
+    legs: { from: string; to: string; km: number; occupancy: number; avgSeats: number }[]
+  }[]
+  detail: {
+    tripId: string
+    tripNumber: string
+    date: string
+    time: string
+    status: TripStatus
+    routeCode: string
+    bus: string | null
+    seats: number
+    sold: number
+    boarded: number
+    noShow: number
+    byKm: number
+    bySeats: number
+    revenue: number
+  }[]
+}

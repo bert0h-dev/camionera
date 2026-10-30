@@ -35,6 +35,12 @@ import {
 import { SaleService } from './sale.service.js';
 import { TicketActionsService } from './ticket-actions.service.js';
 import { BoardingService } from './boarding.service.js';
+import { PromotionsService } from './promotions.service.js';
+import {
+  ApplyPromotionDto,
+  PromotionDto,
+  UpdatePromotionDto,
+} from './dto/promotion.dto.js';
 import {
   CancelQuoteDto,
   CancelTicketsDto,
@@ -74,6 +80,7 @@ export class TicketsController {
     private readonly sale: SaleService,
     private readonly actions: TicketActionsService,
     private readonly boarding: BoardingService,
+    private readonly promotions: PromotionsService,
   ) {}
 
   @Get('passenger-types')
@@ -297,5 +304,48 @@ export class TicketsController {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
     res.send(buffer);
+  }
+
+  // ---------- Promociones ----------
+
+  @Get('promotions')
+  @Roles(...TICKET_READERS)
+  promotionsList() {
+    return this.promotions.list();
+  }
+
+  @Post('promotions')
+  @Roles(UserRole.coordinator)
+  createPromotion(@Body() dto: PromotionDto, @CurrentUser() user: AuthUser) {
+    return this.promotions.create(dto, user);
+  }
+
+  @Patch('promotions/:id')
+  @Roles(UserRole.coordinator)
+  updatePromotion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePromotionDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.promotions.update(id, dto, user);
+  }
+
+  @Put('orders/:id/promotion')
+  @Roles(...TICKET_SELLERS)
+  applyPromotion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApplyPromotionDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.promotions.apply(id, dto.code, user);
+  }
+
+  @Delete('orders/:id/promotion')
+  @Roles(...TICKET_SELLERS)
+  removePromotion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.promotions.remove(id, user);
   }
 }

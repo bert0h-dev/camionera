@@ -11,8 +11,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 | 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ✅ fusionada (PR #29) |
 | 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ fusionada (PR #30) |
 | 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ✅ fusionada (PR #31) |
-| 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ✅ rama `feat/m6-abordaje` |
-| 6.6 | Promociones y clientes | ⏳ |
+| 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ✅ fusionada (PR #32) |
+| 6.6 | Promociones y clientes | ✅ rama `feat/m6-promociones` |
 | 6.7 | Venta en línea (portal público `/viajar`) con Mercado Pago y webhooks; consulta y cancelación por folio + correo | ⏳ |
 
 Decisiones:
@@ -136,7 +136,22 @@ Decisiones (2026-10-30): escáner con `BarcodeDetector` nativo y **jsQR** de res
 - **Manifiesto** (`GET /tickets/trips/:id/manifest` y `/manifest/pdf`): pasajeros por parada de subida con asiento, nombre, tipo, identificación, bajada, folio y estado, con conteos. El PDF (carta) lleva unidad, conductor, cobrador, casilla por pasajero y firmas de conductor y despachador.
 - **Ocupación**: `occupancy` de Recorridos suma `boarded` y cuenta como vendidos también a los no presentados. `/trips/mine` trae `boarding` (vendidos y abordados).
 
+## 6.6 Promociones y clientes
+Decisiones (2026-10-30): las promociones las crean **admin y coordinator** (taquilla solo las aplica), y **se acumulan** con el descuento por tipo de pasajero: el código se aplica sobre lo que queda.
+
+- **Catálogo** (`promotions`; no hubo migración): clave única, nombre, porcentaje con tope opcional o monto fijo, vigencia (fechas de compra), usos máximos, compra mínima, canales y activa.
+  - Una promoción usada no cambia de clave y no se borra (se desactiva). La lista calcula el estado (vigente, por empezar, terminada, agotada o inactiva), las compras cobradas con ella y el descuento otorgado.
+- **En la compra** (`PUT/DELETE /tickets/orders/:id/promotion`): una por compra.
+  - Se valida con `promotionError` (vigencia, usos, canal y compra mínima sobre el importe ya con descuento de pasajero). El descuento se reparte entre los boletos y queda en `order_promotions.discount_applied`.
+  - `PromotionsService.reprice` recalcula al aplicar, al quitar y al capturar pasajeros. Si la compra deja de cumplir, la promoción se quita y la respuesta trae `promotionNotice`.
+  - El **uso se cuenta al cobrar** dentro de la transacción del pago, con un incremento condicionado a `uses_count < max_uses`. Dos cobros simultáneos no rebasan el máximo y un apartado que vence no gasta usos; si se agotó en ese momento, el cobro responde 409.
+  - Las cancelaciones reembolsan sobre lo pagado (ya con descuento). El boleto nuevo de un cambio se cobra sin promoción.
+- **Clientes** (`/customers`): lista con búsqueda por nombre, correo o teléfono y última compra. La ficha muestra datos editables, gasto (pagos − reembolsos), compras, viajes, por viajar, cancelados, no presentados, último viaje y las compras con sus boletos.
+
 ## Pantallas
+- **Venta › Promociones** (`/promociones`): cifras (vigentes, usos, descuento otorgado), tabla con estado y condiciones, y alta, edición y activación para admin y coordinación.
+- **Venta › Clientes** (`/clientes`, `?id=` abre la ficha): cada compra liga a su ficha en Ventas.
+- **Taquilla, cobro**: campo *Código de promoción* con *Aplicar*. Ya aplicada, se ve la clave, el nombre y el descuento con *Quitar*. Al escribir correo o teléfono del contacto se sugieren clientes registrados para llenar sus datos con un clic.
 - **Abordaje** (`/abordaje/:id`): pensada para el celular.
   - Cámara trasera con guía de encuadre, campo de folio y resultado grande: verde si abordó, ámbar si hay que verificar credencial, rojo si no puede abordar. Vibra según el resultado.
   - Cifras de abordaron, por abordar y no presentados, y la lista por parada con buscador, *Abordar* manual y *Deshacer*. Se refresca cada 15 s.
@@ -186,6 +201,10 @@ Decisiones (2026-10-30): escáner con `BarcodeDetector` nativo y **jsQR** de res
 | GET | `/tickets/changes/:orderId` | coordinator, vendor |
 | POST · DELETE | `/tickets/trips/:tripId/check-in` · `/tickets/check-in/:ticketId` | coordinator, supervisor; driver y collector en sus recorridos |
 | GET | `/tickets/trips/:tripId/manifest` · `/tickets/trips/:tripId/manifest/pdf` | coordinator, supervisor; driver y collector en sus recorridos |
+| GET | `/tickets/promotions` · `/customers` · `/customers/:id` | coordinator, supervisor, vendor |
+| POST · PATCH | `/tickets/promotions` · `/tickets/promotions/:id` | admin, coordinator |
+| PUT · DELETE | `/tickets/orders/:id/promotion` | coordinator, vendor |
+| PATCH | `/customers/:id` | coordinator, vendor |
 | GET | `/files/company-logo` | público |
 | GET · PUT · DELETE | `/files/company-logo/info` · `/files/company-logo` | admin |
 

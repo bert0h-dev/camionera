@@ -543,6 +543,12 @@ export class AvailabilityService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
+        promotions: {
+          select: {
+            discountApplied: true,
+            promotion: { select: { id: true, code: true, name: true } },
+          },
+        },
         tickets: {
           where: { status: { not: TicketStatus.cancelled } },
           orderBy: { seatNumber: 'asc' },

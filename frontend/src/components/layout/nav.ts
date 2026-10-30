@@ -1,4 +1,6 @@
 import {
+  BadgePercent,
+  Contact,
   Building2,
   Bus,
   LayoutGrid,
@@ -84,6 +86,8 @@ export const NAV: NavGroup[] = [
       { to: '/taquilla', label: 'Taquilla', icon: Ticket, roles: TRIP_READERS },
       { to: '/ventas', label: 'Ventas', icon: Receipt, roles: TRIP_READERS },
       { to: '/caja', label: 'Caja', icon: Wallet, roles: TRIP_READERS },
+      { to: '/promociones', label: 'Promociones', icon: BadgePercent, roles: TRIP_READERS },
+      { to: '/clientes', label: 'Clientes', icon: Contact, roles: TRIP_READERS },
     ],
   },
   {
@@ -139,6 +143,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   taquilla: 'Taquilla',
   ventas: 'Ventas',
   caja: 'Caja',
+  promociones: 'Promociones',
+  clientes: 'Clientes',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

@@ -158,6 +158,15 @@ model User {
   compensations      StaffCompensation[]
   payrollPeriods     PayrollPeriod[]
   payrollAdjustments PayrollAdjustment[]
+  ordersSold         Order[]             @relation("OrderSeller")
+  promotionsCreated  Promotion[]         @relation("PromotionCreator")
+  ticketCheckIns     Ticket[]            @relation("TicketCheckIn")
+  paymentsRecorded   Payment[]           @relation("PaymentRecorder")
+  refundsCreated     Refund[]            @relation("RefundCreator")
+  cashSessions       CashSession[]       @relation("CashSessionUser")
+  cashSessionsClosed CashSession[]       @relation("CashSessionCloser")
+  cashMovements      CashMovement[]      @relation("CashMovementCreator")
+  ticketEvents       TicketEvent[]       @relation("TicketEventUser")
 
   @@index([role])
   @@index([isActive])
@@ -656,11 +665,14 @@ model Terminal {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  city                City        @relation(fields: [cityId], references: [id])
+  city                City          @relation(fields: [cityId], references: [id])
   buses               Bus[]
-  routesAsOrigin      Route[]     @relation("RouteOrigin")
-  routesAsDestination Route[]     @relation("RouteDestination")
+  routesAsOrigin      Route[]       @relation("RouteOrigin")
+  routesAsDestination Route[]       @relation("RouteDestination")
   routeStops          RouteStop[]
+  ticketsBoarding     Ticket[]      @relation("TicketBoard")
+  ticketsAlighting    Ticket[]      @relation("TicketAlight")
+  cashSessions        CashSession[]
 
   @@index([cityId])
   @@map("terminals")
@@ -1174,6 +1186,7 @@ model Trip {
   createdBy   User?           @relation("TripCreator", fields: [createdById], references: [id])
   statusLog   TripStatusLog[]
   incidents   BusIncident[]
+  tickets     Ticket[]
 
   // Unidad, conductor y cobrador sin recorridos encimados: exclusion constraints en la migración (btree_gist)
   @@unique([routeScheduleId, tripDate])
@@ -1202,4 +1215,385 @@ model TripStatusLog {
 
   @@index([tripId, changedAt])
   @@map("trip_status_log")
+}
+
+// =====================================================
+// BOLETOS (Módulo 6)
+// =====================================================
+
+enum SaleChannel {
+  counter
+  online
+}
+
+/// Una compra (carrito): agrupa boletos, pagos y reembolsos
+enum OrderStatus {
+  /// Asientos apartados esperando el pago
+  pending
+  paid
+  /// Venció el apartado sin pagar
+  expired
+  cancelled
+}
+
+/// Ciclo y transiciones válidas en tickets/ticket-status-rules.ts
+enum TicketStatus {
+  /// Apartado mientras se paga (vence con la orden)
+  held
+  confirmed
+  checked_in
+  no_show
+  cancelled
+  /// Se cambió por otro boleto (otro horario o asiento)
+  changed
+}
+
+enum PaymentMethod {
+  cash
+  card
+  transfer
+  mercadopago
+}
+
+enum PaymentStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum DiscountType {
+  percent
+  amount
+}
+
+enum CashSessionStatus {
+  open
+  closed
+}
+
+enum CashMovementType {
+  sale
+  refund
+  /// Retiro de efectivo (envío a bóveda)
+  withdrawal
+  /// Ingreso de efectivo (cambio adicional)
+  deposit
+}
+
+enum TicketEventType {
+  held
+  released
+  confirmed
+  changed
+  checked_in
+  no_show
+  cancelled
+  refunded
+}
+
+/// Quien compra; en taquilla es opcional
+model Customer {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  fullName  String   @map("full_name") @db.VarChar(255)
+  email     String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  orders Order[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("customers")
+}
+
+/// Tipo de pasajero con su descuento (adulto, niño, INAPAM, estudiante…)
+model PassengerType {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  code            String       @unique @db.VarChar(20)
+  name            String       @db.VarChar(100)
+  discountPercent Decimal      @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  /// Máximo de boletos con este tipo por recorrido (null = sin cupo)
+  maxPerTrip      Int?         @map("max_per_trip")
+  /// Al abordar se pide credencial o identificación
+  requiresId      Boolean      @default(false) @map("requires_id")
+  /// El descuento solo aplica si la fecha del viaje cae en una temporada de estos tipos (vacío = siempre)
+  seasonTypes     SeasonType[] @default([]) @map("season_types")
+  /// Tipo que se propone al capturar un pasajero
+  isDefault       Boolean      @default(false) @map("is_default")
+  isActive        Boolean      @default(true) @map("is_active")
+  sortOrder       Int          @default(0) @map("sort_order")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tickets Ticket[]
+
+  @@map("passenger_types")
+}
+
+model Promotion {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  code          String        @unique @db.VarChar(30)
+  name          String        @db.VarChar(150)
+  description   String?       @db.Text
+  discountType  DiscountType  @map("discount_type")
+  discountValue Decimal       @map("discount_value") @db.Decimal(10, 2)
+  /// Tope del descuento cuando es porcentaje
+  maxDiscount   Decimal?      @map("max_discount") @db.Decimal(10, 2)
+  maxUses       Int?          @map("max_uses")
+  usesCount     Int           @default(0) @map("uses_count")
+  minPurchase   Decimal       @default(0) @map("min_purchase") @db.Decimal(10, 2)
+  validFrom     DateTime      @map("valid_from") @db.Date
+  validUntil    DateTime      @map("valid_until") @db.Date
+  /// Canales donde se acepta (vacío = todos)
+  channels      SaleChannel[] @default([])
+  isActive      Boolean       @default(true) @map("is_active")
+  createdById   String?       @map("created_by") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  createdBy User?            @relation("PromotionCreator", fields: [createdById], references: [id])
+  orders    OrderPromotion[]
+
+  @@index([validFrom, validUntil])
+  @@map("promotions")
+}
+
+model Order {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  /// Folio legible de la compra (secuencia order_number_seq)
+  orderNumber   String      @unique @map("order_number") @db.VarChar(20)
+  channel       SaleChannel
+  status        OrderStatus @default(pending)
+  customerId    String?     @map("customer_id") @db.Uuid
+  /// Correo al que se mandan los boletos (en línea es obligatorio)
+  contactEmail  String?     @map("contact_email") @db.VarChar(255)
+  contactPhone  String?     @map("contact_phone") @db.VarChar(20)
+  /// Vendedor en taquilla; null en línea
+  sellerId      String?     @map("seller_id") @db.Uuid
+  cashSessionId String?     @map("cash_session_id") @db.Uuid
+  /// Suma de los boletos: tarifa, descuentos, IVA, cargo en línea y total
+  subtotal      Decimal     @default(0) @db.Decimal(10, 2)
+  discount      Decimal     @default(0) @db.Decimal(10, 2)
+  vat           Decimal     @default(0) @db.Decimal(10, 2)
+  serviceFee    Decimal     @default(0) @map("service_fee") @db.Decimal(10, 2)
+  total         Decimal     @default(0) @db.Decimal(10, 2)
+  /// Fin del apartado mientras está pendiente
+  expiresAt     DateTime?   @map("expires_at") @db.Timestamptz()
+  paidAt        DateTime?   @map("paid_at") @db.Timestamptz()
+  cancelledAt   DateTime?   @map("cancelled_at") @db.Timestamptz()
+  notes         String?     @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  customer    Customer?        @relation(fields: [customerId], references: [id])
+  seller      User?            @relation("OrderSeller", fields: [sellerId], references: [id])
+  cashSession CashSession?     @relation(fields: [cashSessionId], references: [id])
+  tickets     Ticket[]
+  payments    Payment[]
+  refunds     Refund[]
+  promotions  OrderPromotion[]
+
+  @@index([status, expiresAt])
+  @@index([sellerId, createdAt])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderPromotion {
+  id              String  @id @default(uuid(7)) @db.Uuid
+  orderId         String  @map("order_id") @db.Uuid
+  promotionId     String  @map("promotion_id") @db.Uuid
+  discountApplied Decimal @map("discount_applied") @db.Decimal(10, 2)
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  promotion Promotion @relation(fields: [promotionId], references: [id])
+
+  @@unique([orderId, promotionId])
+  @@index([promotionId])
+  @@map("order_promotions")
+}
+
+/// Un boleto por pasajero y tramo. El precio se congela al venderlo.
+model Ticket {
+  id                String       @id @default(uuid(7)) @db.Uuid
+  /// Folio legible del boleto (secuencia ticket_number_seq)
+  ticketNumber      String       @unique @map("ticket_number") @db.VarChar(20)
+  orderId           String       @map("order_id") @db.Uuid
+  tripId            String       @map("trip_id") @db.Uuid
+  /// Número de asiento (no el id): sobrevive a un cambio de unidad con el mismo acomodo
+  seatNumber        String       @map("seat_number") @db.VarChar(6)
+  /// Índices del itinerario de la ruta (0 = origen); el pasajero ocupa el asiento en [board, alight)
+  boardIndex        Int          @map("board_index")
+  alightIndex       Int          @map("alight_index")
+  boardTerminalId   String       @map("board_terminal_id") @db.Uuid
+  alightTerminalId  String       @map("alight_terminal_id") @db.Uuid
+  /// Instantes de subida y bajada según el itinerario
+  boardAt           DateTime     @map("board_at") @db.Timestamptz()
+  alightAt          DateTime     @map("alight_at") @db.Timestamptz()
+  passengerName     String       @map("passenger_name") @db.VarChar(255)
+  passengerTypeId   String       @map("passenger_type_id") @db.Uuid
+  passengerDocument String?      @map("passenger_document") @db.VarChar(50)
+  /// Tarifa del tramo con temporada
+  basePrice         Decimal      @map("base_price") @db.Decimal(10, 2)
+  seasonPercent     Decimal?     @map("season_percent") @db.Decimal(5, 2)
+  passengerDiscount Decimal      @default(0) @map("passenger_discount") @db.Decimal(10, 2)
+  promoDiscount     Decimal      @default(0) @map("promo_discount") @db.Decimal(10, 2)
+  /// IVA contenido en el total (sin el cargo en línea)
+  vat               Decimal      @default(0) @db.Decimal(10, 2)
+  serviceFee        Decimal      @default(0) @map("service_fee") @db.Decimal(10, 2)
+  total             Decimal      @db.Decimal(10, 2)
+  status            TicketStatus @default(held)
+  /// Token firmado que va en el QR
+  qrToken           String?      @unique @map("qr_token") @db.VarChar(255)
+  checkedInAt       DateTime?    @map("checked_in_at") @db.Timestamptz()
+  checkedInById     String?      @map("checked_in_by") @db.Uuid
+  cancelledAt       DateTime?    @map("cancelled_at") @db.Timestamptz()
+  cancelReason      String?      @map("cancel_reason") @db.Text
+  /// Boleto que lo reemplazó al cambiarlo
+  replacedById      String?      @unique @map("replaced_by") @db.Uuid
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  order          Order         @relation(fields: [orderId], references: [id])
+  trip           Trip          @relation(fields: [tripId], references: [id])
+  boardTerminal  Terminal      @relation("TicketBoard", fields: [boardTerminalId], references: [id])
+  alightTerminal Terminal      @relation("TicketAlight", fields: [alightTerminalId], references: [id])
+  passengerType  PassengerType @relation(fields: [passengerTypeId], references: [id])
+  checkedInBy    User?         @relation("TicketCheckIn", fields: [checkedInById], references: [id])
+  replacedBy     Ticket?       @relation("TicketChange", fields: [replacedById], references: [id])
+  replaces       Ticket?       @relation("TicketChange")
+  refunds        Refund[]
+  events         TicketEvent[]
+
+  // Mismo asiento sin tramos encimados entre boletos activos: exclusion constraint en la migración (btree_gist)
+  @@index([tripId, status])
+  @@index([orderId])
+  @@index([passengerTypeId])
+  @@map("tickets")
+}
+
+model Payment {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  orderId          String        @map("order_id") @db.Uuid
+  method           PaymentMethod
+  status           PaymentStatus @default(pending)
+  amount           Decimal       @db.Decimal(10, 2)
+  /// Efectivo recibido (para calcular el cambio)
+  received         Decimal?      @db.Decimal(10, 2)
+  /// Autorización de la terminal, referencia de la transferencia, etc.
+  reference        String?       @db.VarChar(100)
+  /// Id del pago en la pasarela (único para que el webhook sea idempotente)
+  gatewayPaymentId String?       @unique @map("gateway_payment_id") @db.VarChar(100)
+  gatewayResponse  Json?         @map("gateway_response") @db.JsonB
+  cashSessionId    String?       @map("cash_session_id") @db.Uuid
+  recordedById     String?       @map("recorded_by") @db.Uuid
+  paidAt           DateTime?     @map("paid_at") @db.Timestamptz()
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  order       Order        @relation(fields: [orderId], references: [id])
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
+  recordedBy  User?        @relation("PaymentRecorder", fields: [recordedById], references: [id])
+
+  @@index([orderId])
+  @@index([cashSessionId])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+model Refund {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  orderId         String        @map("order_id") @db.Uuid
+  /// null = reembolso de la orden completa
+  ticketId        String?       @map("ticket_id") @db.Uuid
+  method          PaymentMethod
+  amount          Decimal       @db.Decimal(10, 2)
+  reason          String        @db.Text
+  gatewayRefundId String?       @unique @map("gateway_refund_id") @db.VarChar(100)
+  cashSessionId   String?       @map("cash_session_id") @db.Uuid
+  createdById     String?       @map("created_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  order       Order        @relation(fields: [orderId], references: [id])
+  ticket      Ticket?      @relation(fields: [ticketId], references: [id])
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
+  createdBy   User?        @relation("RefundCreator", fields: [createdById], references: [id])
+
+  @@index([orderId])
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("refunds")
+}
+
+/// Caja de un vendedor: de la apertura al corte. Solo una abierta por usuario (índice parcial en la migración)
+model CashSession {
+  id           String            @id @default(uuid(7)) @db.Uuid
+  userId       String            @map("user_id") @db.Uuid
+  terminalId   String?           @map("terminal_id") @db.Uuid
+  status       CashSessionStatus @default(open)
+  openingFloat Decimal           @map("opening_float") @db.Decimal(10, 2)
+  openedAt     DateTime          @default(now()) @map("opened_at") @db.Timestamptz()
+  closedAt     DateTime?         @map("closed_at") @db.Timestamptz()
+  /// Efectivo que debía haber al corte (fondo + ventas − reembolsos − retiros + ingresos)
+  expectedCash Decimal?          @map("expected_cash") @db.Decimal(10, 2)
+  countedCash  Decimal?          @map("counted_cash") @db.Decimal(10, 2)
+  difference   Decimal?          @db.Decimal(10, 2)
+  closingNotes String?           @map("closing_notes") @db.Text
+  closedById   String?           @map("closed_by") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user      User           @relation("CashSessionUser", fields: [userId], references: [id])
+  terminal  Terminal?      @relation(fields: [terminalId], references: [id])
+  closedBy  User?          @relation("CashSessionCloser", fields: [closedById], references: [id])
+  movements CashMovement[]
+  orders    Order[]
+  payments  Payment[]
+  refunds   Refund[]
+
+  @@index([userId, openedAt])
+  @@index([status])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id          String           @id @default(uuid(7)) @db.Uuid
+  sessionId   String           @map("session_id") @db.Uuid
+  type        CashMovementType
+  method      PaymentMethod
+  /// Siempre positivo; el tipo dice si entra o sale
+  amount      Decimal          @db.Decimal(10, 2)
+  paymentId   String?          @unique @map("payment_id") @db.Uuid
+  refundId    String?          @unique @map("refund_id") @db.Uuid
+  reason      String?          @db.Text
+  createdById String?          @map("created_by") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  session   CashSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy User?       @relation("CashMovementCreator", fields: [createdById], references: [id])
+
+  @@index([sessionId, createdAt])
+  @@map("cash_movements")
+}
+
+/// Historial de cada boleto (venta, cambio, check-in, cancelación, reembolso)
+model TicketEvent {
+  id        String          @id @default(uuid(7)) @db.Uuid
+  ticketId  String          @map("ticket_id") @db.Uuid
+  type      TicketEventType
+  detail    Json?           @db.JsonB
+  /// null = lo hizo el sistema (vencimiento, no presentado, recorrido cancelado)
+  userId    String?         @map("user_id") @db.Uuid
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?  @relation("TicketEventUser", fields: [userId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@index([type, createdAt])
+  @@map("ticket_events")
 }

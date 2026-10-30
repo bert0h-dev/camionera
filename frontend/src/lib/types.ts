@@ -1319,3 +1319,19 @@ export interface TripCandidates {
   drivers: (TripPerson & { issues: AssignmentIssue[] })[]
   collectors: (TripPerson & { issues: AssignmentIssue[] })[]
 }
+
+// ---------- Boletos (Módulo 6) ----------
+
+export interface PassengerType {
+  id: string
+  code: string
+  name: string
+  discountPercent: string
+  maxPerTrip: number | null
+  requiresId: boolean
+  seasonTypes: SeasonType[]
+  isDefault: boolean
+  isActive: boolean
+  sortOrder: number
+  _count?: { tickets: number }
+}

@@ -11,7 +11,7 @@ import { useToast } from '../../components/ui/toast-context'
 import { openOrderPdf } from './useTickets'
 
 /** Venta terminada: cambio, folios y acciones para imprimir o mandar los boletos. */
-export function SaleDone({ order, onNew }: { order: Order; onNew: () => void }) {
+export function SaleDone({ order, onNew, title = 'Venta lista' }: { order: Order; onNew: () => void; title?: string }) {
   const toast = useToast()
   const [email, setEmail] = useState(order.contactEmail ?? '')
   const send = useMutation({
@@ -35,7 +35,7 @@ export function SaleDone({ order, onNew }: { order: Order; onNew: () => void }) 
         <div className="flex flex-wrap items-center gap-4">
           <CircleCheck className="size-12 text-emerald-600 dark:text-emerald-400" />
           <div className="flex-1">
-            <h2 className="text-xl font-semibold">Venta lista</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             <p className="text-sm text-fg-muted">
               Compra <span className="font-data font-semibold text-fg">{order.orderNumber}</span> ·{' '}
               {order.tickets.length} boleto(s) · {formatMoney(order.total)}

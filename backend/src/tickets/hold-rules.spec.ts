@@ -61,6 +61,7 @@ describe('tripItinerary', () => {
     terminalId: name,
     code: name,
     name,
+    cityId: name,
     cityName: name,
     timezone: 'America/Tijuana',
   });

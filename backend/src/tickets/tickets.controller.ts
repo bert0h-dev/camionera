@@ -33,6 +33,14 @@ import {
   SetPassengersDto,
 } from './dto/sale.dto.js';
 import { SaleService } from './sale.service.js';
+import { TicketActionsService } from './ticket-actions.service.js';
+import {
+  CancelQuoteDto,
+  CancelTicketsDto,
+  CompleteChangeDto,
+  LookupDto,
+  StartChangeDto,
+} from './dto/change.dto.js';
 import type { Response } from 'express';
 
 /** Quienes venden o supervisan la venta consultan; las políticas de precio las define el admin. */
@@ -55,6 +63,7 @@ export class TicketsController {
     private readonly availability: AvailabilityService,
     private readonly departures: DeparturesService,
     private readonly sale: SaleService,
+    private readonly actions: TicketActionsService,
   ) {}
 
   @Get('passenger-types')
@@ -178,5 +187,62 @@ export class TicketsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.sale.resend(id, dto.email, user);
+  }
+
+  // ---------- Cancelaciones y cambios ----------
+
+  @Get('lookup')
+  @Roles(...TICKET_READERS)
+  lookup(@Query() q: LookupDto) {
+    return this.actions.lookup(q.code);
+  }
+
+  @Get('orders/:id/full')
+  @Roles(...TICKET_READERS)
+  full(@Param('id', ParseUUIDPipe) id: string) {
+    return this.actions.full(id);
+  }
+
+  @Get('trips/:tripId/passengers')
+  @Roles(...TICKET_READERS)
+  passengersOfTrip(@Param('tripId', ParseUUIDPipe) tripId: string) {
+    return this.actions.passengers(tripId);
+  }
+
+  @Post('cancel/quote')
+  @Roles(...TICKET_SELLERS)
+  cancelQuote(@Body() dto: CancelQuoteDto, @CurrentUser() user: AuthUser) {
+    return this.actions.quoteCancel(dto.ticketIds, user);
+  }
+
+  @Post('cancel')
+  @Roles(...TICKET_SELLERS)
+  cancel(@Body() dto: CancelTicketsDto, @CurrentUser() user: AuthUser) {
+    return this.actions.cancel(dto, user);
+  }
+
+  @Post('changes')
+  @Roles(...TICKET_SELLERS)
+  startChange(@Body() dto: StartChangeDto, @CurrentUser() user: AuthUser) {
+    return this.actions.startChange(dto, user);
+  }
+
+  @Get('changes/:orderId')
+  @Roles(...TICKET_SELLERS)
+  changeView(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.actions.changeView(orderId, user);
+  }
+
+  @Post('changes/:orderId/complete')
+  @Roles(...TICKET_SELLERS)
+  completeChange(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() dto: CompleteChangeDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.actions.completeChange(orderId, dto, user);
   }
 }

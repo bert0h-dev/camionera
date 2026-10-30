@@ -10,6 +10,7 @@ import {
   Route,
   TramFront,
   TriangleAlert,
+  Ticket,
   Wallet,
   Wrench,
   type LucideIcon,
@@ -21,7 +22,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 
-type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip' | 'cash'
+type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip' | 'cash' | 'sale'
 
 interface PendingItem {
   id: string
@@ -43,6 +44,7 @@ const AREA_ICON: Record<Area, LucideIcon> = {
   route: Route,
   trip: TramFront,
   cash: Wallet,
+  sale: Ticket,
 }
 const AREA_LABEL: Record<Area, string> = {
   staff: 'Personal',
@@ -53,6 +55,7 @@ const AREA_LABEL: Record<Area, string> = {
   route: 'Ruta',
   trip: 'Recorrido',
   cash: 'Caja',
+  sale: 'Venta',
 }
 
 /** Las incidencias y las cargas por confirmar no vencen: se cuenta cuánto llevan esperando. */
@@ -72,6 +75,7 @@ function badgeLabel(i: PendingItem) {
         : 'Revisar'
   if (i.area === 'fuel') return i.id.startsWith('fuel-low') ? 'Rendimiento bajo' : 'Por confirmar'
   if (i.area === 'cash') return i.id.startsWith('cash-open') ? 'Sin corte' : 'Diferencia'
+  if (i.area === 'sale') return 'Por reembolsar'
   return i.severity === 'overdue' ? 'Vencido' : 'Por vencer'
 }
 
@@ -79,9 +83,13 @@ type Filter = 'all' | 'staff' | 'fleet' | 'route' | 'cash'
 const FILTERS: { key: Filter; label: string; match: (a: Area) => boolean }[] = [
   { key: 'all', label: 'Todo', match: () => true },
   { key: 'staff', label: 'Personal', match: (a) => a === 'staff' },
-  { key: 'fleet', label: 'Flota', match: (a) => a !== 'staff' && a !== 'route' && a !== 'trip' && a !== 'cash' },
+  {
+    key: 'fleet',
+    label: 'Flota',
+    match: (a) => a !== 'staff' && a !== 'route' && a !== 'trip' && a !== 'cash' && a !== 'sale',
+  },
   { key: 'route', label: 'Rutas y recorridos', match: (a) => a === 'route' || a === 'trip' },
-  { key: 'cash', label: 'Caja', match: (a) => a === 'cash' },
+  { key: 'cash', label: 'Venta y caja', match: (a) => a === 'cash' || a === 'sale' },
 ]
 
 const VISIBLE = 6

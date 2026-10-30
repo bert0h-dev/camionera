@@ -23,6 +23,7 @@ import { wallTime } from '../routes/route-rules.js';
 import { TripAssignmentService } from '../trips/trip-assignment.service.js';
 import { TripStatusService } from '../trips/trip-status.service.js';
 import { CASH_SUPERVISORS, CashService } from '../cash/cash.service.js';
+import { TicketActionsService } from '../tickets/ticket-actions.service.js';
 import { TripsService } from '../trips/trips.service.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
@@ -34,7 +35,8 @@ export type PendingArea =
   | 'fuel'
   | 'route'
   | 'trip'
-  | 'cash';
+  | 'cash'
+  | 'sale';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -100,6 +102,7 @@ export class PendingService {
     private readonly assignment: TripAssignmentService,
     private readonly tripStatus: TripStatusService,
     private readonly cash: CashService,
+    private readonly tickets: TicketActionsService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
@@ -107,6 +110,14 @@ export class PendingService {
     const fleet = FLEET_AREA.includes(user.role);
     const fuelManager = FUEL_MANAGERS.includes(user.role);
     const cashSupervisor = CASH_SUPERVISORS.includes(user.role);
+    const sales = (
+      [
+        UserRole.admin,
+        UserRole.supervisor,
+        UserRole.coordinator,
+        UserRole.vendor,
+      ] as UserRole[]
+    ).includes(user.role);
     const routes =
       user.role === UserRole.admin ||
       (ROUTE_EDITORS as UserRole[]).includes(user.role);
@@ -126,6 +137,7 @@ export class PendingService {
       openArrivals,
       openCash,
       cashDiffs,
+      refundsDue,
     ] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
@@ -144,6 +156,7 @@ export class PendingService {
       fleet ? this.tripStatus.openArrivals() : null,
       cashSupervisor ? this.cash.openTooLong() : null,
       cashSupervisor ? this.cash.recentDifferences() : null,
+      sales ? this.tickets.refundsDue() : null,
     ]);
     const now = Date.now();
 
@@ -349,6 +362,16 @@ export class PendingService {
           link: `/caja?id=${c.id}`,
         };
       }),
+      ...(refundsDue ?? []).map((r) => ({
+        id: `sale-refund-${r.trip.id}`,
+        area: 'sale' as const,
+        severity: 'overdue' as const,
+        title: `Por reembolsar o reubicar · ${r.trip.tripNumber}`,
+        detail: `${r.count} boleto(s) de un recorrido cancelado · $${r.amount.toFixed(2)} por devolver`,
+        date: r.trip.cancelledAt,
+        daysLeft: null,
+        link: `/recorridos/${r.trip.id}`,
+      })),
     ];
 
     const rank = (i: PendingItem) => (i.severity === 'overdue' ? 0 : 1);

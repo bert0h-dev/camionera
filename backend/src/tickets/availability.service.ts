@@ -48,7 +48,7 @@ const terminal = {
     id: true,
     code: true,
     name: true,
-    city: { select: { name: true, timezone: true } },
+    city: { select: { id: true, name: true, timezone: true } },
   },
 } as const;
 
@@ -94,12 +94,13 @@ type TerminalRow = {
   id: string;
   code: string;
   name: string;
-  city: { name: string; timezone: string };
+  city: { id: string; name: string; timezone: string };
 };
 const pointOf = (t: TerminalRow) => ({
   terminalId: t.id,
   code: t.code,
   name: t.name,
+  cityId: t.city.id,
   cityName: t.city.name,
   timezone: t.city.timezone,
 });

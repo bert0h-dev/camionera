@@ -22,6 +22,7 @@ import { ReportIncidentModal, type ReportPreset } from '../fleet/ReportIncidentM
 import { incidentFolio } from '../fleet/useFleet'
 import { AssignTripModal } from './AssignTripModal'
 import { TripStatusBadge } from './TripBadges'
+import { TripPassengersCard } from './TripPassengersCard'
 import { TripStatusActions } from './TripStatusActions'
 import { tripTimes, useCanManageTrips } from './useTrips'
 
@@ -293,6 +294,9 @@ function TripDetailPage() {
                 </ul>
               </CardBody>
             </Card>
+          )}
+          {trip.status === 'cancelled' && user?.role !== 'driver' && user?.role !== 'collector' && (
+            <TripPassengersCard tripId={trip.id} />
           )}
           <Card>
             <CardHeader title="Historial de estados" />

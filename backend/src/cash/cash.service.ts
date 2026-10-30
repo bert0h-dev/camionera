@@ -97,10 +97,36 @@ export class CashService {
     });
   }
 
-  private async totalsOf(session: {
-    id: string;
-    openingFloat: Prisma.Decimal;
-  }) {
+  /** Registra un reembolso como salida de la caja (dentro de la transacción de la cancelación o el cambio). */
+  async recordRefund(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    refund: { id: string; method: PaymentMethod; amount: number },
+    userId: string,
+  ) {
+    await tx.cashMovement.create({
+      data: {
+        sessionId,
+        type: CashMovementType.refund,
+        method: refund.method,
+        amount: refund.amount,
+        refundId: refund.id,
+        createdById: userId,
+      },
+    });
+  }
+
+  /** Para devolver efectivo: no puede salir más del que hay en la caja. */
+  async checkCashOut(
+    session: { id: string; openingFloat: Prisma.Decimal },
+    amount: number,
+  ) {
+    const { totals } = await this.totalsOf(session);
+    const err = withdrawalError(totals.expectedCash, amount);
+    if (err) throw new BadRequestException(err);
+  }
+
+  async totalsOf(session: { id: string; openingFloat: Prisma.Decimal }) {
     const [movements, orders, tickets] = await Promise.all([
       this.prisma.cashMovement.findMany({
         where: { sessionId: session.id },

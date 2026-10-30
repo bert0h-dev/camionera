@@ -9,8 +9,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 | 6.0 | Esquema completo, reglas puras (precio, disponibilidad, cancelación, estados) y catálogo de tipos de pasajero | ✅ fusionada (PR #27) |
 | 6.1 | Disponibilidad por tramo, mapa de asientos y apartado temporal con vencimiento automático | ✅ fusionada (PR #28) |
 | 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ✅ fusionada (PR #29) |
-| 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ rama `feat/m6-caja` |
-| 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ⏳ |
+| 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ fusionada (PR #30) |
+| 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ✅ rama `feat/m6-cancelaciones` |
 | 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ⏳ |
 | 6.6 | Promociones y clientes | ⏳ |
 | 6.7 | Venta en línea (portal público `/viajar`) con Mercado Pago y webhooks; consulta y cancelación por folio + correo | ⏳ |
@@ -98,6 +98,27 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 - **Pendientes** (supervisor y admin, área *Caja*): cajas abiertas por más de `cash.max_open_hours` (urgente) y cortes de los últimos 7 días con diferencia fuera de la tolerancia.
 - **Migración `cash_close_summary`**: `commission_percent`, `commission_amount` y `summary` en `cash_sessions`.
 
+## 6.4 Cancelaciones, cambios y reembolsos
+Decisiones (2026-10-30): en un cambio, la **diferencia a favor del cliente se reembolsa**. Los reembolsos de pagos con tarjeta o transferencia se registran por el mismo medio, con la referencia de la devolución; el efectivo sale de la caja.
+
+- **Cancelar** (`POST /tickets/cancel/quote` y `POST /tickets/cancel`): uno o varios boletos de una misma compra, con motivo.
+  - Dentro de `tickets.cancellation_hours` antes de la subida se devuelve `tickets.refund_percent` del importe sin el cargo en línea (`cancellation-rules.ts`).
+  - Fuera de plazo solo un **admin** cancela, y decide el monto (de $0 a lo pagado); se reparte entre los boletos en proporción.
+  - Con reembolso se necesita caja abierta. Cada reembolso es un `refund` ligado al boleto y un movimiento `refund` de la caja, así que el corte lo descuenta del vendido neto y, si es en efectivo, del esperado. No se puede devolver más efectivo del que hay.
+  - El boleto pasa a `cancelled` (eventos `cancelled` y `refunded`) y libera el asiento. Si a la compra ya no le quedan boletos vigentes, pasa a `cancelled`.
+  - Un boleto que ya abordó no se cancela. Dos cancelaciones simultáneas del mismo boleto: la segunda recibe 409.
+- **Cambiar** (`POST /tickets/changes`, `GET /tickets/changes/:orderId`, `POST /tickets/changes/:orderId/complete`): otra salida, otro asiento u otro tramo, dentro del mismo plazo que la cancelación.
+  - Se aparta el asiento nuevo con el mismo pasajero (nombre, tipo e identificación; vuelve a validar cupo y precio) y el boleto anterior apunta al nuevo con `replaced_by` desde ese momento.
+  - Cotización (`change-rules.ts`): boleto nuevo − boleto anterior + `tickets.change_fee`. El cargo **no aplica** si es el mismo recorrido (cambio de asiento) ni en reubicaciones. Si el resultado es positivo se cobra (pago normal en la caja); si es negativo se devuelve como reembolso del boleto anterior.
+  - Al confirmar: el nuevo queda `confirmed` con su QR (y se manda por correo si la compra tenía), el anterior `changed`, y la compra nueva lleva en sus notas la diferencia y el cargo.
+- **Recorrido cancelado por la empresa**: `TripStatusService.onCancelled` acepta manejadores, y Boletos registra el suyo al arrancar (`onModuleInit`). Así Recorridos sigue sin depender de Boletos.
+  - Los apartados se sueltan. Los vendidos pasan a `cancelled` con `refund_due` = su total (100 %, cargo incluido) y se avisa por correo a quien dejó correo.
+  - En taquilla el saldo se **reembolsa** (la misma cancelación, sin plazo) o se **reubica** en otra salida sin cargo: el saldo funciona como crédito y, si sobra, se devuelve.
+  - **Pendientes** (área *Venta*, para admin, supervisor, coordinator y vendor): "Por reembolsar o reubicar" por recorrido, con cuántos boletos y cuánto falta devolver.
+- **Cambio de unidad con boletos** (en Recorridos): con boletos vendidos o apartados no se puede quitar la unidad, y la nueva debe tener todos los números de asiento vendidos (`missingSeats`). Si falta alguno se bloquea y dice cuáles; hay que cambiar antes de asiento a esos pasajeros.
+- **Extras en la venta**: la búsqueda de la taquilla (`/tickets/departures`) ahora incluye los **recorridos extra**. La búsqueda de Rutas los omitía porque solo arma salidas desde los horarios; aparecen con la etiqueta *Extra*.
+- **Migración `ticket_refund_due`**: `refund_due` en `tickets`.
+
 ## Pantallas
 - **Venta › Caja** (`/caja`):
   - **Mi caja**: sin caja abierta, una tarjeta para abrirla con el fondo propuesto. Con caja abierta, la banda muestra efectivo esperado, vendido neto, boletos y comisión, con los botones *Retiro*, *Ingreso* y *Hacer corte*. Abajo van el arqueo, las ventas por método y los movimientos (se refresca cada 30 s), y después *Mis cortes*.
@@ -117,6 +138,12 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 - Buscador Ctrl+K: "Vender boletos (taquilla)".
 - **Venta › Ventas** (`/ventas`): día con flechas, cifras (vendido, compras, boletos), buscador, "Solo mis ventas" para supervisión y admin, y por compra *PDF* y *Correo*.
 - **Configuración › Empresa**: tarjeta **Logo** para subir, cambiar o quitar.
+- **Ventas** (6.4): clic en una compra (o `?compra=`) abre su **ficha**: boletos en cualquier estado con su historial, pagos y reembolsos.
+  - Por boleto: *Cambiar*, *Cancelar* y, con saldo de un recorrido cancelado, *Reubicar sin cargo* y *Reembolsar saldo*. Con varios boletos vigentes se pueden seleccionar y cancelar juntos.
+  - Campo **Folio o código QR** para abrir la compra del pasajero que llega al mostrador (`GET /tickets/lookup`).
+- **Cancelar o reembolsar**: diálogo con la cotización por boleto (plazo y monto), el monto que decide el admin fuera de plazo, cómo se devuelve y el motivo.
+- **Taquilla en modo cambio** (`/taquilla?cambio=<boleto>`): abre con origen, destino y fecha del boleto. Se elige un solo asiento; el paso 3 muestra el boleto nuevo, el anterior, el cargo y lo que se cobra o se devuelve.
+- **Ficha del recorrido cancelado**: tarjeta *Pasajeros por reembolsar o reubicar* con su contacto, el saldo y liga a su compra en Ventas.
 
 ## API
 | Método | Ruta | Roles |
@@ -130,6 +157,9 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 | GET | `/cash/current` · `/cash` (las propias; supervisión ve todas) · `/cash/:id` · `/cash/:id/pdf` | coordinator, supervisor, vendor |
 | POST | `/cash/open` · `/cash/movements` | coordinator, vendor |
 | POST | `/cash/:id/close` (la propia; supervisión cualquiera) | coordinator, supervisor, vendor |
+| GET | `/tickets/lookup?code=` · `/tickets/orders/:id/full` · `/tickets/trips/:id/passengers` | coordinator, supervisor, vendor |
+| POST | `/tickets/cancel/quote` · `/tickets/cancel` · `/tickets/changes` · `/tickets/changes/:orderId/complete` | coordinator, vendor |
+| GET | `/tickets/changes/:orderId` | coordinator, vendor |
 | GET | `/files/company-logo` | público |
 | GET · PUT · DELETE | `/files/company-logo/info` · `/files/company-logo` | admin |
 

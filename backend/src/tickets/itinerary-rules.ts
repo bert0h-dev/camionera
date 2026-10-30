@@ -4,6 +4,7 @@ export interface ItineraryStopInput {
   terminalId: string;
   code: string;
   name: string;
+  cityId: string;
   cityName: string;
   timezone: string;
   /** Minutos desde la salida del origen */

@@ -28,14 +28,15 @@
   - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ fusionada (PR #27).
   - 6.1 Disponibilidad por tramo, mapa de asientos, apartado y pantalla Taquilla ✅ fusionada (PR #28).
   - 6.2 Pasajeros, cobro en taquilla, boleto con QR en PDF, correo, Ventas y logo ✅ fusionada (PR #29).
-  - 6.3 Caja, corte con arqueo y desglose, comisión, PDF del corte y Pendientes de caja ✅ en la rama `feat/m6-caja`.
+  - 6.3 Caja, corte con arqueo y desglose, comisión, PDF del corte y Pendientes de caja ✅ fusionada (PR #30).
+  - 6.4 Cancelaciones, cambios, reembolsos, recorrido cancelado y extras en la venta ✅ en la rama `feat/m6-cancelaciones`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 6, Boletos**: sigue la 6.4 (cancelaciones, cambios y reembolsos). Fases y decisiones en el doc 17.
+1. **Módulo 6, Boletos**: sigue la 6.5 (check-in con QR, manifiesto y no presentados). Fases y decisiones en el doc 17.
 2. Después viene el Módulo 7 (Reportes); el M6 deja los precios congelados y `ticket_events` para sus cifras.
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 

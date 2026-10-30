@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
-import { FileDown, Mail, Receipt, Search } from 'lucide-react'
+import { FileDown, Mail, Receipt, ScanLine, Search } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMoney, formatTime, todayKey } from '../../lib/format'
 import type { CashCurrent, Paginated, SaleListItem } from '../../lib/types'
@@ -16,6 +16,7 @@ import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Pagination, Table, type Column } from '../../components/ui/Table'
 import { useToast } from '../../components/ui/toast-context'
+import { OrderDetailModal } from './OrderDetailModal'
 import { METHOD_LABELS, openOrderPdf } from './useTickets'
 
 type SalesResponse = Paginated<SaleListItem> & { summary: { date: string; orders: number; total: number } }
@@ -30,6 +31,22 @@ function SalesPage() {
   const [search, setSearch] = useState('')
   const [mine, setMine] = useState(!seesAll)
   const [page, setPage] = useState(1)
+  const orderId = params.get('compra')
+  const [code, setCode] = useState('')
+  const openOrder = (id: string | null) => {
+    const next = new URLSearchParams(params)
+    if (id) next.set('compra', id)
+    else next.delete('compra')
+    setParams(next, { replace: true })
+  }
+  const lookup = useMutation({
+    mutationFn: async () => (await api.get<{ id: string }>('/tickets/lookup', { params: { code } })).data,
+    onSuccess: (o) => {
+      setCode('')
+      openOrder(o.id)
+    },
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  })
   const [sendTo, setSendTo] = useState<{ order: SaleListItem; email: string } | null>(null)
 
   const setDate = (d: string) => {
@@ -121,7 +138,7 @@ function SalesPage() {
       header: '',
       cell: (o) =>
         o.status === 'paid' && (
-          <div className="flex justify-end gap-1">
+          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="sm" icon={FileDown} onClick={() => pdf.mutate(o.id)}>
               PDF
             </Button>
@@ -207,12 +224,31 @@ function SalesPage() {
             Solo mis ventas
           </label>
         )}
+        <form
+          className="flex w-full gap-2 sm:w-auto"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (code.trim()) lookup.mutate()
+          }}
+        >
+          <Input
+            icon={ScanLine}
+            placeholder="Folio o código QR"
+            aria-label="Abrir compra por folio o código QR"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <Button type="submit" variant="secondary" loading={lookup.isPending}>
+            Abrir
+          </Button>
+        </form>
       </FilterBar>
 
       <Table
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
+        onRowClick={(o) => openOrder(o.id)}
         loading={isLoading}
         emptyIcon={Receipt}
         emptyMessage={search ? 'Ninguna venta coincide' : `Sin ventas el ${dayLabel(date)}`}
@@ -252,6 +288,7 @@ function SalesPage() {
           </form>
         )}
       </Modal>
+      {orderId && <OrderDetailModal orderId={orderId} onClose={() => openOrder(null)} />}
     </div>
   )
 }

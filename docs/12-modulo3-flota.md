@@ -206,6 +206,7 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
 - **Al terminar la orden**: la incidencia se resuelve sola con el trabajo realizado.
 - **Liberar la unidad** (orden terminada o incidencia cerrada): vuelve a disponible solo si no le queda otra crítica abierta; si le queda, sigue fuera de servicio a nombre de esa otra incidencia.
 - **Cambio en 3.2**: una unidad fuera de servicio ya admite órdenes **correctivas** (crearlas e iniciarlas); los preventivos siguen bloqueados.
+- **Desde la 5.4** (doc 16): una incidencia puede llevar `trip_id`. La unidad debe ser la asignada al recorrido, y el conductor o cobrador solo reporta en los suyos. Si es crítica y el recorrido no ha terminado, este pasa a retrasado. Las **altas y críticas** se avisan por correo a administración y coordinación (si el correo falla, el reporte se guarda igual).
 
 ### API (`/fleet/incidents`)
 - `GET|POST /`, `GET|PATCH /:id`, `GET summary`, `GET buses` (unidades para elegir al reportar).

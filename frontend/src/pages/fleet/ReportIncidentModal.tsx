@@ -27,6 +27,8 @@ const toLocalInput = (d: Date) => {
 
 export interface ReportPreset {
   busId?: string
+  /** Incidencia de un recorrido: la unidad es la asignada y no se puede cambiar */
+  trip?: { id: string; tripNumber: string; busLabel: string }
   /** Si viene, el formulario edita esa incidencia */
   incident?: Incident
 }
@@ -36,7 +38,18 @@ export function ReportIncidentModal({ preset, onClose }: { preset: ReportPreset 
   return (
     <Modal
       open={!!preset}
-      title={preset?.incident ? `Editar ${incidentFolio(preset.incident.folio)}` : 'Reportar incidencia'}
+      title={
+        preset?.incident
+          ? `Editar ${incidentFolio(preset.incident.folio)}`
+          : preset?.trip
+            ? `Reportar incidencia · ${preset.trip.tripNumber}`
+            : 'Reportar incidencia'
+      }
+      description={
+        preset?.trip && !preset.incident
+          ? 'Si es crítica, la unidad sale de servicio y el recorrido queda retrasado'
+          : undefined
+      }
       size="lg"
       onClose={onClose}
     >
@@ -67,7 +80,7 @@ function IncidentForm({ preset, onClose }: { preset: ReportPreset; onClose: () =
   const buses = useQuery({
     queryKey: ['fleet', 'incidents', 'buses'],
     queryFn: async () => (await api.get<IncidentBusOption[]>('/fleet/incidents/buses')).data,
-    enabled: !editing,
+    enabled: !editing && !preset.trip,
   })
   const categories = useIncidentCategories()
   const category = categories.data?.find((c) => c.id === categoryId) ?? editing?.category
@@ -87,7 +100,7 @@ function IncidentForm({ preset, onClose }: { preset: ReportPreset; onClose: () =
       }
       return editing
         ? (await api.patch<Incident>(`/fleet/incidents/${editing.id}`, body)).data
-        : (await api.post<Incident>('/fleet/incidents', { ...body, busId })).data
+        : (await api.post<Incident>('/fleet/incidents', { ...body, busId, tripId: preset.trip?.id })).data
     },
     onSuccess: (incident) => {
       toast.success(
@@ -99,8 +112,10 @@ function IncidentForm({ preset, onClose }: { preset: ReportPreset; onClose: () =
       )
       queryClient.invalidateQueries({ queryKey: ['fleet'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
       onClose()
-      if (!editing) navigate(`/flota/incidencias/${incident.id}`)
+      // Desde un recorrido se queda en él para seguir operándolo
+      if (!editing && !preset.trip) navigate(`/flota/incidencias/${incident.id}`)
     },
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
@@ -116,6 +131,8 @@ function IncidentForm({ preset, onClose }: { preset: ReportPreset; onClose: () =
       <div className="grid gap-4 sm:grid-cols-2">
         {editing ? (
           <Input label="Unidad" value={`${editing.bus.economicNumber} · ${editing.bus.plates}`} disabled />
+        ) : preset.trip ? (
+          <Input label="Unidad" value={preset.trip.busLabel} disabled hint="La asignada al recorrido" />
         ) : (
           <Select
             label="Unidad"

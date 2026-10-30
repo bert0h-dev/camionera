@@ -111,7 +111,11 @@ function IncidentDetailPage() {
               hint={`${incident.bus.plates} · ${BUS_STATUS_LABELS[incident.bus.status]}`}
               to={canReview ? `/flota/unidades/${incident.bus.id}` : undefined}
             />
-            <HeroStat label="Suceso" value={formatInstantDate(incident.occurredAt)} hint={formatTime(incident.occurredAt)} />
+            <HeroStat
+              label="Suceso"
+              value={formatInstantDate(incident.occurredAt)}
+              hint={formatTime(incident.occurredAt)}
+            />
             <HeroStat label="Reportó" value={incident.reporter.fullName} hint={ROLE_LABELS[incident.reporter.role]} />
             <HeroStat
               label="Orden"
@@ -145,6 +149,16 @@ function IncidentDetailPage() {
                   <dt className="text-xs text-fg-muted">Qué pasó</dt>
                   <dd className="whitespace-pre-line">{incident.description}</dd>
                 </div>
+                {incident.trip && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-fg-muted">Recorrido</dt>
+                    <dd>
+                      <Link className="font-data text-primary hover:underline" to={`/recorridos/${incident.trip.id}`}>
+                        {incident.trip.tripNumber}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-xs text-fg-muted">Lugar</dt>
                   <dd>{incident.location ?? '—'}</dd>

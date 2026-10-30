@@ -7,6 +7,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { ActionType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { TripsService } from '../trips/trips.service.js';
 import { CreateSchedulesDto, UpdateScheduleDto } from './dto/schedule.dto.js';
 import { localArrival, wallTime } from './route-rules.js';
 import {
@@ -54,6 +55,7 @@ export class SchedulesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
+    private readonly trips: TripsService,
   ) {}
 
   private route(routeId: string) {
@@ -161,6 +163,7 @@ export class SchedulesService {
         oldValues: null,
         newValues: row,
       });
+    await this.trips.syncRoute(routeId);
     return rows.map(toWindow);
   }
 
@@ -211,12 +214,18 @@ export class SchedulesService {
       oldValues: before,
       newValues: row,
     });
+    await this.trips.syncRoute(routeId);
     return toWindow(row);
   }
 
   async remove(routeId: string, id: string, actor: AuthUser) {
-    // Cuando existan recorridos (Módulo 5), un horario con recorridos solo se podrá desactivar
     const before = await this.own(routeId, id);
+    // Sus recorridos futuros sin asignar se van con él; si le quedan otros, solo se puede desactivar
+    const left = await this.trips.releaseSchedule(id);
+    if (left)
+      throw new BadRequestException(
+        `El horario ya tiene ${left} recorrido(s) asignados, cancelados o realizados; desactívalo en lugar de borrarlo`,
+      );
     await this.prisma.routeSchedule.delete({ where: { id } });
     await this.audit.log({
       userId: actor.id,

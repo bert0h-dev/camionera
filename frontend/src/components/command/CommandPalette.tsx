@@ -274,6 +274,14 @@ function Palette({ onClose }: { onClose: () => void }) {
               to: '/rutas?nueva=1',
             },
             {
+              id: 'action:trips',
+              section: 'Acciones rápidas',
+              label: 'Recorridos de hoy',
+              icon: Route,
+              keywords: 'recorridos viajes salidas corridas generar extra refuerzo unidad conductor',
+              to: '/recorridos',
+            },
+            {
               id: 'action:new-season',
               section: 'Acciones rápidas',
               label: 'Nueva temporada',

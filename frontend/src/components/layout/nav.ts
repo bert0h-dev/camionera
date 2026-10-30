@@ -13,6 +13,7 @@ import {
   Search,
   ShieldCheck,
   Star,
+  TramFront,
   TriangleAlert,
   Users,
   Wallet,
@@ -36,6 +37,7 @@ export interface NavGroup {
 const STAFF_READERS: UserRole[] = ['hr', 'supervisor', 'coordinator']
 const FLEET_READERS: UserRole[] = ['coordinator', 'supervisor']
 const ROUTE_READERS: UserRole[] = ['coordinator', 'supervisor', 'vendor']
+const TRIP_READERS: UserRole[] = ['coordinator', 'supervisor', 'vendor']
 
 // Cada módulo nuevo agrega su grupo aquí
 export const NAV: NavGroup[] = [
@@ -73,6 +75,10 @@ export const NAV: NavGroup[] = [
       { to: '/rutas', label: 'Rutas', icon: Route, roles: ROUTE_READERS },
       { to: '/rutas/temporadas', label: 'Temporadas', icon: CalendarRange, roles: ROUTE_READERS },
     ],
+  },
+  {
+    label: 'Operación',
+    items: [{ to: '/recorridos', label: 'Recorridos', icon: TramFront, roles: TRIP_READERS }],
   },
   {
     label: 'Sistema',
@@ -114,6 +120,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   rutas: 'Rutas',
   temporadas: 'Temporadas',
   buscar: 'Buscar salidas',
+  recorridos: 'Recorridos',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

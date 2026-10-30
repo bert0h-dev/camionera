@@ -370,7 +370,17 @@ export const SETTINGS = {
       'Días antes del fin de vigencia de un horario para avisarlo en Pendientes',
   },
 
-  // ---------- Recorridos (se usarán en el Módulo 5) ----------
+  // ---------- Recorridos ----------
+  'trips.generation_days_ahead': {
+    type: 'number',
+    default: 14,
+    min: 1,
+    max: 60,
+    label: 'Días de recorridos por adelantado',
+    unit: 'días',
+    description:
+      'Cada noche se generan los recorridos de hoy a este número de días según los horarios de ruta',
+  },
   'trips.unit_turnaround_minutes': {
     type: 'number',
     default: 30,

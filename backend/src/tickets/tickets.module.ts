@@ -7,6 +7,7 @@ import { DeparturesService } from './departures.service.js';
 import { PassengerTypesService } from './passenger-types.service.js';
 import { SaleService } from './sale.service.js';
 import { TicketActionsService } from './ticket-actions.service.js';
+import { BoardingService } from './boarding.service.js';
 import { TripsModule } from '../trips/trips.module.js';
 import { TicketsController } from './tickets.controller.js';
 
@@ -20,6 +21,7 @@ import { TicketsController } from './tickets.controller.js';
     DeparturesService,
     SaleService,
     TicketActionsService,
+    BoardingService,
   ],
   exports: [PassengerTypesService, AvailabilityService, TicketActionsService],
 })

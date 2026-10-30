@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, TramFront, TriangleAlert } from 'lucide-react'
+import { ArrowRight, TramFront, ScanLine, TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMinutes, staffFullName, todayKey } from '../../lib/format'
 import type { TripListItem } from '../../lib/types'
@@ -19,7 +19,7 @@ import { TripStatusBadge } from './TripBadges'
 import { TripStatusActions } from './TripStatusActions'
 import { tripTimes } from './useTrips'
 
-type MyTrip = TripListItem & { actualDepartureAt: string | null }
+type MyTrip = TripListItem & { actualDepartureAt: string | null; boarding: { sold: number; boarded: number } }
 
 /** Los recorridos del día del conductor (o cobrador), con los botones para operarlos. */
 function MyTripsPage() {
@@ -122,6 +122,13 @@ function MyTripsPage() {
                   )}
                   <div className="flex flex-wrap items-center gap-2">
                     {isDriver && <TripStatusActions trip={t} />}
+                    {t.status !== 'cancelled' && t.boarding.sold > 0 && (
+                      <Link to={`/abordaje/${t.id}`}>
+                        <Button size="sm" icon={ScanLine}>
+                          Abordar pasajeros · {t.boarding.boarded}/{t.boarding.sold}
+                        </Button>
+                      </Link>
+                    )}
                     {t.bus && t.status !== 'cancelled' && t.status !== 'completed' && (
                       <Button
                         variant="ghost"

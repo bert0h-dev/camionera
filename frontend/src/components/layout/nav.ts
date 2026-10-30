@@ -135,6 +135,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   buscar: 'Buscar salidas',
   recorridos: 'Recorridos',
   'mis-recorridos': 'Mis recorridos',
+  abordaje: 'Abordaje',
   taquilla: 'Taquilla',
   ventas: 'Ventas',
   caja: 'Caja',

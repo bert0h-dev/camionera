@@ -76,7 +76,7 @@ export const listInclude = {
   collector: person,
 } satisfies Prisma.TripInclude;
 
-const EMPTY_OCCUPANCY = { sold: 0, held: 0 };
+const EMPTY_OCCUPANCY = { sold: 0, held: 0, boarded: 0 };
 
 const unassignedWhere: Prisma.TripWhereInput = {
   OR: [{ busId: null }, { driverId: null }],
@@ -439,7 +439,10 @@ export class TripsService {
    * vigentes. Cuenta boletos, no asientos: con venta por tramos un asiento puede llevar varios.
    */
   private async occupancy(tripIds: string[]) {
-    const map = new Map<string, { sold: number; held: number }>();
+    const map = new Map<
+      string,
+      { sold: number; held: number; boarded: number }
+    >();
     if (tripIds.length === 0) return map;
     const now = new Date();
     const rows = await this.prisma.ticket.findMany({
@@ -450,6 +453,7 @@ export class TripsService {
             TicketStatus.held,
             TicketStatus.confirmed,
             TicketStatus.checked_in,
+            TicketStatus.no_show,
           ],
         },
       },
@@ -460,7 +464,8 @@ export class TripsService {
       },
     });
     for (const r of rows) {
-      const o = map.get(r.tripId) ?? { sold: 0, held: 0 };
+      const o = map.get(r.tripId) ?? { sold: 0, held: 0, boarded: 0 };
+      if (r.status === TicketStatus.checked_in) o.boarded++;
       if (r.status !== TicketStatus.held) o.sold++;
       else if (!r.order.expiresAt || r.order.expiresAt > now) o.held++;
       map.set(r.tripId, o);

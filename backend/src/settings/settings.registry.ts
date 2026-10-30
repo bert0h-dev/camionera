@@ -336,6 +336,16 @@ export const SETTINGS = {
     description:
       'Minutos antes de la salida en que el pasajero debe presentarse a abordar',
   },
+  'tickets.no_show_grace_minutes': {
+    type: 'number',
+    default: 15,
+    min: 0,
+    max: 120,
+    label: 'No presentado en paradas intermedias',
+    unit: 'min',
+    description:
+      'Minutos después del paso por su parada en que un pasajero que no abordó se marca como no presentado',
+  },
   'tickets.max_per_purchase': {
     type: 'number',
     default: 10,

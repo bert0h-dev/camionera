@@ -34,6 +34,7 @@ import {
 } from './dto/sale.dto.js';
 import { SaleService } from './sale.service.js';
 import { TicketActionsService } from './ticket-actions.service.js';
+import { BoardingService } from './boarding.service.js';
 import {
   CancelQuoteDto,
   CancelTicketsDto,
@@ -53,6 +54,14 @@ export const TICKET_READERS = [
 /** Apartan y venden: taquilla y coordinación (el supervisor solo consulta). */
 export const TICKET_SELLERS = [UserRole.coordinator, UserRole.vendor];
 
+/** Abordan pasajeros: la tripulación del recorrido (solo los suyos), coordinación y supervisión. */
+export const BOARDERS = [
+  UserRole.coordinator,
+  UserRole.supervisor,
+  UserRole.driver,
+  UserRole.collector,
+];
+
 @ApiTags('tickets')
 @ApiBearerAuth()
 @Roles(UserRole.admin)
@@ -64,6 +73,7 @@ export class TicketsController {
     private readonly departures: DeparturesService,
     private readonly sale: SaleService,
     private readonly actions: TicketActionsService,
+    private readonly boarding: BoardingService,
   ) {}
 
   @Get('passenger-types')
@@ -244,5 +254,48 @@ export class TicketsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.actions.completeChange(orderId, dto, user);
+  }
+
+  // ---------- Abordaje ----------
+
+  @Post('trips/:tripId/check-in')
+  @Roles(...BOARDERS)
+  checkIn(
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @Body() dto: LookupDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.boarding.checkIn(tripId, dto.code, user);
+  }
+
+  @Delete('check-in/:ticketId')
+  @Roles(...BOARDERS)
+  undoCheckIn(
+    @Param('ticketId', ParseUUIDPipe) ticketId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.boarding.undo(ticketId, user);
+  }
+
+  @Get('trips/:tripId/manifest')
+  @Roles(...BOARDERS)
+  manifest(
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.boarding.manifest(tripId, user);
+  }
+
+  @Get('trips/:tripId/manifest/pdf')
+  @Roles(...BOARDERS)
+  async manifestPdf(
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+  ) {
+    const { buffer, fileName } = await this.boarding.manifestPdf(tripId, user);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.send(buffer);
   }
 }

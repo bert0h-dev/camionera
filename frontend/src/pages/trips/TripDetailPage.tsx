@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2, TriangleAlert, UserCog } from 'lucide-react'
+import { ScanLine, Trash2, TriangleAlert, UserCog } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { localClock } from '../../lib/timezones'
 import { useAuth } from '../../auth/useAuth'
@@ -121,6 +121,13 @@ function TripDetailPage() {
                 Reportar incidencia
               </Button>
             )}
+            {trip.occupancy.sold > 0 && trip.status !== 'cancelled' && user?.role !== 'vendor' && (
+              <Link to={`/abordaje/${trip.id}`}>
+                <Button variant="glass" icon={ScanLine}>
+                  Abordaje
+                </Button>
+              </Link>
+            )}
             {canOperate && <TripStatusActions trip={trip} inBand />}
           </>
         }
@@ -164,7 +171,7 @@ function TripDetailPage() {
               value={trip.bus ? `${trip.occupancy.sold}/${trip.bus._count?.seats ?? '—'}` : '—'}
               hint={
                 trip.bus
-                  ? `vendidos${trip.occupancy.held ? ` · ${trip.occupancy.held} apartados` : ''}`
+                  ? `vendidos${trip.occupancy.boarded ? ` · ${trip.occupancy.boarded} abordaron` : ''}${trip.occupancy.held ? ` · ${trip.occupancy.held} apartados` : ''}`
                   : 'se vende al asignar unidad'
               }
               to={

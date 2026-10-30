@@ -94,7 +94,7 @@ Decisiones:
 - El precio sale de `segmentPrice` + `applySeason` con `tripDate` (M4).
 - `TripStatusService.onCancelled` recibe los manejadores de Boletos (desde la 6.4 cancela los boletos y deja el saldo por devolver).
 - Cambio de unidad con boletos vendidos: validado desde la 6.4 (no se quita la unidad y la nueva debe tener los asientos vendidos).
-- El abordaje (`boarding`) es el momento natural del check-in con QR.
+- El abordaje (`boarding`) es el momento natural del check-in con QR: desde la 6.5 lo hace Boletos, y `TripStatusService.onStatusChanged` le avisa la salida y la llegada para marcar los no presentados.
 
 ## API
 | Método | Ruta | Roles |

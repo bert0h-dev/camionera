@@ -13,6 +13,7 @@ import {
   ActionType,
   BusStatus,
   OdometerSource,
+  TicketStatus,
   TripStatus,
   UserRole,
 } from '../generated/prisma/enums.js';
@@ -200,6 +201,13 @@ export class TripStatusService {
     });
     if (to === TripStatus.cancelled)
       await this.onTripCancelled(id, reason ?? '', actor);
+    for (const h of this.statusHandlers)
+      await h(id, to, actor).catch((err: unknown) =>
+        this.logger.error(
+          'Falló un manejador del cambio de estado del recorrido ' + id,
+          err,
+        ),
+      );
     return {
       id: updated.id,
       status: updated.status,
@@ -213,6 +221,19 @@ export class TripStatusService {
     reason: string,
     actor: AuthUser,
   ) => Promise<void>)[] = [];
+
+  /** Manejadores de cualquier cambio de estado (Boletos marca los no presentados al salir y al terminar). */
+  private readonly statusHandlers: ((
+    tripId: string,
+    to: TripStatus,
+    actor: AuthUser,
+  ) => Promise<void>)[] = [];
+
+  onStatusChanged(
+    handler: (tripId: string, to: TripStatus, actor: AuthUser) => Promise<void>,
+  ) {
+    this.statusHandlers.push(handler);
+  }
 
   onCancelled(
     handler: (tripId: string, reason: string, actor: AuthUser) => Promise<void>,
@@ -238,15 +259,46 @@ export class TripStatusService {
   // ---------- Conductor ----------
 
   /** Recorridos del día del usuario como conductor o cobrador. */
-  mine(actor: AuthUser, q: MineQueryDto) {
+  async mine(actor: AuthUser, q: MineQueryDto) {
     const person = { userId: actor.id };
-    return this.prisma.trip.findMany({
+    const trips = await this.prisma.trip.findMany({
       where: {
         tripDate: toDate(q.date),
         OR: [{ driver: person }, { collector: person }],
       },
       include: listInclude,
       orderBy: { departureAt: 'asc' },
+    });
+    // Vendidos y abordados de cada recorrido, para el botón de abordaje (Módulo 6)
+    const counts = trips.length
+      ? await this.prisma.ticket.groupBy({
+          by: ['tripId', 'status'],
+          where: {
+            tripId: { in: trips.map((t) => t.id) },
+            status: {
+              in: [
+                TicketStatus.confirmed,
+                TicketStatus.checked_in,
+                TicketStatus.no_show,
+              ],
+            },
+          },
+          _count: true,
+        })
+      : [];
+    return trips.map((t) => {
+      const of = (s: TicketStatus) =>
+        counts.find((c) => c.tripId === t.id && c.status === s)?._count ?? 0;
+      return {
+        ...t,
+        boarding: {
+          sold:
+            of(TicketStatus.confirmed) +
+            of(TicketStatus.checked_in) +
+            of(TicketStatus.no_show),
+          boarded: of(TicketStatus.checked_in),
+        },
+      };
     });
   }
 

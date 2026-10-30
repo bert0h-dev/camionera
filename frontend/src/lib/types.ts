@@ -1482,6 +1482,8 @@ export interface SaleListItem {
 export interface TripOccupancy {
   sold: number
   held: number
+  /** Abordaron (check-in) */
+  boarded: number
 }
 
 // ---------- Caja (Módulo 6.3) ----------

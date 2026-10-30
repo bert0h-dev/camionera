@@ -64,6 +64,10 @@ export function TripsOverview() {
             <span className="block truncate text-xs text-fg-muted">
               {t.bus ? `Unidad ${t.bus.economicNumber}` : 'sin unidad'}
               {missing && ' · falta asignar'}
+              {t.occupancy.sold > 0 &&
+                (t.status === 'scheduled'
+                  ? ' · ' + t.occupancy.sold + ' boletos'
+                  : ' · abordaron ' + t.occupancy.boarded + '/' + t.occupancy.sold)}
             </span>
           </span>
           <TripStatusBadge status={t.status} />

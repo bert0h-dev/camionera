@@ -9,7 +9,7 @@
   - **Rutas**: Horarios de ruta (`routes.schedule_expiry_alert_days`, 7 días: aviso en Pendientes de los horarios cuya vigencia termina). Desde la 4.2.
   - **Sistema**: Seguridad de acceso y Bitácora.
   - **Recorridos**: días generados por adelantado y descansos entre recorridos (Módulo 5).
-  - **Boletos**: Venta de boletos (`tickets.*`: apartado en taquilla y en línea, cargo por cambio, cancelación, reembolso, check-in y boletos por compra) y **Caja** (`cash.*`: fondo propuesto, tolerancia del corte y aviso de caja abierta; desde la 6.3) y, debajo, el catálogo **Tipos de pasajero** (desde la 6.0). Los parámetros se aplican conforme entran las fases del Módulo 6.
+  - **Boletos**: Venta de boletos (`tickets.*`: apartado en taquilla y en línea, cargo por cambio, cancelación, reembolso, check-in, no presentado en paradas intermedias y boletos por compra) y **Caja** (`cash.*`: fondo propuesto, tolerancia del corte y aviso de caja abierta; desde la 6.3) y, debajo, el catálogo **Tipos de pasajero** (desde la 6.0). Los parámetros se aplican conforme entran las fases del Módulo 6.
   - **Próximamente**: hoy vacío. Si un módulo futuro adelanta parámetros, va aquí colapsado y atenuado.
 - **Navegación**: un menú lateral fijo con los módulos y sus grupos; en pantallas chicas se vuelve una fila de chips. Cada enlace salta a su tarjeta y, si está en "Próximamente", la abre.
 - **Buscador**: filtra por nombre o descripción del parámetro, o por título del grupo, sin distinguir acentos ni mayúsculas. Los campos que no coinciden se ocultan sin perder lo que se esté editando.

@@ -10,8 +10,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 | 6.1 | Disponibilidad por tramo, mapa de asientos y apartado temporal con vencimiento automático | ✅ fusionada (PR #28) |
 | 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ✅ fusionada (PR #29) |
 | 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ✅ fusionada (PR #30) |
-| 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ✅ rama `feat/m6-cancelaciones` |
-| 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ⏳ |
+| 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ✅ fusionada (PR #31) |
+| 6.5 | Check-in con QR desde *Mis recorridos*, manifiesto de pasajeros, no presentados y ocupación real | ✅ rama `feat/m6-abordaje` |
 | 6.6 | Promociones y clientes | ⏳ |
 | 6.7 | Venta en línea (portal público `/viajar`) con Mercado Pago y webhooks; consulta y cancelación por folio + correo | ⏳ |
 
@@ -119,7 +119,31 @@ Decisiones (2026-10-30): en un cambio, la **diferencia a favor del cliente se re
 - **Extras en la venta**: la búsqueda de la taquilla (`/tickets/departures`) ahora incluye los **recorridos extra**. La búsqueda de Rutas los omitía porque solo arma salidas desde los horarios; aparecen con la etiqueta *Extra*.
 - **Migración `ticket_refund_due`**: `refund_due` en `tickets`.
 
+## 6.5 Abordaje: check-in, manifiesto y no presentados
+Decisiones (2026-10-30): escáner con `BarcodeDetector` nativo y **jsQR** de respaldo; la credencial (INAPAM, estudiante) **solo se avisa** a quien aborda, no bloquea.
+
+- **Check-in** (`POST /tickets/trips/:tripId/check-in` con `code`): el código es el QR (se verifica la firma) o el folio del boleto escrito a mano.
+  - Reglas (`boarding-rules.ts`, con pruebas): el boleto debe ser de ese recorrido y estar `confirmed`. La ventana se abre `tickets.checkin_minutes` antes del paso por su parada de subida y se cierra cuando el recorrido ya pasó esa parada: el origen, al registrar la salida; una intermedia, `tickets.no_show_grace_minutes` (parámetro nuevo, 15) después de su hora de paso, con el recorrido ya en camino.
+  - Rechaza QR no emitidos por la central, boletos de otro recorrido, cambiados y duplicados ("ya abordó a las 07:12, Juan").
+  - Dos lecturas simultáneas no abordan dos veces (se actualiza solo si sigue `confirmed`).
+  - Guarda quién y cuándo (`checked_in_by`, `checked_in_at`) y el evento `checked_in`. Si el tipo pide credencial, la respuesta trae `verifyId`.
+- **Deshacer** (`DELETE /tickets/check-in/:ticketId`): solo mientras el recorrido no pase la parada; queda en el historial.
+- **Quién aborda**: el conductor o cobrador **asignado** (solo en sus recorridos), coordinator, supervisor y admin.
+- **No presentados**: `TripStatusService.onStatusChanged` (mismo patrón que `onCancelled`).
+  - Al salir (`in_transit`) se marcan `no_show` los del origen que no abordaron. Al terminar (`completed`), todos los que falten.
+  - Un cron cada 5 min marca los de paradas intermedias pasada la gracia.
+  - No tienen reembolso.
+- **Manifiesto** (`GET /tickets/trips/:id/manifest` y `/manifest/pdf`): pasajeros por parada de subida con asiento, nombre, tipo, identificación, bajada, folio y estado, con conteos. El PDF (carta) lleva unidad, conductor, cobrador, casilla por pasajero y firmas de conductor y despachador.
+- **Ocupación**: `occupancy` de Recorridos suma `boarded` y cuenta como vendidos también a los no presentados. `/trips/mine` trae `boarding` (vendidos y abordados).
+
 ## Pantallas
+- **Abordaje** (`/abordaje/:id`): pensada para el celular.
+  - Cámara trasera con guía de encuadre, campo de folio y resultado grande: verde si abordó, ámbar si hay que verificar credencial, rojo si no puede abordar. Vibra según el resultado.
+  - Cifras de abordaron, por abordar y no presentados, y la lista por parada con buscador, *Abordar* manual y *Deshacer*. Se refresca cada 15 s.
+  - Botón *Manifiesto* (PDF).
+- **Mis recorridos**: botón *Abordar pasajeros · 12/30* en cada tarjeta con boletos.
+- **Ficha del recorrido**: botón *Abordaje* en la banda y "N abordaron" en la cifra *Boletos*.
+- **Inicio › Recorridos**: "abordaron x/y" en lo que está en operación y "N boletos" en lo programado.
 - **Venta › Caja** (`/caja`):
   - **Mi caja**: sin caja abierta, una tarjeta para abrirla con el fondo propuesto. Con caja abierta, la banda muestra efectivo esperado, vendido neto, boletos y comisión, con los botones *Retiro*, *Ingreso* y *Hacer corte*. Abajo van el arqueo, las ventas por método y los movimientos (se refresca cada 30 s), y después *Mis cortes*.
   - **Corte**: desglose por billetes y monedas (o solo el total), con esperado, contado y diferencia en vivo; pide motivo si pasa la tolerancia. Al terminar abre la ficha del corte con su PDF.
@@ -160,6 +184,8 @@ Decisiones (2026-10-30): en un cambio, la **diferencia a favor del cliente se re
 | GET | `/tickets/lookup?code=` · `/tickets/orders/:id/full` · `/tickets/trips/:id/passengers` | coordinator, supervisor, vendor |
 | POST | `/tickets/cancel/quote` · `/tickets/cancel` · `/tickets/changes` · `/tickets/changes/:orderId/complete` | coordinator, vendor |
 | GET | `/tickets/changes/:orderId` | coordinator, vendor |
+| POST · DELETE | `/tickets/trips/:tripId/check-in` · `/tickets/check-in/:ticketId` | coordinator, supervisor; driver y collector en sus recorridos |
+| GET | `/tickets/trips/:tripId/manifest` · `/tickets/trips/:tripId/manifest/pdf` | coordinator, supervisor; driver y collector en sus recorridos |
 | GET | `/files/company-logo` | público |
 | GET · PUT · DELETE | `/files/company-logo/info` · `/files/company-logo` | admin |
 

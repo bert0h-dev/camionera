@@ -45,6 +45,7 @@ export const loaders = {
   cash: () => import('../pages/cash/CashPage'),
   promotions: () => import('../pages/tickets/PromotionsPage'),
   customers: () => import('../pages/tickets/CustomersPage'),
+  reports: () => import('../pages/reports/ReportsPage'),
   boarding: () => import('../pages/boarding/BoardingPage'),
 } satisfies Record<string, Loader>
 
@@ -80,6 +81,7 @@ const BY_SEGMENT: Record<string, PageKey> = {
   caja: 'cash',
   promociones: 'promotions',
   clientes: 'customers',
+  reportes: 'reports',
   abordaje: 'boarding',
 }
 

@@ -1,5 +1,6 @@
 import {
   BadgePercent,
+  BarChart3,
   Contact,
   Building2,
   Bus,
@@ -98,6 +99,10 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: 'Análisis',
+    items: [{ to: '/reportes', label: 'Reportes', icon: BarChart3, roles: TRIP_READERS }],
+  },
+  {
     label: 'Sistema',
     items: [
       { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, roles: ['admin'] },
@@ -145,6 +150,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   caja: 'Caja',
   promociones: 'Promociones',
   clientes: 'Clientes',
+  reportes: 'Reportes',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

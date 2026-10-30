@@ -13,6 +13,6 @@ import { SeasonsService } from './seasons.service.js';
   imports: [FleetModule, SettingsModule, TripsModule],
   controllers: [RoutesController, SeasonsController],
   providers: [RoutesService, SchedulesService, SeasonsService, SearchService],
-  exports: [RoutesService, SchedulesService, SeasonsService],
+  exports: [RoutesService, SchedulesService, SeasonsService, SearchService],
 })
 export class RoutesModule {}

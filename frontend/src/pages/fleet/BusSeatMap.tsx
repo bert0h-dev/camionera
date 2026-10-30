@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Ban } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { BusLayout, BusSeat } from '../../lib/types'
@@ -17,15 +17,29 @@ const SEAT_TONE = {
 const BLOCKED =
   'border-red-300 bg-red-50 text-red-700 line-through dark:border-red-400/40 dark:bg-red-500/15 dark:text-red-300'
 
+/** Cómo se pinta un asiento cuando el mapa se usa para otra cosa (p. ej. la venta de boletos). */
+export interface SeatLook {
+  className: string
+  title?: string
+  disabled?: boolean
+  content?: ReactNode
+}
+
 /** Asientos de una unidad sobre la plantilla del modelo; los bloqueados se ven en rojo. */
-export function BusSeatMap({
+export function BusSeatMap<S extends BusSeat>({
   layout,
   seats,
   onSeatClick,
+  seatLook,
+  legend,
 }: {
   layout: BusLayout
-  seats: BusSeat[]
-  onSeatClick?: (seat: BusSeat) => void
+  seats: S[]
+  onSeatClick?: (seat: S) => void
+  /** Reemplaza el color por categoría (p. ej. libre, apartado u ocupado en la venta) */
+  seatLook?: (seat: S) => SeatLook
+  /** Reemplaza la leyenda de categorías */
+  legend?: ReactNode
 }) {
   const [floorIdx, setFloorIdx] = useState(0)
   const floor = layout.floors[Math.min(floorIdx, layout.floors.length - 1)]
@@ -66,6 +80,26 @@ export function BusSeatMap({
                     </div>
                   )
                 }
+                const look = seatLook?.(seat)
+                if (look)
+                  return (
+                    <button
+                      key={`${r}:${c}`}
+                      type="button"
+                      disabled={!onSeatClick || look.disabled}
+                      onClick={() => onSeatClick?.(seat)}
+                      title={look.title}
+                      aria-label={look.title}
+                      className={cn(
+                        base,
+                        'font-data font-semibold',
+                        look.className,
+                        onSeatClick && !look.disabled ? 'cursor-pointer hover:brightness-95' : 'cursor-default',
+                      )}
+                    >
+                      {look.content ?? seat.number}
+                    </button>
+                  )
                 return (
                   <button
                     key={`${r}:${c}`}
@@ -92,18 +126,20 @@ export function BusSeatMap({
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-fg-muted">
-        {(['normal', 'preferred', 'accessible'] as const).map((k) => (
-          <span key={k} className="flex items-center gap-1.5">
-            <span className={cn('size-3 rounded border', SEAT_TONE[k])} />
-            {CATEGORY_LABELS[k]}
+      {legend ?? (
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+          {(['normal', 'preferred', 'accessible'] as const).map((k) => (
+            <span key={k} className="flex items-center gap-1.5">
+              <span className={cn('size-3 rounded border', SEAT_TONE[k])} />
+              {CATEGORY_LABELS[k]}
+            </span>
+          ))}
+          <span className="flex items-center gap-1.5">
+            <span className={cn('size-3 rounded border', BLOCKED)} />
+            Bloqueado
           </span>
-        ))}
-        <span className="flex items-center gap-1.5">
-          <span className={cn('size-3 rounded border', BLOCKED)} />
-          Bloqueado
-        </span>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

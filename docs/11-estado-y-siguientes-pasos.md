@@ -25,14 +25,15 @@
   - 5.3 Estados, tiempos reales, odómetro y Mis recorridos ✅ fusionada (PR #25).
   - 5.4 Incidencias del recorrido, aviso por correo y pestaña Recorridos en Inicio ✅ fusionada (PR #26).
 - **Módulo 6, Gestión de Boletos** (doc 17): 🚧 en curso, plan 6.0–6.7 aprobado.
-  - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ en la rama `feat/m6-esquema`.
+  - 6.0 Esquema, reglas de precio, disponibilidad y cancelación, y tipos de pasajero ✅ fusionada (PR #27).
+  - 6.1 Disponibilidad por tramo, mapa de asientos, apartado y pantalla Taquilla ✅ en la rama `feat/m6-disponibilidad`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 6, Boletos**: sigue la 6.1 (disponibilidad, mapa de asientos y apartado). Fases y decisiones en el doc 17.
+1. **Módulo 6, Boletos**: sigue la 6.2 (pasajeros, cobro en taquilla y boleto con QR en PDF). Fases y decisiones en el doc 17.
 2. Después viene el Módulo 7 (Reportes); el M6 deja los precios congelados y `ticket_events` para sus cifras.
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 

@@ -13,6 +13,7 @@ import {
   Search,
   ShieldCheck,
   Star,
+  Ticket,
   TramFront,
   TriangleAlert,
   Users,
@@ -77,6 +78,10 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: 'Venta',
+    items: [{ to: '/taquilla', label: 'Taquilla', icon: Ticket, roles: TRIP_READERS }],
+  },
+  {
     label: 'Operación',
     items: [
       { to: '/recorridos', label: 'Recorridos', icon: TramFront, roles: TRIP_READERS },
@@ -125,6 +130,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   buscar: 'Buscar salidas',
   recorridos: 'Recorridos',
   'mis-recorridos': 'Mis recorridos',
+  taquilla: 'Taquilla',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

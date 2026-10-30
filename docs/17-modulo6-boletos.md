@@ -6,8 +6,8 @@ Un **boleto** es un pasajero en un asiento de un recorrido, para un tramo del it
 
 | Fase | Contenido | Estado |
 |---|---|---|
-| 6.0 | Esquema completo, reglas puras (precio, disponibilidad, cancelación, estados) y catálogo de tipos de pasajero | ✅ rama `feat/m6-esquema` |
-| 6.1 | Disponibilidad por tramo, mapa de asientos y apartado temporal con vencimiento automático | ⏳ |
+| 6.0 | Esquema completo, reglas puras (precio, disponibilidad, cancelación, estados) y catálogo de tipos de pasajero | ✅ fusionada (PR #27) |
+| 6.1 | Disponibilidad por tramo, mapa de asientos y apartado temporal con vencimiento automático | ✅ rama `feat/m6-disponibilidad` |
 | 6.2 | Venta en taquilla: búsqueda → mapa → pasajeros → cobro (efectivo, tarjeta en terminal, transferencia o mixto); boleto con QR en PDF y por correo; logo de la empresa | ⏳ |
 | 6.3 | Caja y corte: apertura con fondo, movimientos, retiros, arqueo y comisión del vendedor | ⏳ |
 | 6.4 | Cancelaciones, cambios y reembolsos; recorrido cancelado (`onTripCancelled`); cambio de unidad con boletos | ⏳ |
@@ -54,11 +54,39 @@ Reglas en la base (SQL de la migración, Prisma no las modela):
 - Ya existían: `tickets.cancellation_hours`, `tickets.refund_percent`, `tickets.checkin_minutes` y `tickets.max_per_purchase`, más IVA y comisiones en *Impuestos y comisiones*.
 - El grupo dejó "Próximamente": ahora es el módulo **Boletos**. Debajo está la tarjeta **Tipos de pasajero** (alta, edición, activar o desactivar; siempre hay uno predeterminado y ese no se desactiva). El buscador de parámetros la encuentra por "pasajero", "INAPAM", "descuento", etc.
 
+## 6.1 Disponibilidad, mapa y apartado
+- **Itinerario del recorrido** (`itinerary-rules.ts`): origen, paradas y destino con índice, terminal, hora de paso y precio acumulado. Las paradas salen de la ruta actual; el destino usa la duración copiada en el recorrido para coincidir con su llegada. Cada boleto guarda sus terminales y sus instantes de subida y bajada.
+- **Cuándo se vende** (`hold-rules.ts`): recorrido programado, abordando o retrasado antes de salir, **con unidad asignada**, y mientras no haya pasado la hora del punto de subida. Si no, la respuesta dice por qué.
+- **Mapa** (`GET /tickets/trips/:id/seats?board=&alight=`): acomodo de la unidad con el estado de cada asiento en el tramo (libre, apartado, vendido o bloqueado; los apartados propios se marcan aparte), precio del tramo con temporada, conteos y cupo restante de cada tipo de pasajero.
+- **Búsqueda con disponibilidad** (`GET /tickets/departures`): la del M4.5 más el recorrido generado, si se vende y los lugares libres del tramo. *Rutas › Buscar salidas* ya la usa y muestra los libres con liga a la taquilla.
+- **Apartado** (`POST /tickets/holds`): crea una compra `pending` con boletos `held` a precio de adulto (los tipos de pasajero se capturan en la 6.2), que vence en `tickets.hold_minutes`.
+  - Respeta `tickets.max_per_purchase`, rechaza asientos inexistentes o bloqueados y, en la misma transacción, libera primero los apartados vencidos de ese recorrido.
+  - Si dos vendedores apartan el mismo asiento a la vez, la exclusion constraint deja pasar uno y el otro recibe 409 (probado contra la base).
+  - `PATCH /tickets/holds/:id` quita asientos (no todos) o **extiende una vez** sumando otro `hold_minutes`. Para agregar asientos se suelta y se aparta de nuevo.
+  - `DELETE /tickets/holds/:id` suelta el apartado completo.
+- **Vencimiento**: un cron cada minuto pasa a `expired` las compras vencidas y a `cancelled` sus boletos, con evento `released`.
+- **Folios**: compra `C0000001`, boleto `B0000001` (secuencias de la migración).
+- **Ocupación**: la lista y la ficha de Recorridos muestran boletos vendidos / asientos y los apartados vigentes. Cuenta boletos, no asientos: con venta por tramos un asiento puede llevar varios.
+
+## Pantallas
+- **Venta › Taquilla** (`/taquilla`; coordinator, supervisor y vendor; el supervisor ve pero no aparta):
+  1. Salida: origen, destino y fecha, con lugares libres y botón *Elegir asientos* (o el motivo si no se vende).
+  2. Asientos: mapa del tramo (se refresca cada 15 s), itinerario con el tramo resaltado y total estimado; *Apartar*.
+  3. Apartado: asientos con su tramo y precio, IVA incluido, total, contador del tiempo que queda, *Más tiempo* (una vez) y *Soltar asientos*. La captura de pasajeros y el cobro llegan en la 6.2.
+  - El estado vive en la URL (`origen`, `destino`, `fecha`, `viaje`, `sube`, `baja`, `compra`).
+- El mapa de Flota (`BusSeatMap`) acepta `seatLook` y `legend` para pintar estados de venta (`SeatPicker`).
+- Ficha del recorrido: cifra **Boletos** en la banda, con liga a la taquilla para el recorrido completo.
+- Buscador Ctrl+K: "Vender boletos (taquilla)".
+
 ## API
 | Método | Ruta | Roles |
 |---|---|---|
 | GET | `/tickets/passenger-types?includeInactive=` | coordinator, supervisor, vendor |
 | POST · PATCH | `/tickets/passenger-types` · `/tickets/passenger-types/:id` | admin |
+| GET | `/tickets/departures` (mismos filtros que `/routes/search`) · `/tickets/trips/:id/seats` · `/tickets/orders/:id` | coordinator, supervisor, vendor |
+| POST · PATCH · DELETE | `/tickets/holds` · `/tickets/holds/:id` | coordinator, vendor |
+
+Una compra solo la ve su vendedor, el supervisor o el admin.
 
 ## Datos
 `npm run prisma:seed -w backend` siembra los cuatro tipos de pasajero (no sobrescribe los existentes).

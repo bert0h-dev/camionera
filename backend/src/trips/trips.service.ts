@@ -10,7 +10,11 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { paginate } from '../common/dto/pagination.dto.js';
 import { businessHour, dateKey, toDate, today } from '../common/dates.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { ActionType, TripStatus } from '../generated/prisma/enums.js';
+import {
+  ActionType,
+  TicketStatus,
+  TripStatus,
+} from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { wallTime, zonedInstant } from '../routes/route-rules.js';
 import { timeKey } from '../routes/schedule-rules.js';
@@ -58,12 +62,21 @@ export const listInclude = {
       name: true,
       originTerminal: terminal,
       destinationTerminal: terminal,
+      _count: { select: { stops: true } },
     },
   },
-  bus: { select: { id: true, economicNumber: true } },
+  bus: {
+    select: {
+      id: true,
+      economicNumber: true,
+      _count: { select: { seats: true } },
+    },
+  },
   driver: person,
   collector: person,
 } satisfies Prisma.TripInclude;
+
+const EMPTY_OCCUPANCY = { sold: 0, held: 0 };
 
 const unassignedWhere: Prisma.TripWhereInput = {
   OR: [{ busId: null }, { driverId: null }],
@@ -410,7 +423,49 @@ export class TripsService {
       }),
       this.prisma.trip.count({ where }),
     ]);
-    return paginate(data, total, q);
+    const occupancy = await this.occupancy(data.map((t) => t.id));
+    return paginate(
+      data.map((t) => ({
+        ...t,
+        occupancy: occupancy.get(t.id) ?? EMPTY_OCCUPANCY,
+      })),
+      total,
+      q,
+    );
+  }
+
+  /**
+   * Boletos activos por recorrido (Módulo 6): vendidos (confirmados o abordados) y apartados
+   * vigentes. Cuenta boletos, no asientos: con venta por tramos un asiento puede llevar varios.
+   */
+  private async occupancy(tripIds: string[]) {
+    const map = new Map<string, { sold: number; held: number }>();
+    if (tripIds.length === 0) return map;
+    const now = new Date();
+    const rows = await this.prisma.ticket.findMany({
+      where: {
+        tripId: { in: tripIds },
+        status: {
+          in: [
+            TicketStatus.held,
+            TicketStatus.confirmed,
+            TicketStatus.checked_in,
+          ],
+        },
+      },
+      select: {
+        tripId: true,
+        status: true,
+        order: { select: { expiresAt: true } },
+      },
+    });
+    for (const r of rows) {
+      const o = map.get(r.tripId) ?? { sold: 0, held: 0 };
+      if (r.status !== TicketStatus.held) o.sold++;
+      else if (!r.order.expiresAt || r.order.expiresAt > now) o.held++;
+      map.set(r.tripId, o);
+    }
+    return map;
   }
 
   /** Cifras del día para la banda de la pantalla. */
@@ -483,10 +538,12 @@ export class TripsService {
     });
     if (!trip) throw new NotFoundException('Recorrido no encontrado');
     const { schedule, ...rest } = trip;
+    const occupancy = (await this.occupancy([id])).get(id) ?? EMPTY_OCCUPANCY;
     const originTz = trip.route.originTerminal.city.timezone;
     const destinationTz = trip.route.destinationTerminal.city.timezone;
     return {
       ...rest,
+      occupancy,
       schedule: schedule
         ? {
             id: schedule.id,

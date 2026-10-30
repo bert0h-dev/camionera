@@ -123,6 +123,7 @@ function TripDetailPage() {
             {canOperate && <TripStatusActions trip={trip} inBand />}
           </>
         }
+        statsColumns={5}
         stats={
           <>
             <HeroStat
@@ -156,6 +157,20 @@ function TripDetailPage() {
               value={trip.driver ? `${trip.driver.firstName} ${trip.driver.lastName}` : '—'}
               tone={trip.driver ? 'neutral' : 'warning'}
               hint={trip.collector ? `cobrador: ${staffFullName(trip.collector)}` : 'sin cobrador'}
+            />
+            <HeroStat
+              label="Boletos"
+              value={trip.bus ? `${trip.occupancy.sold}/${trip.bus._count?.seats ?? '—'}` : '—'}
+              hint={
+                trip.bus
+                  ? `vendidos${trip.occupancy.held ? ` · ${trip.occupancy.held} apartados` : ''}`
+                  : 'se vende al asignar unidad'
+              }
+              to={
+                trip.bus && trip.status !== 'cancelled'
+                  ? `/taquilla?viaje=${trip.id}&sube=0&baja=${(trip.route._count?.stops ?? 0) + 1}`
+                  : undefined
+              }
             />
           </>
         }

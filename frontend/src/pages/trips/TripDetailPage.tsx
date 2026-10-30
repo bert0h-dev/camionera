@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Trash2, UserCog } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { dayLabel, formatInstantDate, formatMinutes, formatTime, staffFullName } from '../../lib/format'
 import { TRIP_STATUS_LABELS, type TripDetail } from '../../lib/types'
@@ -15,6 +15,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
 import { daysText } from '../routes/useRoutes'
+import { AssignTripModal } from './AssignTripModal'
 import { TripStatusBadge } from './TripBadges'
 import { tripTimes, useCanManageTrips } from './useTrips'
 
@@ -27,6 +28,7 @@ function TripDetailPage() {
   const queryClient = useQueryClient()
   const canManage = useCanManageTrips()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [assigning, setAssigning] = useState(false)
 
   const {
     data: trip,
@@ -54,6 +56,8 @@ function TripDetailPage() {
   const origin = trip.route.originTerminal
   const destination = trip.route.destinationTerminal
   const isExtra = !trip.routeScheduleId
+  // Antes de salir todavía se puede cambiar la unidad o el personal
+  const canAssign = canManage && ['scheduled', 'boarding', 'delayed'].includes(trip.status)
   const canDelete =
     canManage && isExtra && trip.status === 'scheduled' && !trip.busId && !trip.driverId && !trip.collectorId
 
@@ -74,11 +78,18 @@ function TripDetailPage() {
           </div>
         }
         actions={
-          canDelete && (
-            <Button variant="glass" icon={Trash2} onClick={() => setConfirmDelete(true)}>
-              Borrar extra
-            </Button>
-          )
+          <>
+            {canDelete && (
+              <Button variant="glass" icon={Trash2} onClick={() => setConfirmDelete(true)}>
+                Borrar extra
+              </Button>
+            )}
+            {canAssign && (
+              <Button variant="accent" icon={UserCog} onClick={() => setAssigning(true)}>
+                {trip.busId || trip.driverId ? 'Cambiar asignación' : 'Asignar'}
+              </Button>
+            )}
+          </>
         }
         stats={
           <>
@@ -97,12 +108,12 @@ function TripDetailPage() {
               label="Unidad"
               value={trip.bus?.economicNumber ?? '—'}
               tone={trip.bus ? 'neutral' : 'warning'}
-              hint={trip.bus ? 'asignada' : 'se asigna en la fase 5.2'}
+              hint={trip.bus ? 'asignada' : 'sin asignar'}
               to={trip.bus ? `/flota/unidades/${trip.bus.id}` : undefined}
             />
             <HeroStat
               label="Conductor"
-              value={trip.driver ? staffFullName(trip.driver) : '—'}
+              value={trip.driver ? `${trip.driver.firstName} ${trip.driver.lastName}` : '—'}
               tone={trip.driver ? 'neutral' : 'warning'}
               hint={trip.collector ? `cobrador: ${staffFullName(trip.collector)}` : 'sin cobrador'}
             />
@@ -113,6 +124,11 @@ function TripDetailPage() {
       {times.crossesZone && (
         <Alert tone="info">
           La salida está en hora de {origin.city.name} y la llegada en hora de {destination.city.name}.
+        </Alert>
+      )}
+      {trip.overrideReason && (
+        <Alert tone="warning" title="Asignación forzada por un administrador">
+          {trip.overrideReason}
         </Alert>
       )}
       {trip.status === 'cancelled' && (
@@ -206,6 +222,10 @@ function TripDetailPage() {
           </CardBody>
         </Card>
       </div>
+
+      {canAssign && (
+        <AssignTripModal key={String(assigning)} trip={trip} open={assigning} onClose={() => setAssigning(false)} />
+      )}
 
       <ConfirmModal
         open={confirmDelete}

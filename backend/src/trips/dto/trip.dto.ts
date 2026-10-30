@@ -69,6 +69,35 @@ export class GenerateTripsDto {
   routeId?: string;
 }
 
+export class AssignTripDto {
+  @ApiPropertyOptional({
+    description: 'null = quitar la unidad',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  busId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsUUID()
+  driverId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsUUID()
+  collectorId?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Solo admin: motivo para pasar las horas máximas de manejo',
+  })
+  @Transform(trimOrNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  overrideReason?: string | null;
+}
+
 export class CreateExtraTripDto {
   @ApiProperty()
   @IsUUID()

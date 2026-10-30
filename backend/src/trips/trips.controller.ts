@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -15,11 +16,13 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../generated/prisma/enums.js';
 import {
+  AssignTripDto,
   CreateExtraTripDto,
   GenerateTripsDto,
   QueryTripsDto,
   SummaryQueryDto,
 } from './dto/trip.dto.js';
+import { TripAssignmentService } from './trip-assignment.service.js';
 import { TripsService } from './trips.service.js';
 
 /** Coordinación (y admin) gestiona los recorridos; supervisión y taquilla los consultan. */
@@ -35,7 +38,10 @@ export const TRIP_EDITORS = [UserRole.coordinator];
 @Roles(...TRIP_EDITORS)
 @Controller('trips')
 export class TripsController {
-  constructor(private readonly trips: TripsService) {}
+  constructor(
+    private readonly trips: TripsService,
+    private readonly assignment: TripAssignmentService,
+  ) {}
 
   @Get('summary')
   @Roles(...TRIP_READERS)
@@ -69,6 +75,20 @@ export class TripsController {
   @Roles(...TRIP_READERS)
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.trips.findOne(id);
+  }
+
+  @Get(':id/candidates')
+  candidates(@Param('id', ParseUUIDPipe) id: string) {
+    return this.assignment.candidates(id);
+  }
+
+  @Put(':id/assignment')
+  assign(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignTripDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.assignment.assign(id, dto, actor);
   }
 
   @Delete(':id')

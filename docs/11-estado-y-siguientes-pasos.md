@@ -20,7 +20,8 @@
   - 4.5 Búsqueda de salidas ✅ fusionada (PR #22).
   - Con la 4.1: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
 - **Módulo 5, Gestión de Recorridos** (doc 16): 🚧 en curso.
-  - 5.1 Generación automática, extras y pantalla Recorridos ✅ en la rama `feat/m5-generacion`.
+  - 5.1 Generación automática, extras y pantalla Recorridos ✅ fusionada (PR #23).
+  - 5.2 Asignación de unidad, conductor y cobrador con validaciones y Pendientes ✅ en la rama `feat/m5-asignacion`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).

@@ -19,10 +19,13 @@ import { ROUTE_EDITORS } from '../routes/routes.controller.js';
 import { daysLabel, timeKey } from '../routes/schedule-rules.js';
 import { SchedulesService } from '../routes/schedules.service.js';
 import { dateKey, daysBetween, today } from '../common/dates.js';
+import { wallTime } from '../routes/route-rules.js';
+import { TripAssignmentService } from '../trips/trip-assignment.service.js';
+import { TripsService } from '../trips/trips.service.js';
 import { StaffDocumentsService } from '../staff/documents/staff-documents.service.js';
 
 export type PendingArea =
-  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route';
+  'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip';
 export type PendingSeverity = 'overdue' | 'soon';
 
 export interface PendingItem {
@@ -51,6 +54,18 @@ const FLEET_AREA: UserRole[] = [
   UserRole.supervisor,
 ];
 
+const DAY_MS = 86_400_000;
+const URGENT_MS = 6 * 3_600_000;
+
+/** '30/10 14:05' en hora de la terminal de origen, como en Recorridos */
+const departure = (
+  at: Date,
+  route: { originTerminal: { city: { timezone: string } } },
+) => {
+  const w = wallTime(at, route.originTerminal.city.timezone);
+  return `${w.date.slice(8)}/${w.date.slice(5, 7)} ${w.time}`;
+};
+
 const staffName = (s: {
   firstName: string;
   lastName: string;
@@ -72,6 +87,8 @@ export class PendingService {
     private readonly incidents: IncidentsService,
     private readonly fuel: FuelService,
     private readonly schedules: SchedulesService,
+    private readonly trips: TripsService,
+    private readonly assignment: TripAssignmentService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
@@ -90,6 +107,9 @@ export class PendingService {
       fuelLoads,
       unscheduled,
       expiring,
+      unassigned,
+      unfit,
+      stale,
     ] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
@@ -99,6 +119,11 @@ export class PendingService {
       fuelManager ? this.fuel.pendingLoads() : null,
       routes ? this.schedules.routesWithoutSchedules() : null,
       routes ? this.schedules.expiringSchedules() : null,
+      fleet
+        ? this.assignment.unassignedBefore(new Date(Date.now() + DAY_MS))
+        : null,
+      fleet ? this.assignment.busesNoLongerFit() : null,
+      routes ? this.trips.staleTrips() : null,
     ]);
     const now = Date.now();
 
@@ -215,6 +240,49 @@ export class PendingService {
         date: s.validUntil,
         daysLeft: s.validUntil ? daysBetween(today(), s.validUntil) : null,
         link: `/rutas/${s.route.id}?tab=schedules`,
+      })),
+      ...(unassigned ?? []).map((t) => {
+        const missing = [!t.busId && 'unidad', !t.driverId && 'conductor']
+          .filter(Boolean)
+          .join(' y ');
+        return {
+          id: `trip-unassigned-${t.id}`,
+          area: 'trip' as const,
+          // A menos de 6 h de salir ya es urgente
+          severity:
+            t.departureAt.getTime() - now < URGENT_MS
+              ? ('overdue' as const)
+              : ('soon' as const),
+          title: `Sin ${missing} · ${t.tripNumber}`,
+          detail: `Sale ${departure(t.departureAt, t.route)} · ${t.route.name}`,
+          date: null,
+          daysLeft: null,
+          link: `/recorridos/${t.id}`,
+        };
+      }),
+      ...(unfit ?? []).map((t) => ({
+        id: `trip-unfit-${t.id}`,
+        area: 'trip' as const,
+        severity: 'overdue' as const,
+        title: `Unidad no disponible · ${t.tripNumber}`,
+        detail: `La ${t.bus!.economicNumber} está ${
+          t.bus!.status === 'maintenance'
+            ? 'en mantenimiento'
+            : 'fuera de servicio'
+        } · sale ${departure(t.departureAt, t.route)}`,
+        date: null,
+        daysLeft: null,
+        link: `/recorridos/${t.id}`,
+      })),
+      ...(stale ?? []).map((t) => ({
+        id: `trip-stale-${t.id}`,
+        area: 'trip' as const,
+        severity: 'soon' as const,
+        title: `Horario cambiado · ${t.tripNumber}`,
+        detail: `Ya está asignado; su horario cambió o se desactivó · ${t.route.name}`,
+        date: null,
+        daysLeft: null,
+        link: `/recorridos/${t.id}`,
       })),
     ];
 

@@ -381,6 +381,16 @@ export const SETTINGS = {
     description:
       'Cada noche se generan los recorridos de hoy a este número de días según los horarios de ruta',
   },
+  'trips.boarding_open_minutes': {
+    type: 'number',
+    default: 30,
+    min: 5,
+    max: 180,
+    label: 'Apertura del abordaje',
+    unit: 'min',
+    description:
+      'Minutos antes de la salida a partir de los cuales se puede pasar un recorrido a abordando',
+  },
   'trips.unit_turnaround_minutes': {
     type: 'number',
     default: 30,

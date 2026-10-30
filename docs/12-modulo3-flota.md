@@ -74,10 +74,10 @@ Pestañas Terminales, Mapa, Ciudades y Combustibles. Los registros no se borran:
 
 ### Reglas (`backend/src/fleet/bus-rules.ts`, con pruebas)
 - **Apta**: la unidad no está en mantenimiento ni fuera de servicio, tiene seguro y tarjeta de circulación vigentes hoy (un documento vence al terminar su día) y su terminal base tiene ubicación. Si no es apta, la API devuelve `fit` y la lista de motivos (`reasons`).
-- **Salir a servicio** (`in_service`): exige que la unidad sea apta. La primera vez se guarda `first_service_at`.
+- **Salir a servicio** (`in_service`): exige que la unidad sea apta. La primera vez se guarda `first_service_at`. Desde la 5.3, la salida de un recorrido la pone en servicio y la llegada la regresa a disponible (doc 16).
 - **Cambio de modelo**: solo mientras `first_service_at` esté vacío. Al cambiarlo se vuelven a copiar los asientos y se pierden los bloqueos.
 - **Motivo obligatorio**: para pasar a mantenimiento o fuera de servicio, y para bloquear un asiento.
-- **Odómetro**: nunca baja. `BusesService.recordOdometer(id, km, actor, source)` queda lista para mantenimiento, combustible y recorridos.
+- **Odómetro**: nunca baja. `BusesService.recordOdometer(id, km, actor, source)` la usan mantenimiento, combustible y recorridos (salida y llegada, origen `trip`).
 - **Terminal base**: tiene que estar activa y con ubicación (`assertUsableTerminal`).
 - **Alertas de documentos**: solo cuenta el documento más reciente de cada tipo; los anteriores quedan como historial.
 - **Sin borrado**: las unidades no se borran; se pasan a fuera de servicio. Los documentos sí se pueden eliminar, y todo cambio queda en la bitácora.

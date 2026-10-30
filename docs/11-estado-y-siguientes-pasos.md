@@ -21,14 +21,15 @@
   - Con la 4.1: los modales ya no se cierran con un clic afuera (solo X, Cancelar o Esc), y Catálogos › Terminales y Ciudades tienen buscador y paginado de 20 en pantalla.
 - **Módulo 5, Gestión de Recorridos** (doc 16): 🚧 en curso.
   - 5.1 Generación automática, extras y pantalla Recorridos ✅ fusionada (PR #23).
-  - 5.2 Asignación de unidad, conductor y cobrador con validaciones y Pendientes ✅ en la rama `feat/m5-asignacion`.
+  - 5.2 Asignación de unidad, conductor y cobrador con validaciones y Pendientes ✅ fusionada (PR #24).
+  - 5.3 Estados, tiempos reales, odómetro y Mis recorridos ✅ en la rama `feat/m5-estados`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 5, Recorridos**: generar los viajes de cada día a partir de los horarios, asignar unidad y conductor, y sus estados (ver "Lo que deja listo el Módulo 4" en el doc 15).
+1. **Módulo 5, Recorridos**: falta la 5.4 (incidencias del recorrido en `bus_incidents`, avisos y pestaña Recorridos en Inicio). Plan en el doc 16.
 2. Después vienen los Módulos 6 (Boletos) y 7 (Reportes).
    - Los parámetros `tickets.*` ya están listos.
 

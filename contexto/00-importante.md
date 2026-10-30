@@ -151,12 +151,52 @@ Un sistema integral de gestión de autobuses que permita administrar toda la ope
 
 #### **MÓDULO 5: Gestión de Recorridos**
 
-- Generación automática de recorridos
-- Asignación de unidades
+### **MÓDULO 5.1: Generación Automática de Trips**
+
+- Genera trips basados en horarios de ruta
+- Aplica días de la semana configurados
+- Previene duplicados
+- Batch creation para eficiencia
+
+### **MÓDULO 5.2: Gestión de Recursos**
+
+- Asignación de autobuses
 - Asignación de personal
-- Estados del recorrido (programado, en curso, completado, cancelado)
-- Tracking en tiempo real (opcional)
-- Registro de incidencias
+- Validación de disponibilidad
+- Prevención de conflictos
+
+### **MÓDULO 5.3. Control de Estados**
+
+- Flujo completo del ciclo de vida
+- Transiciones validadas
+- Actualización automática de bookings
+- Registro de tiempos reales
+
+### **MÓDULO 5.4. Sistema de Incidencias**
+
+- Registro de problemas
+- Clasificación por tipo y severidad
+- Seguimiento y resolución
+- Notificaciones automáticas
+
+### **MÓDULO 5.5. Estados de un Trip**
+
+```
+scheduled → boarding → in_transit → completed
+    ↓           ↓           ↓
+cancelled   cancelled   delayed → in_transit/completed
+```
+
+### **MÓDULO 5.6. Transiciones Válidas**
+
+| Estado Actual | Puede Cambiar A                  |
+| ------------- | -------------------------------- |
+| scheduled     | boarding, cancelled              |
+| boarding      | in_transit, cancelled            |
+| in_transit    | completed, delayed               |
+| delayed       | in_transit, completed, cancelled |
+| completed     | - (estado final)                 |
+| cancelled     | - (estado final)                 |
 
 #### **MÓDULO 6: Gestión de Boletos**
 

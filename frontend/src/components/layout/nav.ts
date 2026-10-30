@@ -78,7 +78,10 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Operación',
-    items: [{ to: '/recorridos', label: 'Recorridos', icon: TramFront, roles: TRIP_READERS }],
+    items: [
+      { to: '/recorridos', label: 'Recorridos', icon: TramFront, roles: TRIP_READERS },
+      { to: '/mis-recorridos', label: 'Mis recorridos', icon: TramFront, roles: ['driver', 'collector'] },
+    ],
   },
   {
     label: 'Sistema',
@@ -121,6 +124,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   temporadas: 'Temporadas',
   buscar: 'Buscar salidas',
   recorridos: 'Recorridos',
+  'mis-recorridos': 'Mis recorridos',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

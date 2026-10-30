@@ -92,4 +92,4 @@ Decisiones:
 | GET | `/reports/sales?from=&to=&routeId=&sellerId=&channel=` | admin, supervisor, coordinator; vendor (solo lo suyo) |
 | GET | `/reports/sales/export?format=xlsx\|pdf&…` | igual |
 | GET | `/reports/occupancy?from=&to=&routeId=` · `/reports/occupancy/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |
-| GET | `/reports/cancellations?from=&to=&routeId=` · `/reports/cancellations/export?format=xlsx|pdf&…` | admin, supervisor, coordinator |
+| GET | `/reports/cancellations?from=&to=&routeId=` · `/reports/cancellations/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |

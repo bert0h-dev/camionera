@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
@@ -30,6 +31,8 @@ const LATE_ARRIVAL_MIN = 60;
 /** Ciclo de vida del recorrido: abordar, salir, retrasar, terminar y cancelar. */
 @Injectable()
 export class TripStatusService {
+  private readonly logger = new Logger(TripStatusService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -195,7 +198,8 @@ export class TripStatusService {
       oldValues: { status: trip.status },
       newValues: { status: to, reason },
     });
-    if (to === TripStatus.cancelled) await this.onTripCancelled(id);
+    if (to === TripStatus.cancelled)
+      await this.onTripCancelled(id, reason ?? '', actor);
     return {
       id: updated.id,
       status: updated.status,
@@ -203,11 +207,33 @@ export class TripStatusService {
     };
   }
 
-  /**
-   * Gancho para el Módulo 6: al cancelar un recorrido se cancelarán sus boletos y se
-   * generarán los reembolsos. Hoy no hay boletos, así que no hace nada.
-   */
-  private async onTripCancelled(_tripId: string) {}
+  /** Manejadores del Módulo 6 al cancelar un recorrido (Boletos se registra al arrancar; así Recorridos no depende de Boletos). */
+  private readonly cancelHandlers: ((
+    tripId: string,
+    reason: string,
+    actor: AuthUser,
+  ) => Promise<void>)[] = [];
+
+  onCancelled(
+    handler: (tripId: string, reason: string, actor: AuthUser) => Promise<void>,
+  ) {
+    this.cancelHandlers.push(handler);
+  }
+
+  /** Cancela los boletos del recorrido; si un manejador falla, el recorrido ya quedó cancelado y solo se registra. */
+  private async onTripCancelled(
+    tripId: string,
+    reason: string,
+    actor: AuthUser,
+  ) {
+    for (const h of this.cancelHandlers)
+      await h(tripId, reason, actor).catch((err: unknown) =>
+        this.logger.error(
+          `No se cancelaron los boletos del recorrido ${tripId}`,
+          err,
+        ),
+      );
+  }
 
   // ---------- Conductor ----------
 

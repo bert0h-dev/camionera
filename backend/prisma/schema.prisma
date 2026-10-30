@@ -1455,6 +1455,8 @@ model Ticket {
   cancelReason      String?      @map("cancel_reason") @db.Text
   /// Boleto que lo reemplazó al cambiarlo
   replacedById      String?      @unique @map("replaced_by") @db.Uuid
+  /// Saldo por devolver cuando la empresa canceló el recorrido (se reembolsa o se usa al reubicar)
+  refundDue         Decimal?     @map("refund_due") @db.Decimal(10, 2)
   createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
 

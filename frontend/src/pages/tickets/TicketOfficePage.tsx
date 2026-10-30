@@ -16,6 +16,7 @@ import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
+import { ChangeCheckout } from './ChangeCheckout'
 import { Checkout } from './Checkout'
 import { SaleDone } from './SaleDone'
 import { SeatPicker } from './SeatPicker'
@@ -67,7 +68,14 @@ function DepartureRow({ r, onPick }: { r: SellableDeparture; onPick: () => void 
         </div>
         <div className="min-w-28 text-right">
           <div className="font-data text-xl font-bold text-primary">{formatMoney(r.price)}</div>
-          <div className="text-xs text-fg-muted">Ruta {r.routeCode}</div>
+          <div className="text-xs text-fg-muted">
+            Ruta {r.routeCode}
+            {r.extra && (
+              <Badge tone="info" className="ml-1">
+                Extra
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="ml-auto flex min-w-44 flex-col items-end gap-1">
           {r.sellable ? (
@@ -219,6 +227,8 @@ function TicketOfficePage() {
   const board = params.get('sube') ?? ''
   const alight = params.get('baja') ?? ''
   const orderId = params.get('compra') ?? ''
+  // Modo cambio (6.4): se elige la salida y un solo asiento para el boleto indicado
+  const changeOf = params.get('cambio') ?? ''
   const [selected, setSelected] = useState<string[]>([])
   // Venta recién cobrada (con el cambio a entregar); se muestra hasta empezar otra
   const [paid, setPaid] = useState<Order | null>(null)
@@ -265,14 +275,24 @@ function TicketOfficePage() {
 
   const hold = useMutation({
     mutationFn: async () =>
-      (
-        await api.post<Order>('/tickets/holds', {
-          tripId,
-          boardIndex: Number(board),
-          alightIndex: Number(alight),
-          seats: selected,
-        })
-      ).data,
+      changeOf
+        ? (
+            await api.post<Order>('/tickets/changes', {
+              ticketId: changeOf,
+              tripId,
+              boardIndex: Number(board),
+              alightIndex: Number(alight),
+              seat: selected[0],
+            })
+          ).data
+        : (
+            await api.post<Order>('/tickets/holds', {
+              tripId,
+              boardIndex: Number(board),
+              alightIndex: Number(alight),
+              seats: selected,
+            })
+          ).data,
     onSuccess: (o) => {
       queryClient.setQueryData(['tickets', 'order', o.id], o)
       queryClient.invalidateQueries({ queryKey: ['tickets', 'seats'] })
@@ -295,9 +315,11 @@ function TicketOfficePage() {
   }
   const newSale = () => {
     setPaid(null)
-    back()
+    setSelected([])
+    update({ viaje: '', sube: '', baja: '', compra: '', cambio: '' })
   }
-  const toggle = (n: string) => setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
+  const toggle = (n: string) =>
+    setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : changeOf ? [n] : [...s, n]))
 
   const m = map.data
   const cityName = (id: string) => cities.data?.find((c) => c.id === id)?.name ?? '…'
@@ -313,13 +335,27 @@ function TicketOfficePage() {
       ))}
     </>
   )
-  const stepLabel = paid ? 'Venta lista' : !tripId ? '1 · Salida' : orderId ? '3 · Pasajeros y cobro' : '2 · Asientos'
+  const stepLabel = paid
+    ? changeOf
+      ? 'Cambio listo'
+      : 'Venta lista'
+    : !tripId
+      ? '1 · Salida'
+      : orderId
+        ? changeOf
+          ? '3 · Diferencia'
+          : '3 · Pasajeros y cobro'
+        : '2 · Asientos'
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Taquilla"
-        description="Venta en mostrador: busca la salida, elige asientos en el mapa y apártalos mientras cobras"
+        title={changeOf ? 'Cambio de boleto' : 'Taquilla'}
+        description={
+          changeOf
+            ? 'Elige la nueva salida y el asiento; se cobra o se devuelve la diferencia'
+            : 'Venta en mostrador: busca la salida, elige asientos en el mapa y apártalos mientras cobras'
+        }
         refreshing={(map.isFetching && !map.isLoading) || (departures.isFetching && !departures.isLoading)}
         actions={
           <span className="font-data text-base font-bold tracking-wide text-amber-400 uppercase">{stepLabel}</span>
@@ -419,7 +455,7 @@ function TicketOfficePage() {
         </>
       )}
 
-      {paid && <SaleDone order={paid} onNew={newSale} />}
+      {paid && <SaleDone order={paid} onNew={newSale} title={changeOf ? 'Cambio listo' : undefined} />}
 
       {tripId && !paid && (
         <div className="space-y-4">
@@ -432,7 +468,15 @@ function TicketOfficePage() {
             <Alert tone="danger">{apiErrorMessage(map.error)}</Alert>
           ) : (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-              {orderId && order.data?.status === 'pending' && holdLeft > 0 ? (
+              {changeOf && orderId && order.data?.status === 'pending' && holdLeft > 0 ? (
+                <ChangeCheckout
+                  orderId={orderId}
+                  onDone={(o) => {
+                    setPaid(o)
+                    update({ viaje: '', sube: '', baja: '', compra: '' })
+                  }}
+                />
+              ) : orderId && order.data?.status === 'pending' && holdLeft > 0 ? (
                 <Checkout
                   key={order.data.id}
                   order={order.data}
@@ -514,7 +558,7 @@ function TicketOfficePage() {
                         loading={hold.isPending}
                         onClick={() => hold.mutate()}
                       >
-                        Apartar {selected.length || ''} asiento(s)
+                        {changeOf ? 'Apartar asiento para el cambio' : `Apartar ${selected.length || ''} asiento(s)`}
                       </Button>
                     </CardBody>
                   </Card>

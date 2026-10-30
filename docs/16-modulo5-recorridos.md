@@ -73,7 +73,7 @@ Decisiones:
 - **Terminar**: registra la llegada real y exige el odómetro de llegada (no menor al de salida ni al de la unidad). La unidad regresa a **disponible** si seguía en servicio (si una incidencia la sacó de servicio, se respeta).
 - Las lecturas de odómetro se guardan en Flota con origen `trip`.
 - Cada cambio queda en `trip_status_log` y en la bitácora.
-- **Cancelar** libera la unidad y al personal (las exclusion constraints no cuentan los cancelados). `onTripCancelled` queda como gancho para que el Módulo 6 cancele los boletos.
+- **Cancelar** libera la unidad y al personal (las exclusion constraints no cuentan los cancelados). Desde la 6.4 Boletos se registra con `TripStatusService.onCancelled` y deja a cada boleto vendido con saldo por devolver (doc 17).
 - **Conductor**: solo opera **sus** recorridos y no puede cancelar. Conductor y cobrador solo ven la ficha de sus propios recorridos.
 - **Pendientes**: recorridos que debieron salir hace más de 15 min y siguen programados o abordando, y los que debieron llegar hace más de una hora y no se han cerrado.
 
@@ -92,8 +92,8 @@ Decisiones:
 ## Módulo 5 completo: lo que deja listo para el 6
 - Cada recorrido tiene unidad (con sus asientos) y fecha: un boleto es (`tripId`, asiento, tramo).
 - El precio sale de `segmentPrice` + `applySeason` con `tripDate` (M4).
-- `TripStatusService.onTripCancelled` es el gancho para cancelar boletos y reembolsar.
-- Cambiar de unidad con boletos vendidos deberá validarse en el M6 (los asientos son de la unidad).
+- `TripStatusService.onCancelled` recibe los manejadores de Boletos (desde la 6.4 cancela los boletos y deja el saldo por devolver).
+- Cambio de unidad con boletos vendidos: validado desde la 6.4 (no se quita la unidad y la nueva debe tener los asientos vendidos).
 - El abordaje (`boarding`) es el momento natural del check-in con QR.
 
 ## API

@@ -234,3 +234,14 @@ export const ASSIGNABLE_STATUSES = [
   'boarding',
   'delayed',
 ] as const;
+
+/**
+ * Asientos con boletos vendidos que no existen en la unidad nueva (Módulo 6). Si hay alguno,
+ * el cambio de unidad se bloquea: primero se cambia de asiento a esos pasajeros.
+ */
+export function missingSeats(soldSeats: string[], busSeats: string[]) {
+  const available = new Set(busSeats);
+  return [...new Set(soldSeats)]
+    .filter((s) => !available.has(s))
+    .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+}

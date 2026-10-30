@@ -11,6 +11,7 @@ import {
   ActionType,
   BusStatus,
   StaffRole,
+  TicketStatus,
   TripStatus,
   UserRole,
 } from '../generated/prisma/enums.js';
@@ -22,6 +23,7 @@ import {
   busIssues,
   collectorIssues,
   driverIssues,
+  missingSeats,
   type Issue,
   type StaffCandidate,
   type TripWindow,
@@ -284,6 +286,43 @@ export class TripAssignmentService {
    * Cambia la unidad, el conductor o el cobrador (null = quitar). Solo se validan los que
    * cambian. Los límites de horas solo los puede forzar un admin con motivo.
    */
+  /**
+   * Con boletos vendidos (Módulo 6) no se puede quitar la unidad, y la nueva debe tener todos
+   * los asientos vendidos: los boletos guardan el número de asiento, no el asiento de la unidad.
+   */
+  private async checkSoldSeats(tripId: string, busId: string | null) {
+    const sold = await this.prisma.ticket.findMany({
+      where: {
+        tripId,
+        status: {
+          in: [
+            TicketStatus.held,
+            TicketStatus.confirmed,
+            TicketStatus.checked_in,
+          ],
+        },
+      },
+      select: { seatNumber: true },
+    });
+    if (!sold.length) return;
+    if (!busId)
+      throw new BadRequestException(
+        `El recorrido tiene ${sold.length} boleto(s) vendidos o apartados; no se puede quedar sin unidad`,
+      );
+    const seats = await this.prisma.busSeat.findMany({
+      where: { busId },
+      select: { number: true },
+    });
+    const missing = missingSeats(
+      sold.map((t) => t.seatNumber),
+      seats.map((s) => s.number),
+    );
+    if (missing.length)
+      throw new BadRequestException(
+        `La unidad nueva no tiene los asientos ${missing.join(', ')}, que ya están vendidos. Cambia antes de asiento a esos pasajeros (Venta › Ventas)`,
+      );
+  }
+
   async assign(id: string, dto: AssignTripDto, actor: AuthUser) {
     const row = await this.trip(id);
     if (!(ASSIGNABLE_STATUSES as readonly string[]).includes(row.status))
@@ -307,6 +346,7 @@ export class TripAssignmentService {
       throw new BadRequestException(
         'El conductor y el cobrador deben ser personas distintas',
       );
+    if (swapsBus) await this.checkSoldSeats(id, next.busId);
 
     const [nearby, limits] = await Promise.all([
       this.nearby(row),

@@ -1349,6 +1349,8 @@ export type SeatState = 'free' | 'held' | 'occupied' | 'blocked'
 
 /** Salida de la búsqueda con su recorrido y lugares libres en el tramo */
 export interface SellableDeparture extends DepartureResult {
+  /** Recorrido extra (refuerzo), sin horario */
+  extra?: boolean
   trip: { id: string; tripNumber: string; status: TripStatus } | null
   sellable: boolean
   notSellableReason: string | null
@@ -1538,4 +1540,122 @@ export interface CashCurrent {
   session: CashDetail | null
   defaultFloat: number
   tolerance: number
+}
+
+// ---------- Cancelaciones y cambios (6.4) ----------
+
+export type TicketEventType =
+  'held' | 'released' | 'confirmed' | 'changed' | 'checked_in' | 'no_show' | 'cancelled' | 'refunded'
+
+interface FullTerminal {
+  code: string
+  name: string
+  cityId: string
+  city: { name: string; timezone: string }
+}
+
+export interface FullTicket {
+  id: string
+  ticketNumber: string
+  seatNumber: string
+  boardIndex: number
+  alightIndex: number
+  boardAt: string
+  alightAt: string
+  status: TicketStatus
+  passengerName: string
+  passengerDocument: string | null
+  total: string
+  serviceFee: string
+  refundDue: string | null
+  cancelReason: string | null
+  passengerType: { id: string; name: string }
+  boardTerminal: FullTerminal
+  alightTerminal: FullTerminal
+  trip: {
+    id: string
+    tripNumber: string
+    status: TripStatus
+    departureAt: string
+    tripDate: string
+    route: { code: string; name: string }
+  }
+  replacedBy: { id: string; ticketNumber: string; orderId: string } | null
+  replaces: { id: string; ticketNumber: string; orderId: string } | null
+  events: {
+    id: string
+    type: TicketEventType
+    detail: Record<string, unknown> | null
+    createdAt: string
+    user: { fullName: string } | null
+  }[]
+}
+
+export interface FullOrder {
+  id: string
+  orderNumber: string
+  status: OrderStatus
+  total: string
+  vat: string
+  paidAt: string | null
+  createdAt: string
+  notes: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  seller: { id: string; fullName: string } | null
+  payments: { id: string; method: PaymentMethod; amount: string; reference: string | null; paidAt: string | null }[]
+  refunds: {
+    id: string
+    method: PaymentMethod
+    amount: string
+    reason: string
+    createdAt: string
+    ticketId: string | null
+    createdBy: { fullName: string } | null
+  }[]
+  tickets: FullTicket[]
+}
+
+export interface CancelQuote {
+  quotes: {
+    ticketId: string
+    ticketNumber: string
+    seatNumber: string
+    passengerName: string
+    total: number
+    refundDue: boolean
+    inWindow: boolean
+    deadline: string
+    refund: number
+  }[]
+  refund: number
+  allInWindow: boolean
+  canOverride: boolean
+  policy: { cancellationHours: number; refundPercent: number }
+}
+
+export interface ChangeQuote {
+  difference: number
+  fee: number
+  due: number
+  refund: number
+}
+
+export interface ChangeOrder extends Omit<Order, 'change'> {
+  change: {
+    relocation: boolean
+    sameTrip: boolean
+    old: {
+      id: string
+      ticketNumber: string
+      orderId: string
+      orderNumber: string
+      seatNumber: string
+      total: number
+      refundDue: number | null
+      tripNumber: string
+      departureAt: string
+    }
+    quote: ChangeQuote
+  }
 }

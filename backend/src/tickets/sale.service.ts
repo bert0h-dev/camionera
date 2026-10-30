@@ -36,7 +36,7 @@ import { AvailabilityService } from './availability.service.js';
 import { CashService } from '../cash/cash.service.js';
 import { PayDto, QueryOrdersDto, SetPassengersDto } from './dto/sale.dto.js';
 import { orderTotals, priceTickets } from './pricing-rules.js';
-import { qrToken } from './qr-token.js';
+import { qrToken, verifyQrToken } from './qr-token.js';
 import { checkPayments, passengerError } from './sale-rules.js';
 import { ticketsPdf, type TicketPdfTicket } from './ticket-pdf.js';
 import { ACTIVE_STATUSES } from './ticket-status-rules.js';
@@ -81,6 +81,16 @@ export class SaleService {
   // ---------- Pasajeros ----------
 
   /** Nombre, tipo e identificación de cada pasajero; recalcula precios y cupos. */
+  /** Token del QR de un boleto. */
+  qrFor(ticketId: string) {
+    return qrToken(ticketId, this.qrSecret);
+  }
+
+  /** Id del boleto de un QR auténtico, o null. */
+  ticketOfQr(token: string) {
+    return verifyQrToken(token, this.qrSecret);
+  }
+
   async setPassengers(orderId: string, dto: SetPassengersDto, user: AuthUser) {
     const order = await this.availability.ownPendingOrder(orderId, user);
     const held = order.tickets.filter((t) => t.status === TicketStatus.held);

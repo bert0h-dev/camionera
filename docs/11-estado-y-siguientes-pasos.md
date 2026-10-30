@@ -56,6 +56,7 @@
   - `-- --payroll` agrega solo la nómina demo.
   - `-- --fleet` agrega solo la flota demo (no toca al personal), incluidas las cargas de combustible y las rutas demo.
   - `-- --routes` agrega solo las rutas demo (clave `DEM-…`).
+  - `-- --sales` agrega **ventas demo** para los reportes: recorridos de los últimos 60 días y los próximos 14 en las rutas demo, unos 30 mil boletos con pagos, cajas con corte, abordajes, no presentados, cancelaciones, cambios, reembolsos, promociones `DEMO…` y 80 clientes. Reemplaza las anteriores; `-- --sales --clean` solo las borra. Es determinista (misma semilla, mismos datos).
 - **Zonas horarias**: las ciudades que no son demo quedaron en `America/Mexico_City`; revisar las del noroeste o el sureste (p. ej. Mexicali → `America/Tijuana`).
 - Del contexto, resueltos en el M6: venta por tramos (con reutilización de asiento), carrito (`orders`) y tipo de pasajero. Sigue abierto: andenes de las terminales.
 

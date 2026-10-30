@@ -3,6 +3,8 @@
 //   npm run seed:demo -w backend -- --clean → solo borra
 //   npm run seed:demo -w backend -- --fleet → solo agrega la flota y el mantenimiento demo (no toca al personal)
 //   npm run seed:demo -w backend -- --routes → solo agrega las rutas demo (clave DEM-…)
+//   npm run seed:demo -w backend -- --sales → ventas demo de 60 días atrás y 14 adelante (reemplaza las anteriores)
+//   npm run seed:demo -w backend -- --sales --clean → solo borra las ventas demo
 //   DEMO_PASSWORD en .env (opcional) crea el usuario mecánico demo
 // Todo lo demo se identifica por el correo @demo.camionera.mx de los empleados.
 import 'dotenv/config';
@@ -30,6 +32,7 @@ import { computePayroll, totals } from '../src/payroll/payroll-rules.js';
 import { defaultLayout, seatCount } from '../src/fleet/layout-rules.js';
 import { seatsFromLayout } from '../src/fleet/bus-rules.js';
 import { fuelTotal, measureLoads } from '../src/fleet/fuel-rules.js';
+import { cleanSales, loadSales } from './seed-sales.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
@@ -78,6 +81,7 @@ function rng(seed: number) {
 }
 
 async function clean() {
+  await cleanSales(prisma); // boletos y compras referencian recorridos y usuarios demo
   const staff = await prisma.staff.findMany({
     where: { email: { endsWith: DEMO_DOMAIN } },
     select: { id: true },
@@ -923,6 +927,11 @@ async function main() {
   if (process.argv.includes('--payroll')) return loadPayroll();
   if (process.argv.includes('--fleet')) return loadFleet();
   if (process.argv.includes('--routes')) return loadRoutes();
+  if (process.argv.includes('--sales')) {
+    await cleanSales(prisma);
+    if (!process.argv.includes('--clean')) await loadSales(prisma);
+    return;
+  }
   await clean();
   if (!process.argv.includes('--clean')) {
     await load();

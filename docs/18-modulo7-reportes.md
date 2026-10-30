@@ -39,6 +39,15 @@ Decisiones:
 - Filtros: periodo, ruta y vendedor (este último no lo ve el vendor).
 - Contenido: gráfica por día, dona por método, rutas con más ingreso, tablas por vendedor y por ruta, origen → destino, canal y descuentos, tipo de pasajero y promoción.
 
+## Datos demo para reportes
+`npm run seed:demo -w backend -- --sales` (`prisma/seed-sales.ts`) genera historia en las rutas demo con las mismas reglas de la taquilla (temporada, tipo de pasajero, promoción, IVA y política de cancelación).
+- Recorridos de los últimos 60 días: casi todos terminados, con hora real (algunos con retraso) y odómetro; alrededor de 3 % cancelados por la empresa, con saldo por devolver (la mitad ya reembolsado). Los próximos 14 días quedan con ventas parciales.
+- Ocupación variable: más los fines de semana y en horas pico, y tramos entre paradas que reutilizan asientos.
+- Pagos en efectivo, tarjeta, transferencia y mixtos, hechos por los tres vendedores demo (se les crea usuario sin contraseña conocida). Hay una caja por vendedor y día, con corte y algunas diferencias.
+- Alrededor de 93 % aborda y el resto no se presenta; alrededor de 6 % cancela con reembolso según la política, y hay algunos cambios de asiento.
+- Las compras y los boletos demo usan folios `D…`, sus compras y recorridos llevan la nota `DEMO-VENTAS`, los clientes el correo `@demo.camionera.mx` y las promociones la clave `DEMO…`. `--clean` general también los borra.
+- Volumen: unos 900 recorridos y 30 mil boletos. Con él, el reporte de ventas de un mes tarda unos 5 s porque agrega en memoria; se cambiará a agregación en SQL (pendiente).
+
 ## API
 | Método | Ruta | Roles |
 |---|---|---|

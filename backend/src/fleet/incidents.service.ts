@@ -2,7 +2,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { today } from '../common/dates.js';
@@ -15,8 +17,11 @@ import {
   IncidentStatus,
   MaintenanceStatus,
   MaintenanceType,
+  TripStatus,
   UserRole,
 } from '../generated/prisma/enums.js';
+import { brandedEmail, MailService } from '../mail/mail.service.js';
+import { TRANSITIONS } from '../trips/status-rules.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   CloseIncidentDto,
@@ -28,6 +33,7 @@ import {
   UpdateIncidentDto,
 } from './dto/incident.dto.js';
 import {
+  INCIDENT_SEVERITY_LABELS,
   incidentFolio,
   isOpenIncident,
   OPEN_INCIDENT,
@@ -63,6 +69,7 @@ const incidentInclude = {
   category: { select: { id: true, name: true, isAccident: true } },
   reporter: { select: { id: true, fullName: true, role: true } },
   reviewer: { select: { id: true, fullName: true } },
+  trip: { select: { id: true, tripNumber: true, status: true } },
   orders: {
     select: {
       id: true,
@@ -86,11 +93,18 @@ const ACCIDENT_FIELDS = [
 
 @Injectable()
 export class IncidentsService {
+  private readonly logger = new Logger(IncidentsService.name);
+  private readonly appUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly maintenance: MaintenanceService,
-  ) {}
+    private readonly mail: MailService,
+    config: ConfigService,
+  ) {
+    this.appUrl = config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+  }
 
   private log(
     actor: AuthUser,
@@ -357,7 +371,121 @@ export class IncidentsService {
 
   // ---------- Reporte ----------
 
+  /**
+   * Incidencia de un recorrido: la unidad debe ser la asignada y el conductor o cobrador
+   * solo reporta en los suyos.
+   */
+  private async checkTrip(dto: CreateIncidentDto, actor: AuthUser) {
+    if (!dto.tripId) return null;
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: dto.tripId },
+      include: {
+        driver: { select: { userId: true } },
+        collector: { select: { userId: true } },
+      },
+    });
+    if (!trip) throw new BadRequestException('Recorrido no encontrado');
+    if (trip.status === TripStatus.cancelled)
+      throw new BadRequestException('El recorrido está cancelado');
+    if (trip.busId !== dto.busId)
+      throw new BadRequestException(
+        'La unidad no es la asignada a ese recorrido',
+      );
+    if (
+      !isReviewer(actor) &&
+      trip.driver?.userId !== actor.id &&
+      trip.collector?.userId !== actor.id
+    )
+      throw new ForbiddenException(
+        'Solo puedes reportar incidencias de tus recorridos',
+      );
+    return trip;
+  }
+
+  /** Una crítica en un recorrido que no ha terminado lo marca como retrasado. */
+  private async delayTrip(
+    trip: { id: string; status: TripStatus },
+    reason: string,
+    actor: AuthUser,
+  ) {
+    if (!TRANSITIONS[trip.status].includes(TripStatus.delayed)) return;
+    await this.prisma.$transaction([
+      this.prisma.trip.update({
+        where: { id: trip.id },
+        data: { status: TripStatus.delayed },
+      }),
+      this.prisma.tripStatusLog.create({
+        data: {
+          tripId: trip.id,
+          fromStatus: trip.status,
+          toStatus: TripStatus.delayed,
+          reason,
+          changedById: actor.id,
+        },
+      }),
+    ]);
+  }
+
+  /** Aviso por correo a administración y coordinación de las incidencias altas y críticas. */
+  private async notify(incident: {
+    id: string;
+    folio: number;
+    severity: IncidentSeverity;
+    description: string;
+    location: string | null;
+    bus: { economicNumber: string };
+    category: { name: string };
+    reporter: { fullName: string };
+    trip: { tripNumber: string } | null;
+  }) {
+    if (
+      incident.severity !== IncidentSeverity.high &&
+      incident.severity !== IncidentSeverity.critical
+    )
+      return;
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: { in: [UserRole.admin, UserRole.coordinator] },
+      },
+      select: { email: true },
+    });
+    const folio = incidentFolio(incident.folio);
+    const severity = INCIDENT_SEVERITY_LABELS[incident.severity].toLowerCase();
+    const where = incident.trip
+      ? `en el recorrido ${incident.trip.tripNumber}`
+      : 'fuera de recorrido';
+    const intro = `${incident.reporter.fullName} reportó una incidencia ${severity} (${incident.category.name}) de la unidad ${incident.bus.economicNumber} ${where}${
+      incident.location ? `, en ${incident.location}` : ''
+    }: ${incident.description}`;
+    const url = `${this.appUrl}/flota/incidencias/${incident.id}`;
+    // Un correo que falla no debe tumbar el reporte
+    await Promise.all(
+      recipients.map((r) =>
+        this.mail
+          .send({
+            to: r.email,
+            subject: `Incidencia ${severity} · unidad ${incident.bus.economicNumber} · ${folio}`,
+            text: `${intro}\n\n${url}`,
+            html: brandedEmail({
+              title: `Incidencia ${folio}`,
+              intro,
+              action: { label: 'Ver incidencia', url },
+              outro:
+                incident.severity === IncidentSeverity.critical
+                  ? 'La unidad quedó fuera de servicio. Si iba en un recorrido, este quedó retrasado: asigna otra unidad desde su ficha.'
+                  : undefined,
+            }),
+          })
+          .catch((err: Error) =>
+            this.logger.error(`Aviso de ${folio} a ${r.email}: ${err.message}`),
+          ),
+      ),
+    );
+  }
+
   async create(dto: CreateIncidentDto, actor: AuthUser) {
+    const trip = await this.checkTrip(dto, actor);
     const [, category] = await Promise.all([
       this.prisma.bus.findUniqueOrThrow({ where: { id: dto.busId } }),
       this.getCategory(dto.categoryId),
@@ -374,8 +502,15 @@ export class IncidentsService {
       include: incidentInclude,
     });
     await this.log(actor, incident.id, ActionType.insert, null, incident);
-    // Si la saca de servicio, el estado de la unidad cambió
-    return (await this.applyCritical(incident, actor))
+    if (trip && incident.severity === IncidentSeverity.critical)
+      await this.delayTrip(
+        trip,
+        `${incidentFolio(incident.folio)} · ${category.name}: ${incident.description}`,
+        actor,
+      );
+    void this.notify(incident);
+    // Si la saca de servicio o retrasa el recorrido, lo que se devuelve cambió
+    return (await this.applyCritical(incident, actor)) || trip
       ? this.getIncident(incident.id, actor)
       : incident;
   }

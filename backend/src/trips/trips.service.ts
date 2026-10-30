@@ -467,6 +467,18 @@ export class TripsService {
           orderBy: { changedAt: 'asc' },
           include: { changedBy: { select: { id: true, fullName: true } } },
         },
+        incidents: {
+          select: {
+            id: true,
+            folio: true,
+            severity: true,
+            status: true,
+            description: true,
+            occurredAt: true,
+            category: { select: { name: true } },
+          },
+          orderBy: { occurredAt: 'asc' },
+        },
       },
     });
     if (!trip) throw new NotFoundException('Recorrido no encontrado');

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bus, SlidersHorizontal, Users } from 'lucide-react'
+import { Bus, SlidersHorizontal, TramFront, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { api, apiErrorMessage } from '../lib/api'
 import type { DashboardSummary, UserRole } from '../lib/types'
@@ -20,20 +20,23 @@ import { MyPayslipsCard } from './home/MyPayslipsCard'
 import { MyShiftCard } from './home/MyShiftCard'
 import { PendingPanel } from './home/PendingPanel'
 import { TeamDashboard } from './home/TeamDashboard'
+import { TripsOverview } from './home/TripsOverview'
 import { businessFormat } from '../lib/format'
 
 const STAFF_READERS: UserRole[] = ['admin', 'hr', 'supervisor', 'coordinator']
 const FLEET_READERS: UserRole[] = ['admin', 'coordinator', 'supervisor']
+const TRIP_READERS: UserRole[] = ['admin', 'coordinator', 'supervisor']
 const AREA_KEY = 'home.area'
 
-type Section = 'pending' | 'me' | 'staff' | 'fleet' | 'myOrders'
-type Area = 'staff' | 'fleet'
+type Section = 'pending' | 'me' | 'staff' | 'fleet' | 'trips' | 'myOrders'
+type Area = 'staff' | 'fleet' | 'trips'
 
 const SECTION_LABELS: Record<Section, { label: string; hint: string }> = {
   pending: { label: 'Pendientes', hint: 'Documentos y preventivos vencidos o por vencer' },
   me: { label: 'Mi información', hint: 'Mi turno, mi mes, mis evaluaciones y recibos' },
   staff: { label: 'Personal', hint: 'Tablero de entradas, asistencia y puestos' },
   fleet: { label: 'Flota', hint: 'Estado de las unidades y del taller' },
+  trips: { label: 'Recorridos', hint: 'Avance del día y lo que está en operación' },
   myOrders: { label: 'Mis órdenes de trabajo', hint: 'Órdenes de mantenimiento asignadas' },
 }
 
@@ -59,7 +62,7 @@ function headline(team: Team | null | undefined, isTeamReader: boolean) {
 const readArea = (): Area | null => {
   try {
     const v = localStorage.getItem(AREA_KEY)
-    return v === 'staff' || v === 'fleet' ? v : null
+    return v === 'staff' || v === 'fleet' || v === 'trips' ? v : null
   } catch {
     return null
   }
@@ -70,6 +73,7 @@ function HomePage() {
   const role = user?.role
   const isTeamReader = !!role && STAFF_READERS.includes(role)
   const isFleetReader = !!role && FLEET_READERS.includes(role)
+  const isTripReader = !!role && TRIP_READERS.includes(role)
   const isMechanic = role === 'mechanic'
 
   const { data, isLoading, isFetching } = useQuery({
@@ -98,6 +102,7 @@ function HomePage() {
     ...(data?.me ? (['me'] as const) : []),
     ...(isTeamReader ? (['staff'] as const) : []),
     ...(isFleetReader ? (['fleet'] as const) : []),
+    ...(isTripReader ? (['trips'] as const) : []),
     ...(isMechanic ? (['myOrders'] as const) : []),
   ]
   const hidden = new Set(prefs.data?.hiddenSections ?? [])
@@ -106,6 +111,7 @@ function HomePage() {
   const areaTabs: TabItem<Area>[] = [
     ...(show('staff') ? [{ key: 'staff' as const, label: 'Personal', icon: Users }] : []),
     ...(show('fleet') ? [{ key: 'fleet' as const, label: 'Flota', icon: Bus }] : []),
+    ...(show('trips') ? [{ key: 'trips' as const, label: 'Recorridos', icon: TramFront }] : []),
   ]
   const area = areaTabs.find((a) => a.key === areaChoice)?.key ?? areaTabs[0]?.key
   const chooseArea = (a: Area) => {
@@ -261,6 +267,7 @@ function HomePage() {
           {areaTabs.length > 1 && <Tabs items={areaTabs} value={area} onChange={chooseArea} />}
           {area === 'staff' && <TeamDashboard team={t} />}
           {area === 'fleet' && <FleetOverview />}
+          {area === 'trips' && <TripsOverview />}
         </section>
       )}
 

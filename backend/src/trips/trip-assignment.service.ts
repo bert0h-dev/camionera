@@ -9,6 +9,7 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { dateKey } from '../common/dates.js';
 import {
   ActionType,
+  BusStatus,
   StaffRole,
   TripStatus,
   UserRole,
@@ -111,7 +112,12 @@ export class TripAssignmentService {
   private async trip(id: string) {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
-      select: { ...windowSelect, status: true, overrideReason: true },
+      select: {
+        ...windowSelect,
+        status: true,
+        overrideReason: true,
+        actualDepartureAt: true,
+      },
     });
     if (!trip) throw new NotFoundException('Recorrido no encontrado');
     return trip;
@@ -291,6 +297,12 @@ export class TripAssignmentService {
       collectorId:
         dto.collectorId === undefined ? row.collectorId : dto.collectorId,
     };
+    const departed = row.actualDepartureAt !== null;
+    const swapsBus = next.busId !== row.busId;
+    if (departed && (!next.busId || !next.driverId))
+      throw new BadRequestException(
+        'El recorrido ya salió: no se puede quedar sin unidad ni conductor',
+      );
     if (next.collectorId && next.collectorId === next.driverId)
       throw new BadRequestException(
         'El conductor y el cobrador deben ser personas distintas',
@@ -366,8 +378,12 @@ export class TripAssignmentService {
             : next.driverId === row.driverId
               ? row.overrideReason
               : null,
+          // En ruta, la lectura de salida era de la otra unidad
+          ...(departed && swapsBus && { startOdometerKm: null }),
         },
       });
+      if (departed && swapsBus)
+        await this.swapBusOnRoad(row.busId, next.busId!, row.tripNumber);
       await this.audit.log({
         userId: actor.id,
         tableName: 'trips',
@@ -389,6 +405,50 @@ export class TripAssignmentService {
         );
       throw err;
     }
+  }
+
+  /**
+   * Cambio de unidad con el recorrido ya en camino (p. ej. tras una incidencia crítica):
+   * la nueva pasa a en servicio y la anterior, si seguía en servicio, regresa a disponible.
+   * Si una incidencia la sacó de servicio, se queda así.
+   */
+  private async swapBusOnRoad(
+    oldBusId: string | null,
+    newBusId: string,
+    tripNumber: string,
+  ) {
+    const now = new Date();
+    const [oldBus, newBus] = await Promise.all([
+      oldBusId ? this.prisma.bus.findUnique({ where: { id: oldBusId } }) : null,
+      this.prisma.bus.findUniqueOrThrow({ where: { id: newBusId } }),
+    ]);
+    await this.prisma.$transaction([
+      ...(oldBus?.status === BusStatus.in_service
+        ? [
+            this.prisma.bus.update({
+              where: { id: oldBus.id },
+              data: {
+                status: BusStatus.available,
+                statusReason: null,
+                statusChangedAt: now,
+              },
+            }),
+          ]
+        : []),
+      ...(newBus.status === BusStatus.available
+        ? [
+            this.prisma.bus.update({
+              where: { id: newBus.id },
+              data: {
+                status: BusStatus.in_service,
+                statusReason: `Recorrido ${tripNumber}`,
+                statusChangedAt: now,
+                ...(!newBus.firstServiceAt && { firstServiceAt: now }),
+              },
+            }),
+          ]
+        : []),
+    ]);
   }
 
   /** Recorridos sin unidad o sin conductor que salen antes de `until`. */

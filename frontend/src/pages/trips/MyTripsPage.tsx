@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, TramFront } from 'lucide-react'
+import { ArrowRight, TramFront, TriangleAlert } from 'lucide-react'
 import { api } from '../../lib/api'
 import { addDaysKey, dayLabel, formatMinutes, staffFullName, todayKey } from '../../lib/format'
 import type { TripListItem } from '../../lib/types'
 import { useAuth } from '../../auth/useAuth'
 import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
 import { BandStepper } from '../../components/ui/BandStepper'
 import { Card, CardBody } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { HeroStat } from '../../components/ui/HeroStat'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
+import { ReportIncidentModal, type ReportPreset } from '../fleet/ReportIncidentModal'
 import { TripStatusBadge } from './TripBadges'
 import { TripStatusActions } from './TripStatusActions'
 import { tripTimes } from './useTrips'
@@ -24,6 +26,7 @@ function MyTripsPage() {
   const { user } = useAuth()
   const isDriver = user?.role === 'driver'
   const [date, setDate] = useState(todayKey())
+  const [reporting, setReporting] = useState<ReportPreset | null>(null)
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['trips', 'mine', date],
     queryFn: async () => (await api.get<MyTrip[]>('/trips/mine', { params: { date } })).data,
@@ -119,6 +122,21 @@ function MyTripsPage() {
                   )}
                   <div className="flex flex-wrap items-center gap-2">
                     {isDriver && <TripStatusActions trip={t} />}
+                    {t.bus && t.status !== 'cancelled' && t.status !== 'completed' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={TriangleAlert}
+                        onClick={() =>
+                          setReporting({
+                            busId: t.bus!.id,
+                            trip: { id: t.id, tripNumber: t.tripNumber, busLabel: `Unidad ${t.bus!.economicNumber}` },
+                          })
+                        }
+                      >
+                        Reportar incidencia
+                      </Button>
+                    )}
                     <Link to={`/recorridos/${t.id}`} className="ml-auto text-sm text-primary hover:underline">
                       Ver ficha
                     </Link>
@@ -129,6 +147,8 @@ function MyTripsPage() {
           })}
         </div>
       )}
+
+      <ReportIncidentModal preset={reporting} onClose={() => setReporting(null)} />
     </div>
   )
 }

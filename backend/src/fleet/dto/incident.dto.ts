@@ -74,6 +74,13 @@ export class CreateIncidentDto {
   @IsUUID()
   busId: string;
 
+  @ApiPropertyOptional({
+    description: 'Recorrido en el que ocurrió; la unidad debe ser la asignada',
+  })
+  @IsOptional()
+  @IsUUID()
+  tripId?: string | null;
+
   @ApiProperty()
   @IsUUID()
   categoryId: string;
@@ -137,7 +144,7 @@ export class CreateIncidentDto {
 
 /** La unidad no cambia: si se equivocaron, se descarta y se reporta de nuevo. */
 export class UpdateIncidentDto extends PartialType(
-  OmitType(CreateIncidentDto, ['busId'] as const),
+  OmitType(CreateIncidentDto, ['busId', 'tripId'] as const),
 ) {}
 
 export class QueryIncidentDto extends PaginationQueryDto {

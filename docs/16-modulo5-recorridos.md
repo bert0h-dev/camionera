@@ -8,8 +8,8 @@ Un **recorrido** es un horario de ruta en una fecha concreta (o un extra sin hor
 |---|---|---|
 | 5.1 | Generación automática, extras, pantalla Recorridos y ficha | ✅ fusionada (PR #23) |
 | 5.2 | Asignación de unidad, conductor y cobrador con validaciones; Pendientes | ✅ fusionada (PR #24) |
-| 5.3 | Estados, tiempos reales, odómetro, Mis recorridos (conductor) | ✅ rama `feat/m5-estados` |
-| 5.4 | Incidencias del recorrido (en `bus_incidents`), avisos y pestaña en Inicio | ⏳ |
+| 5.3 | Estados, tiempos reales, odómetro, Mis recorridos (conductor) | ✅ fusionada (PR #25) |
+| 5.4 | Incidencias del recorrido (en `bus_incidents`), avisos y pestaña en Inicio | ✅ rama `feat/m5-incidencias` |
 
 Decisiones:
 - Fechas en `Timestamptz` (`departure_at`, `arrival_at`), no `date` + `time` como el esquema de `contexto/`: así se representan los viajes que cruzan la medianoche y las zonas horarias. `trip_date` es el día de salida en la zona del origen.
@@ -76,6 +76,25 @@ Decisiones:
 - **Cancelar** libera la unidad y al personal (las exclusion constraints no cuentan los cancelados). `onTripCancelled` queda como gancho para que el Módulo 6 cancele los boletos.
 - **Conductor**: solo opera **sus** recorridos y no puede cancelar. Conductor y cobrador solo ven la ficha de sus propios recorridos.
 - **Pendientes**: recorridos que debieron salir hace más de 15 min y siguen programados o abordando, y los que debieron llegar hace más de una hora y no se han cerrado.
+
+## 5.4 Incidencias del recorrido
+- Unificadas con Flota: `POST /fleet/incidents` acepta `tripId`. La unidad debe ser la asignada al recorrido, el recorrido no puede estar cancelado, y el conductor o cobrador solo reporta en los suyos (supervisión y coordinación en cualquiera).
+- **Crítica**: la unidad sale de servicio (regla de la 3.3) y, si el recorrido no ha terminado, pasa a **retrasado**. El historial guarda como motivo el folio, la categoría y la descripción.
+- **Cambio de unidad en ruta**: un recorrido retrasado que ya salió puede cambiar de unidad desde la asignación. La nueva pasa a en servicio. La anterior regresa a disponible solo si seguía en servicio; si la incidencia la sacó, se queda fuera. Se borra el odómetro de salida (era de la otra unidad), así que no se calculan km recorridos de ese viaje. Ya en ruta no se puede quitar la unidad ni el conductor.
+- **Avisos**: las incidencias **altas y críticas** (de recorrido o no) mandan correo a los usuarios activos admin y coordinator con la liga a la incidencia. Si el envío falla, solo queda en el log.
+  - Pendiente: con `onboarding@resend.dev` Resend solo entrega a la dirección dueña de la cuenta; hay que verificar un dominio propio (doc 11).
+- **Pantallas**:
+  - Ficha del recorrido: botón **Reportar incidencia** (con la unidad fija) y la tarjeta *Incidencias* con folio, gravedad y estado.
+  - Mis recorridos: el mismo botón en cada tarjeta mientras el viaje no termine.
+  - Ficha de la incidencia: muestra el recorrido con liga.
+  - Inicio: pestaña **Recorridos** (admin, coordinator y supervisor) con el avance del día por estado, cuántos faltan por asignar, lo que está en operación y las próximas 5 salidas. Se refresca cada minuto.
+
+## Módulo 5 completo: lo que deja listo para el 6
+- Cada recorrido tiene unidad (con sus asientos) y fecha: un boleto es (`tripId`, asiento, tramo).
+- El precio sale de `segmentPrice` + `applySeason` con `tripDate` (M4).
+- `TripStatusService.onTripCancelled` es el gancho para cancelar boletos y reembolsar.
+- Cambiar de unidad con boletos vendidos deberá validarse en el M6 (los asientos son de la unidad).
+- El abordaje (`boarding`) es el momento natural del check-in con QR.
 
 ## API
 | Método | Ruta | Roles |

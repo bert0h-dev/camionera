@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2, UserCog } from 'lucide-react'
+import { Trash2, TriangleAlert, UserCog } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { localClock } from '../../lib/timezones'
 import { useAuth } from '../../auth/useAuth'
@@ -17,6 +17,9 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toast-context'
 import { daysText } from '../routes/useRoutes'
+import { IncidentStatusBadge, SeverityBadge } from '../fleet/IncidentBadges'
+import { ReportIncidentModal, type ReportPreset } from '../fleet/ReportIncidentModal'
+import { incidentFolio } from '../fleet/useFleet'
 import { AssignTripModal } from './AssignTripModal'
 import { TripStatusBadge } from './TripBadges'
 import { TripStatusActions } from './TripStatusActions'
@@ -33,6 +36,7 @@ function TripDetailPage() {
   const { user } = useAuth()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [reporting, setReporting] = useState<ReportPreset | null>(null)
 
   const {
     data: trip,
@@ -64,6 +68,8 @@ function TripDetailPage() {
   const canAssign = canManage && ['scheduled', 'boarding', 'delayed'].includes(trip.status)
   // El conductor solo llega a la ficha de sus propios recorridos (lo valida el servidor)
   const canOperate = canManage || user?.role === 'driver'
+  // Quien ve la ficha y no es taquilla puede reportar (supervisión, conductor y cobrador incluidos)
+  const canReport = !!trip.bus && trip.status !== 'cancelled' && user?.role !== 'vendor'
   const late =
     trip.actualDepartureAt &&
     Math.max(0, Math.round((Date.parse(trip.actualDepartureAt) - Date.parse(trip.departureAt)) / 60000))
@@ -98,6 +104,20 @@ function TripDetailPage() {
             {canAssign && (
               <Button variant="glass" icon={UserCog} onClick={() => setAssigning(true)}>
                 {trip.busId || trip.driverId ? 'Cambiar asignación' : 'Asignar'}
+              </Button>
+            )}
+            {canReport && (
+              <Button
+                variant="glass"
+                icon={TriangleAlert}
+                onClick={() =>
+                  setReporting({
+                    busId: trip.bus!.id,
+                    trip: { id: trip.id, tripNumber: trip.tripNumber, busLabel: `Unidad ${trip.bus!.economicNumber}` },
+                  })
+                }
+              >
+                Reportar incidencia
               </Button>
             )}
             {canOperate && <TripStatusActions trip={trip} inBand />}
@@ -234,30 +254,58 @@ function TripDetailPage() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader title="Historial de estados" />
-          <CardBody>
-            {trip.statusLog.length === 0 ? (
-              <p className="text-sm text-fg-muted">Programado desde su generación; aún sin cambios.</p>
-            ) : (
-              <ol className="space-y-3 text-sm">
-                {trip.statusLog.map((l) => (
-                  <li key={l.id} className="border-l-2 border-border pl-3">
-                    <div className="font-medium">
-                      {l.fromStatus ? `${TRIP_STATUS_LABELS[l.fromStatus]} → ` : ''}
-                      {TRIP_STATUS_LABELS[l.toStatus]}
-                    </div>
-                    <div className="text-xs text-fg-muted">
-                      {dateTime(l.changedAt)} · {l.changedBy?.fullName ?? 'sistema'}
-                    </div>
-                    {l.reason && <div className="text-xs">{l.reason}</div>}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </CardBody>
-        </Card>
+        <div className="space-y-6">
+          {trip.incidents.length > 0 && (
+            <Card>
+              <CardHeader title="Incidencias" />
+              <CardBody>
+                <ul className="space-y-3 text-sm">
+                  {trip.incidents.map((i) => (
+                    <li key={i.id}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link className="font-data text-primary hover:underline" to={`/flota/incidencias/${i.id}`}>
+                          {incidentFolio(i.folio)}
+                        </Link>
+                        <SeverityBadge severity={i.severity} />
+                        <IncidentStatusBadge status={i.status} />
+                      </div>
+                      <div className="text-xs text-fg-muted">
+                        {i.category.name} · {dateTime(i.occurredAt)}
+                      </div>
+                      <div className="line-clamp-2 text-xs">{i.description}</div>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
+          <Card>
+            <CardHeader title="Historial de estados" />
+            <CardBody>
+              {trip.statusLog.length === 0 ? (
+                <p className="text-sm text-fg-muted">Programado desde su generación; aún sin cambios.</p>
+              ) : (
+                <ol className="space-y-3 text-sm">
+                  {trip.statusLog.map((l) => (
+                    <li key={l.id} className="border-l-2 border-border pl-3">
+                      <div className="font-medium">
+                        {l.fromStatus ? `${TRIP_STATUS_LABELS[l.fromStatus]} → ` : ''}
+                        {TRIP_STATUS_LABELS[l.toStatus]}
+                      </div>
+                      <div className="text-xs text-fg-muted">
+                        {dateTime(l.changedAt)} · {l.changedBy?.fullName ?? 'sistema'}
+                      </div>
+                      {l.reason && <div className="text-xs">{l.reason}</div>}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardBody>
+          </Card>
+        </div>
       </div>
+
+      <ReportIncidentModal preset={reporting} onClose={() => setReporting(null)} />
 
       {canAssign && (
         <AssignTripModal key={String(assigning)} trip={trip} open={assigning} onClose={() => setAssigning(false)} />

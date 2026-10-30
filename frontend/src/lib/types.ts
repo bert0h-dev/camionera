@@ -943,6 +943,8 @@ export interface Incident {
   closedAt: string | null
   resolution: string | null
   tookBusOut: boolean
+  /** Recorrido en el que ocurrió (Módulo 5) */
+  trip?: { id: string; tripNumber: string; status: TripStatus } | null
   createdAt: string
   bus: { id: string; economicNumber: string; plates: string; status: BusStatus; odometerKm: number }
   category: { id: string; name: string; isAccident: boolean }
@@ -1264,6 +1266,15 @@ export interface TripDetail extends TripListItem {
   cancelledBy: { id: string; fullName: string } | null
   schedule: { id: string; departureTime: string; daysOfWeek: number[]; isActive: boolean } | null
   statusLog: TripStatusLogEntry[]
+  incidents: {
+    id: string
+    folio: number
+    severity: IncidentSeverity
+    status: IncidentStatus
+    description: string
+    occurredAt: string
+    category: { name: string }
+  }[]
   local: {
     departure: { date: string; time: string }
     arrival: { date: string; time: string }

@@ -43,6 +43,8 @@ export const loaders = {
   ticketOffice: () => import('../pages/tickets/TicketOfficePage'),
   sales: () => import('../pages/tickets/SalesPage'),
   cash: () => import('../pages/cash/CashPage'),
+  promotions: () => import('../pages/tickets/PromotionsPage'),
+  customers: () => import('../pages/tickets/CustomersPage'),
   boarding: () => import('../pages/boarding/BoardingPage'),
 } satisfies Record<string, Loader>
 
@@ -76,6 +78,8 @@ const BY_SEGMENT: Record<string, PageKey> = {
   taquilla: 'ticketOffice',
   ventas: 'sales',
   caja: 'cash',
+  promociones: 'promotions',
+  clientes: 'customers',
   abordaje: 'boarding',
 }
 

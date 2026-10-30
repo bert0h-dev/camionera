@@ -34,6 +34,7 @@ import { SettingsService } from '../settings/settings.service.js';
 import { occupies, overlaps } from './availability-rules.js';
 import { AvailabilityService } from './availability.service.js';
 import { CashService } from '../cash/cash.service.js';
+import { PromotionsService } from './promotions.service.js';
 import { PayDto, QueryOrdersDto, SetPassengersDto } from './dto/sale.dto.js';
 import { orderTotals, priceTickets } from './pricing-rules.js';
 import { qrToken, verifyQrToken } from './qr-token.js';
@@ -66,6 +67,7 @@ export class SaleService {
     private readonly mail: MailService,
     private readonly audit: AuditService,
     private readonly cash: CashService,
+    private readonly promotions: PromotionsService,
     config: ConfigService,
   ) {
     const secret = config.get<string>('TICKET_QR_SECRET');
@@ -230,7 +232,12 @@ export class SaleService {
         },
       });
     });
-    return this.availability.order(order.id, user);
+    // Con promoción, el descuento se recalcula sobre los tipos de pasajero nuevos
+    const promotionNotice = await this.promotions.reprice(order.id);
+    return {
+      ...(await this.availability.order(order.id, user)),
+      promotionNotice,
+    };
   }
 
   // ---------- Cobro ----------
@@ -267,6 +274,7 @@ export class SaleService {
         throw new ConflictException(
           'El apartado venció mientras se cobraba; aparta de nuevo',
         );
+      await this.promotions.consume(tx, order.id);
       const created = [];
       for (const p of dto.payments)
         created.push(

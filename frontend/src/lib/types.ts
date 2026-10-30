@@ -1453,6 +1453,10 @@ export interface Order {
   tickets: OrderTicket[]
   /** Cambio a entregar (solo en la respuesta del cobro) */
   change?: number
+  /** Promoción aplicada (una por compra) */
+  promotions?: { discountApplied: string; promotion: { id: string; code: string; name: string } }[]
+  /** Aviso cuando al recalcular se quitó la promoción */
+  promotionNotice?: string | null
 }
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mercadopago'
@@ -1660,4 +1664,72 @@ export interface ChangeOrder extends Omit<Order, 'change'> {
     }
     quote: ChangeQuote
   }
+}
+
+// ---------- Promociones y clientes (6.6) ----------
+
+export type PromotionStatus = 'current' | 'upcoming' | 'ended' | 'exhausted' | 'inactive'
+
+export interface Promotion {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  discountType: 'percent' | 'amount'
+  discountValue: string
+  maxDiscount: string | null
+  maxUses: number | null
+  usesCount: number
+  minPurchase: string
+  validFrom: string
+  validUntil: string
+  channels: ('counter' | 'online')[]
+  isActive: boolean
+  status: PromotionStatus
+  orders: number
+  discountGiven: number
+  createdBy: { fullName: string } | null
+}
+
+export interface Customer {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  notes: string | null
+  createdAt: string
+  lastPurchaseAt?: string | null
+  _count?: { orders: number }
+}
+
+export interface CustomerDetail extends Customer {
+  stats: {
+    orders: number
+    tickets: number
+    boarded: number
+    upcoming: number
+    cancelled: number
+    noShow: number
+    spent: number
+    lastTripAt: string | null
+  }
+  orders: {
+    id: string
+    orderNumber: string
+    status: OrderStatus
+    total: string
+    paidAt: string | null
+    tickets: {
+      id: string
+      ticketNumber: string
+      seatNumber: string
+      passengerName: string
+      status: TicketStatus
+      boardAt: string
+      total: string
+      boardTerminal: { code: string }
+      alightTerminal: { code: string }
+      trip: { id: string; tripNumber: string }
+    }[]
+  }[]
 }

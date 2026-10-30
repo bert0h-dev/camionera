@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Banknote, CreditCard, Landmark, Plus, Trash2, Users, Wallet } from 'lucide-react'
+import { BadgePercent, Banknote, CreditCard, Landmark, Plus, Trash2, Users, Wallet } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { formatMoney } from '../../lib/format'
-import type { CashCurrent, Order, PaymentMethod, TripSeatMap } from '../../lib/types'
+import type { CashCurrent, Customer, Order, Paginated, PaymentMethod, TripSeatMap } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
@@ -91,11 +91,42 @@ export function Checkout({
     onSuccess: (o) => {
       queryClient.setQueryData(['tickets', 'order', o.id], o)
       setConfirmed(true)
+      if (o.promotionNotice) toast.error(o.promotionNotice)
       // Con un solo pago, se ajusta al total nuevo
       setPayments((list) => (list.length === 1 ? [{ ...list[0], amount: o.total }] : list))
     },
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
+
+  // Promoción: una por compra; el servidor valida y recalcula el total
+  const [promoCode, setPromoCode] = useState('')
+  const applied = order.promotions?.[0]
+  const promo = useMutation({
+    mutationFn: async (code: string | null) =>
+      code
+        ? (await api.put<Order>(`/tickets/orders/${order.id}/promotion`, { code })).data
+        : (await api.delete<Order>(`/tickets/orders/${order.id}/promotion`)).data,
+    onSuccess: (o) => {
+      queryClient.setQueryData(['tickets', 'order', o.id], o)
+      setPromoCode('')
+      setPayments((list) => (list.length === 1 ? [{ ...list[0], amount: o.total }] : list))
+    },
+    onError: (err) => toast.error(apiErrorMessage(err)),
+  })
+
+  // Clientes ya registrados que coinciden con el correo o teléfono que se escribe
+  const contactTerm = (
+    contact.email.length >= 4 ? contact.email : contact.phone.length >= 4 ? contact.phone : ''
+  ).trim()
+  const suggestions = useQuery({
+    queryKey: ['customers', 'suggest', contactTerm],
+    enabled: contactTerm.length >= 4,
+    queryFn: async () =>
+      (await api.get<Paginated<Customer>>('/customers', { params: { search: contactTerm, limit: 3 } })).data.data,
+  })
+  const suggested = (suggestions.data ?? []).filter(
+    (c) => c.email !== contact.email || c.phone !== contact.phone || c.fullName !== contact.name,
+  )
 
   const pay = useMutation({
     mutationFn: async () =>
@@ -214,6 +245,25 @@ export function Checkout({
                   setConfirmed(false)
                 }}
               />
+              {suggested.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 text-xs sm:col-span-3">
+                  <span className="text-fg-muted">Clientes registrados:</span>
+                  {suggested.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="rounded-full bg-primary-soft px-2.5 py-1 text-primary-soft-fg hover:brightness-95"
+                      onClick={() => {
+                        setContact({ name: c.fullName, email: c.email ?? '', phone: c.phone ?? '' })
+                        setConfirmed(false)
+                      }}
+                    >
+                      {c.fullName}
+                      {c.email ? ` · ${c.email}` : c.phone ? ` · ${c.phone}` : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex justify-end">
               <Button type="submit" variant={confirmed ? 'secondary' : 'primary'} loading={savePassengers.isPending}>
@@ -251,6 +301,40 @@ export function Checkout({
             </Alert>
           )}
           <fieldset disabled={!confirmed} className="space-y-3">
+            {applied ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm dark:border-emerald-400/40 dark:bg-emerald-500/10">
+                <BadgePercent className="size-4 text-emerald-700 dark:text-emerald-300" />
+                <span className="flex-1">
+                  <span className="font-data font-semibold">{applied.promotion.code}</span> · {applied.promotion.name}
+                </span>
+                <span className="font-data font-semibold text-emerald-700 dark:text-emerald-300">
+                  −{formatMoney(applied.discountApplied)}
+                </span>
+                <Button variant="ghost" size="sm" loading={promo.isPending} onClick={() => promo.mutate(null)}>
+                  Quitar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                <div className="w-full sm:w-64">
+                  <Input
+                    label="Código de promoción"
+                    placeholder="Opcional"
+                    className="font-data uppercase"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={!promoCode.trim()}
+                  loading={promo.isPending}
+                  onClick={() => promo.mutate(promoCode.trim())}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            )}
             {payments.map((p, i) => {
               const Icon = METHOD_ICONS[p.method]
               return (

@@ -8,13 +8,16 @@ import { PassengerTypesService } from './passenger-types.service.js';
 import { SaleService } from './sale.service.js';
 import { TicketActionsService } from './ticket-actions.service.js';
 import { BoardingService } from './boarding.service.js';
+import { PromotionsService } from './promotions.service.js';
+import { CustomersService } from './customers.service.js';
+import { CustomersController } from './customers.controller.js';
 import { TripsModule } from '../trips/trips.module.js';
 import { TicketsController } from './tickets.controller.js';
 
 // Importa RoutesModule por la búsqueda de salidas; Rutas y Recorridos no dependen de Boletos
 @Module({
   imports: [SettingsModule, RoutesModule, TripsModule, CashModule],
-  controllers: [TicketsController],
+  controllers: [TicketsController, CustomersController],
   providers: [
     PassengerTypesService,
     AvailabilityService,
@@ -22,6 +25,8 @@ import { TicketsController } from './tickets.controller.js';
     SaleService,
     TicketActionsService,
     BoardingService,
+    PromotionsService,
+    CustomersService,
   ],
   exports: [PassengerTypesService, AvailabilityService, TicketActionsService],
 })

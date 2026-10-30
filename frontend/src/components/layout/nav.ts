@@ -83,6 +83,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/taquilla', label: 'Taquilla', icon: Ticket, roles: TRIP_READERS },
       { to: '/ventas', label: 'Ventas', icon: Receipt, roles: TRIP_READERS },
+      { to: '/caja', label: 'Caja', icon: Wallet, roles: TRIP_READERS },
     ],
   },
   {
@@ -136,6 +137,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   'mis-recorridos': 'Mis recorridos',
   taquilla: 'Taquilla',
   ventas: 'Ventas',
+  caja: 'Caja',
   nueva: 'Nueva',
   nuevo: 'Nuevo',
   editar: 'Editar',

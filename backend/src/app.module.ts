@@ -11,6 +11,7 @@ import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RoutesModule } from './routes/routes.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { CashModule } from './cash/cash.module.js';
 import { FilesModule } from './files/files.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { TripsModule } from './trips/trips.module.js';
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module.js';
     RoutesModule,
     TripsModule,
     TicketsModule,
+    CashModule,
   ],
   controllers: [HealthController],
 })

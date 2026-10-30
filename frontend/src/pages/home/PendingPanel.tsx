@@ -10,6 +10,7 @@ import {
   Route,
   TramFront,
   TriangleAlert,
+  Wallet,
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
@@ -20,7 +21,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 
-type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip'
+type Area = 'staff' | 'fleet' | 'maintenance' | 'incident' | 'fuel' | 'route' | 'trip' | 'cash'
 
 interface PendingItem {
   id: string
@@ -41,6 +42,7 @@ const AREA_ICON: Record<Area, LucideIcon> = {
   fuel: Fuel,
   route: Route,
   trip: TramFront,
+  cash: Wallet,
 }
 const AREA_LABEL: Record<Area, string> = {
   staff: 'Personal',
@@ -50,6 +52,7 @@ const AREA_LABEL: Record<Area, string> = {
   fuel: 'Combustible',
   route: 'Ruta',
   trip: 'Recorrido',
+  cash: 'Caja',
 }
 
 /** Las incidencias y las cargas por confirmar no vencen: se cuenta cuánto llevan esperando. */
@@ -68,15 +71,17 @@ function badgeLabel(i: PendingItem) {
         ? 'Unidad no apta'
         : 'Revisar'
   if (i.area === 'fuel') return i.id.startsWith('fuel-low') ? 'Rendimiento bajo' : 'Por confirmar'
+  if (i.area === 'cash') return i.id.startsWith('cash-open') ? 'Sin corte' : 'Diferencia'
   return i.severity === 'overdue' ? 'Vencido' : 'Por vencer'
 }
 
-type Filter = 'all' | 'staff' | 'fleet' | 'route'
+type Filter = 'all' | 'staff' | 'fleet' | 'route' | 'cash'
 const FILTERS: { key: Filter; label: string; match: (a: Area) => boolean }[] = [
   { key: 'all', label: 'Todo', match: () => true },
   { key: 'staff', label: 'Personal', match: (a) => a === 'staff' },
-  { key: 'fleet', label: 'Flota', match: (a) => a !== 'staff' && a !== 'route' && a !== 'trip' },
+  { key: 'fleet', label: 'Flota', match: (a) => a !== 'staff' && a !== 'route' && a !== 'trip' && a !== 'cash' },
   { key: 'route', label: 'Rutas y recorridos', match: (a) => a === 'route' || a === 'trip' },
+  { key: 'cash', label: 'Caja', match: (a) => a === 'cash' },
 ]
 
 const VISIBLE = 6

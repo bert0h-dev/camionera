@@ -33,6 +33,7 @@ import { wallTime } from '../routes/route-rules.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { occupies, overlaps } from './availability-rules.js';
 import { AvailabilityService } from './availability.service.js';
+import { CashService } from '../cash/cash.service.js';
 import { PayDto, QueryOrdersDto, SetPassengersDto } from './dto/sale.dto.js';
 import { orderTotals, priceTickets } from './pricing-rules.js';
 import { qrToken } from './qr-token.js';
@@ -64,6 +65,7 @@ export class SaleService {
     private readonly files: FilesService,
     private readonly mail: MailService,
     private readonly audit: AuditService,
+    private readonly cash: CashService,
     config: ConfigService,
   ) {
     const secret = config.get<string>('TICKET_QR_SECRET');
@@ -231,9 +233,12 @@ export class SaleService {
     const total = Number(order.total);
     const check = checkPayments(dto.payments, total);
     if (!check.ok) throw new BadRequestException(check.error);
+    // Aviso temprano; la transacción lo vuelve a revisar
+    await this.cash.requireOpen(user.id, this.prisma);
 
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
+      const session = await this.cash.requireOpen(user.id, tx);
       // Cierra la carrera con el vencimiento: solo se cobra si sigue pendiente y vigente
       const claimed = await tx.order.updateMany({
         where: {
@@ -241,25 +246,35 @@ export class SaleService {
           status: OrderStatus.pending,
           expiresAt: { gt: now },
         },
-        data: { status: OrderStatus.paid, paidAt: now, expiresAt: null },
+        data: {
+          status: OrderStatus.paid,
+          paidAt: now,
+          expiresAt: null,
+          cashSessionId: session.id,
+        },
       });
       if (claimed.count !== 1)
         throw new ConflictException(
           'El apartado venció mientras se cobraba; aparta de nuevo',
         );
+      const created = [];
       for (const p of dto.payments)
-        await tx.payment.create({
-          data: {
-            orderId: order.id,
-            method: p.method,
-            status: PaymentStatus.approved,
-            amount: p.amount,
-            received: p.method === 'cash' ? (p.received ?? p.amount) : null,
-            reference: p.reference ?? null,
-            recordedById: user.id,
-            paidAt: now,
-          },
-        });
+        created.push(
+          await tx.payment.create({
+            data: {
+              orderId: order.id,
+              method: p.method,
+              status: PaymentStatus.approved,
+              amount: p.amount,
+              received: p.method === 'cash' ? (p.received ?? p.amount) : null,
+              reference: p.reference ?? null,
+              recordedById: user.id,
+              cashSessionId: session.id,
+              paidAt: now,
+            },
+          }),
+        );
+      await this.cash.recordSale(tx, session.id, created, user.id);
       for (const t of held) {
         await tx.ticket.update({
           where: { id: t.id },

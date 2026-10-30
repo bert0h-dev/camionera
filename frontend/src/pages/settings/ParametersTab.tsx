@@ -117,6 +117,13 @@ const GROUPS: {
     description: 'Apartado, cancelación, reembolso, cambios y check-in; se aplican conforme entra la venta (Módulo 6)',
     icon: Ticket,
   },
+  {
+    group: 'cash',
+    module: 'tickets',
+    title: 'Caja',
+    description: 'Fondo propuesto al abrir, tolerancia de diferencias en el corte y aviso de cajas sin cortar',
+    icon: Wallet,
+  },
 ]
 
 // Búsqueda sin distinguir mayúsculas ni acentos

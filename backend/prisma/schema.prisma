@@ -1531,21 +1531,26 @@ model Refund {
 
 /// Caja de un vendedor: de la apertura al corte. Solo una abierta por usuario (índice parcial en la migración)
 model CashSession {
-  id           String            @id @default(uuid(7)) @db.Uuid
-  userId       String            @map("user_id") @db.Uuid
-  terminalId   String?           @map("terminal_id") @db.Uuid
-  status       CashSessionStatus @default(open)
-  openingFloat Decimal           @map("opening_float") @db.Decimal(10, 2)
-  openedAt     DateTime          @default(now()) @map("opened_at") @db.Timestamptz()
-  closedAt     DateTime?         @map("closed_at") @db.Timestamptz()
+  id                String            @id @default(uuid(7)) @db.Uuid
+  userId            String            @map("user_id") @db.Uuid
+  terminalId        String?           @map("terminal_id") @db.Uuid
+  status            CashSessionStatus @default(open)
+  openingFloat      Decimal           @map("opening_float") @db.Decimal(10, 2)
+  openedAt          DateTime          @default(now()) @map("opened_at") @db.Timestamptz()
+  closedAt          DateTime?         @map("closed_at") @db.Timestamptz()
   /// Efectivo que debía haber al corte (fondo + ventas − reembolsos − retiros + ingresos)
-  expectedCash Decimal?          @map("expected_cash") @db.Decimal(10, 2)
-  countedCash  Decimal?          @map("counted_cash") @db.Decimal(10, 2)
-  difference   Decimal?          @db.Decimal(10, 2)
-  closingNotes String?           @map("closing_notes") @db.Text
-  closedById   String?           @map("closed_by") @db.Uuid
-  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+  expectedCash      Decimal?          @map("expected_cash") @db.Decimal(10, 2)
+  countedCash       Decimal?          @map("counted_cash") @db.Decimal(10, 2)
+  difference        Decimal?          @db.Decimal(10, 2)
+  closingNotes      String?           @map("closing_notes") @db.Text
+  closedById        String?           @map("closed_by") @db.Uuid
+  /// % de comisión del vendedor vigente al cortar (congelado)
+  commissionPercent Decimal?          @map("commission_percent") @db.Decimal(5, 2)
+  commissionAmount  Decimal?          @map("commission_amount") @db.Decimal(10, 2)
+  /// Resumen congelado al cortar: totales por método, compras, boletos y desglose de billetes y monedas
+  summary           Json?             @db.JsonB
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
 
   user      User           @relation("CashSessionUser", fields: [userId], references: [id])
   terminal  Terminal?      @relation(fields: [terminalId], references: [id])

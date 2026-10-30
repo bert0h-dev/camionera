@@ -1481,3 +1481,61 @@ export interface TripOccupancy {
   sold: number
   held: number
 }
+
+// ---------- Caja (Módulo 6.3) ----------
+
+export type CashMovementType = 'sale' | 'refund' | 'withdrawal' | 'deposit'
+
+export interface CashTotals {
+  sales: Record<PaymentMethod, number>
+  refunds: Record<PaymentMethod, number>
+  withdrawals: number
+  deposits: number
+  netSales: number
+  expectedCash: number
+}
+
+export interface CashSession {
+  id: string
+  userId: string
+  status: 'open' | 'closed'
+  openingFloat: string
+  openedAt: string
+  closedAt: string | null
+  expectedCash: string | null
+  countedCash: string | null
+  difference: string | null
+  closingNotes: string | null
+  commissionPercent: string | null
+  commissionAmount: string | null
+  summary: {
+    totals: CashTotals
+    orders: number
+    tickets: number
+    breakdown: Record<string, number> | null
+    tolerance: number
+  } | null
+  user: { id: string; fullName: string }
+  closedBy: { id: string; fullName: string } | null
+  terminal: { id: string; code: string; name: string } | null
+}
+
+export interface CashDetail extends CashSession {
+  movements: {
+    id: string
+    type: CashMovementType
+    method: PaymentMethod
+    amount: string
+    reason: string | null
+    createdAt: string
+    createdBy: { fullName: string } | null
+    order: { id: string; orderNumber: string } | null
+  }[]
+  live: { totals: CashTotals; orders: number; tickets: number; commission: number; commissionPercent: number }
+}
+
+export interface CashCurrent {
+  session: CashDetail | null
+  defaultFloat: number
+  tolerance: number
+}

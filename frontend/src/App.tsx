@@ -42,6 +42,7 @@ const SeasonsPage = lazyPage('seasons')
 const DeparturesSearchPage = lazyPage('departures')
 const TicketOfficePage = lazyPage('ticketOffice')
 const SalesPage = lazyPage('sales')
+const CashPage = lazyPage('cash')
 const TripsPage = lazyPage('trips')
 const TripDetailPage = lazyPage('tripDetail')
 const MyTripsPage = lazyPage('myTrips')
@@ -96,6 +97,7 @@ function App() {
               <Route path="/recorridos" element={<TripsPage />} />
               <Route path="/taquilla" element={<TicketOfficePage />} />
               <Route path="/ventas" element={<SalesPage />} />
+              <Route path="/caja" element={<CashPage />} />
             </Route>
             {/* El conductor y el cobrador solo llegan a la ficha de sus recorridos (lo valida el servidor) */}
             <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'vendor', 'driver', 'collector']} />}>

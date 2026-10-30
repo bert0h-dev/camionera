@@ -130,19 +130,8 @@ export class TripsService {
     }));
   }
 
-  /**
-   * Crea los recorridos que faltan en el rango y quita los programados sin asignar que ya no
-   * corresponden a su horario. Los que ya salieron no se tocan. Es idempotente.
-   */
-  async generate(
-    from: string,
-    to: string,
-    routeId?: string,
-  ): Promise<GenerateResult> {
-    if (to < from)
-      throw new BadRequestException(
-        'La fecha final no puede ser anterior a la inicial',
-      );
+  /** Lo que piden los horarios contra lo que existe: qué crear, qué quitar y qué avisar. */
+  private async diff(from: string, to: string, routeId?: string) {
     const now = new Date();
     const routes = await this.planRoutes(routeId);
     // Las salidas que ya pasaron no se generan
@@ -181,7 +170,23 @@ export class TripsService {
       })),
       planned,
     );
+    return { planned, remove, stale };
+  }
 
+  /**
+   * Crea los recorridos que faltan en el rango y quita los programados sin asignar que ya no
+   * corresponden a su horario. Los que ya salieron no se tocan. Es idempotente.
+   */
+  async generate(
+    from: string,
+    to: string,
+    routeId?: string,
+  ): Promise<GenerateResult> {
+    if (to < from)
+      throw new BadRequestException(
+        'La fecha final no puede ser anterior a la inicial',
+      );
+    const { planned, remove, stale } = await this.diff(from, to, routeId);
     const [removed, created] = await this.prisma.$transaction([
       this.prisma.trip.deleteMany({
         where: { id: { in: remove }, status: TripStatus.scheduled },
@@ -199,6 +204,23 @@ export class TripsService {
       removed: removed.count,
       stale: stale.length,
     };
+  }
+
+  /** Recorridos asignados del horizonte que ya no coinciden con su horario (para Pendientes). */
+  async staleTrips() {
+    const { from, to } = await this.horizon();
+    const { stale } = await this.diff(from, to);
+    if (!stale.length) return [];
+    return this.prisma.trip.findMany({
+      where: { id: { in: stale } },
+      select: {
+        id: true,
+        tripNumber: true,
+        departureAt: true,
+        route: { select: { name: true } },
+      },
+      orderBy: { departureAt: 'asc' },
+    });
   }
 
   /** Generación manual desde la pantalla de recorridos. */

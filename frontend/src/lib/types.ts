@@ -1297,3 +1297,14 @@ export interface GenerateTripsResult {
   removed: number
   stale: number
 }
+
+export interface AssignmentIssue {
+  level: 'block' | 'override' | 'warn'
+  message: string
+}
+
+export interface TripCandidates {
+  buses: { id: string; economicNumber: string; model: string; seats: number; issues: AssignmentIssue[] }[]
+  drivers: (TripPerson & { issues: AssignmentIssue[] })[]
+  collectors: (TripPerson & { issues: AssignmentIssue[] })[]
+}

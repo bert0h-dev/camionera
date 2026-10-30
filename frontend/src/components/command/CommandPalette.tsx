@@ -446,7 +446,7 @@ function Palette({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-70 flex items-start justify-center bg-overlay p-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
       onMouseDown={onClose}
     >
       <div

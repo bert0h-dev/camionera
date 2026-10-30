@@ -6,8 +6,8 @@ Pantalla única **Análisis › Reportes** (`/reportes`) con una pestaña por á
 
 | Fase | Contenido | Estado |
 |---|---|---|
-| 7.1 | Base de reportes y **ventas** | ✅ rama `feat/m7-ventas` |
-| 7.2 | **Ocupación** por recorrido, ruta, horario y tramo | ⏳ |
+| 7.1 | Base de reportes y **ventas** | ✅ fusionada (PR #34) |
+| 7.2 | **Ocupación** por recorrido, ruta, horario y tramo; ventas en SQL | ✅ rama `feat/m7-ocupacion` |
 | 7.3 | **Cancelaciones y no presentados** | ⏳ |
 | 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ⏳ |
 | 7.5 | **Tablero ejecutivo** (pestaña en Inicio) | ⏳ |
@@ -34,10 +34,27 @@ Decisiones:
 - **Por vendedor**: lo vendido se cuenta a quien vendió y los reembolsos a quien los hizo, como en su caja. La comisión es **estimada** con el porcentaje vigente; la congelada está en cada corte de Caja.
 - **Por ruta** (importe de los boletos y su participación), **origen → destino** (los 20 tramos más vendidos, incluidos los de rutas con paradas), **por tipo de pasajero** y **por promoción**.
 
+## 7.2 Ocupación (`GET /reports/occupancy` y `/reports/occupancy/export?format=xlsx|pdf`)
+- **Ventas en SQL**: el reporte de ventas pasó de sumar en memoria a `GROUP BY` en SQL, con el día en la zona de la central (`AT TIME ZONE`). Un mes de datos demo bajó de 4.4 s a 0.9 s, y las cifras son idénticas a las de antes, comparadas con y sin filtro de ruta. Migración `report_indexes`: índice en `orders.paid_at`; `payments.paid_at`, `refunds.created_at` y `tickets(trip_id, status)` ya lo tenían.
+- **Qué cuenta**: recorridos con unidad y no cancelados, por día de salida, y boletos confirmados, abordados o no presentados.
+- **Medida principal, por asiento-km** (`occupancy-rules.ts`, con pruebas): km ocupados entre asientos × km de la ruta.
+  - Cada boleto aporta los km de su tramo (`km_from_origin` de las paradas); si la ruta no tiene km, cada trecho pesa igual. Nunca pasa de 100 %.
+  - La de **asientos** (boletos entre asientos) se da como referencia y puede pasar de 100 % con tramos.
+  - Los promedios son ponderados: suma de lo ocupado entre suma de lo ofrecido.
+- **Cifras**: ocupación (con su cambio en puntos contra el periodo anterior), recorridos, boletos por asiento, % de abordados y de no presentados (solo recorridos que ya salieron), ingreso por recorrido, y casi vacíos (< 25 %) y casi llenos (≥ 90 %).
+- **Por día** y **por ruta**.
+- **Mapa de calor**: día de la semana × franja de 3 h, por hora local del origen.
+- **Por horario**: cada salida programada, del más vacío al más lleno, con recorridos, boletos promedio y casi vacíos. Los extras van aparte.
+- **Por trecho**, en rutas con paradas: asientos ocupados promedio y % entre cada par de puntos.
+- **Detalle por recorrido**, con liga a su ficha.
+- Lo ven admin, supervisor y coordinator; el vendor no ve la pestaña.
+- Verificado contra un conteo directo en la base (octubre: 437 recorridos, 12,231 boletos y 18,904 asientos).
+
 ## Pantalla
 - Banda: neto, vendido (con el cambio contra el periodo anterior), reembolsos y boletos; botones *Excel* y *PDF*; pestañas.
 - Filtros: periodo, ruta y vendedor (este último no lo ve el vendor).
 - Contenido: gráfica por día, dona por método, rutas con más ingreso, tablas por vendedor y por ruta, origen → destino, canal y descuentos, tipo de pasajero y promoción.
+- Pestaña **Ocupación** (`?vista=occupancy`): aviso de cómo se mide, línea por día, barras por ruta, mapa de calor (cuadrícula propia en índigo), tabla de horarios con barra de ocupación, trechos proporcionales a sus km y detalle paginado. El filtro de vendedor solo aparece en Ventas.
 
 ## Datos demo para reportes
 `npm run seed:demo -w backend -- --sales` (`prisma/seed-sales.ts`) genera historia en las rutas demo con las mismas reglas de la taquilla (temporada, tipo de pasajero, promoción, IVA y política de cancelación).
@@ -46,10 +63,11 @@ Decisiones:
 - Pagos en efectivo, tarjeta, transferencia y mixtos, hechos por los tres vendedores demo (se les crea usuario sin contraseña conocida). Hay una caja por vendedor y día, con corte y algunas diferencias.
 - Alrededor de 93 % aborda y el resto no se presenta; alrededor de 6 % cancela con reembolso según la política, y hay algunos cambios de asiento.
 - Las compras y los boletos demo usan folios `D…`, sus compras y recorridos llevan la nota `DEMO-VENTAS`, los clientes el correo `@demo.camionera.mx` y las promociones la clave `DEMO…`. `--clean` general también los borra.
-- Volumen: unos 900 recorridos y 30 mil boletos. Con él, el reporte de ventas de un mes tarda unos 5 s porque agrega en memoria; se cambiará a agregación en SQL (pendiente).
+- Volumen: unos 900 recorridos y 30 mil boletos. Con él, un mes de ventas responde en menos de 1 s y uno de ocupación en alrededor de 1.5 s (incluye el periodo anterior).
 
 ## API
 | Método | Ruta | Roles |
 |---|---|---|
 | GET | `/reports/sales?from=&to=&routeId=&sellerId=&channel=` | admin, supervisor, coordinator; vendor (solo lo suyo) |
 | GET | `/reports/sales/export?format=xlsx\|pdf&…` | igual |
+| GET | `/reports/occupancy?from=&to=&routeId=` · `/reports/occupancy/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { FileDown, FileSpreadsheet, ReceiptText } from 'lucide-react'
+import { FileDown, FileSpreadsheet, Gauge, ReceiptText } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { useAuth } from '../../auth/useAuth'
 import { Button } from '../../components/ui/Button'
@@ -9,13 +9,23 @@ import { FilterBar } from '../../components/ui/FilterBar'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
+import { OccupancyReportTab, OccupancyStats } from './OccupancyReportTab'
 import { RangePicker } from './ReportFilters'
 import { SalesReportTab, SalesStats } from './SalesReportTab'
-import { presetRange, useSalesReport, type SalesFilters } from './useReports'
+import { presetRange, useOccupancyReport, useSalesReport, type SalesFilters } from './useReports'
 
-type TabKey = 'sales'
+type TabKey = 'sales' | 'occupancy'
 
-const TABS: TabItem<TabKey>[] = [{ key: 'sales', label: 'Ventas', icon: ReceiptText }]
+const TABS: (TabItem<TabKey> & { operation?: boolean })[] = [
+  { key: 'sales', label: 'Ventas', icon: ReceiptText },
+  { key: 'occupancy', label: 'Ocupación', icon: Gauge, operation: true },
+]
+
+/** Exportación de cada pestaña. */
+const EXPORTS: Record<TabKey, { url: string; name: string }> = {
+  sales: { url: '/reports/sales/export', name: 'ventas' },
+  occupancy: { url: '/reports/occupancy/export', name: 'ocupacion' },
+}
 
 /** Descarga un archivo del API (lleva el token, por eso no es un enlace directo). */
 async function download(url: string, params: Record<string, string | undefined>, fallbackName: string) {
@@ -34,6 +44,7 @@ async function download(url: string, params: Record<string, string | undefined>,
 function ReportsPage() {
   const toast = useToast()
   const { user } = useAuth()
+  const isVendor = user?.role === 'vendor'
   const [params, setParams] = useSearchParams()
   const month = presetRange('month')
   const f: SalesFilters = {
@@ -43,7 +54,10 @@ function ReportsPage() {
     sellerId: params.get('vendedor') ?? '',
     channel: params.get('canal') ?? '',
   }
-  const tab: TabKey = 'sales'
+  // El vendedor solo ve ventas; las pestañas de operación son de supervisión y coordinación
+  const tabs = TABS.filter((t) => !t.operation || !isVendor)
+  const requested = params.get('vista') as TabKey | null
+  const tab: TabKey = tabs.some((t) => t.key === requested) ? requested! : 'sales'
   const set = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params)
     for (const [k, v] of Object.entries(patch)) {
@@ -54,6 +68,8 @@ function ReportsPage() {
   }
 
   const sales = useSalesReport(f)
+  const occupancy = useOccupancyReport({ from: f.from, to: f.to, routeId: f.routeId }, tab === 'occupancy')
+  const active = tab === 'sales' ? sales : occupancy
   const routes = useQuery({
     queryKey: ['trips', 'route-options'],
     queryFn: async () => (await api.get<{ id: string; code: string; name: string }[]>('/trips/route-options')).data,
@@ -61,20 +77,19 @@ function ReportsPage() {
   const exportFile = useMutation({
     mutationFn: (format: 'xlsx' | 'pdf') =>
       download(
-        '/reports/sales/export',
+        EXPORTS[tab].url,
         {
           format,
           from: f.from,
           to: f.to,
           routeId: f.routeId || undefined,
-          sellerId: f.sellerId || undefined,
-          channel: f.channel || undefined,
+          sellerId: tab === 'sales' ? f.sellerId || undefined : undefined,
+          channel: tab === 'sales' ? f.channel || undefined : undefined,
         },
-        `ventas.${format}`,
+        `${EXPORTS[tab].name}.${format}`,
       ),
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
-  const isVendor = user?.role === 'vendor'
 
   return (
     <div className="space-y-6">
@@ -83,7 +98,7 @@ function ReportsPage() {
         description={
           isVendor ? 'Tus ventas por periodo' : 'Ventas, ocupación, cancelaciones, flota y personal por periodo'
         }
-        refreshing={sales.isFetching && !sales.isLoading}
+        refreshing={active.isFetching && !active.isLoading}
         actions={
           <>
             <Button
@@ -104,8 +119,18 @@ function ReportsPage() {
             </Button>
           </>
         }
-        stats={tab === 'sales' && <SalesStats data={sales.data} loading={sales.isLoading} />}
-        bottom={<Tabs variant="band" items={TABS} value={tab} onChange={() => undefined} />}
+        stats={
+          tab === 'sales' ? (
+            <SalesStats data={sales.data} loading={sales.isLoading} />
+          ) : (
+            <OccupancyStats data={occupancy.data} loading={occupancy.isLoading} />
+          )
+        }
+        bottom={
+          tabs.length > 1 && (
+            <Tabs variant="band" items={tabs} value={tab} onChange={(k) => set({ vista: k === 'sales' ? '' : k })} />
+          )
+        }
       />
 
       <FilterBar>
@@ -120,7 +145,7 @@ function ReportsPage() {
             ))}
           </Select>
         </div>
-        {!isVendor && (
+        {!isVendor && tab === 'sales' && (
           <div className="w-full sm:w-48">
             <Select aria-label="Vendedor" value={f.sellerId} onChange={(e) => set({ vendedor: e.target.value })}>
               <option value="">Todos los vendedores</option>
@@ -137,6 +162,7 @@ function ReportsPage() {
       </FilterBar>
 
       {tab === 'sales' && <SalesReportTab query={sales} />}
+      {tab === 'occupancy' && <OccupancyReportTab query={occupancy} />}
     </div>
   )
 }

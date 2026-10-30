@@ -1400,6 +1400,8 @@ model Order {
   @@index([sellerId, createdAt])
   @@index([customerId])
   @@index([createdAt])
+  /// Reportes de ventas por fecha de cobro (Módulo 7)
+  @@index([paidAt])
   @@map("orders")
 }
 

@@ -258,8 +258,16 @@ function Palette({ onClose }: { onClose: () => void }) {
               section: 'Acciones rápidas',
               label: 'Buscar salidas',
               icon: Route,
-              keywords: 'salidas horarios viaje boleto taquilla origen destino tramo precio',
+              keywords: 'salidas horarios viaje origen destino tramo precio',
               to: '/rutas/buscar',
+            },
+            {
+              id: 'action:ticket-office',
+              section: 'Acciones rápidas',
+              label: 'Vender boletos (taquilla)',
+              icon: Route,
+              keywords: 'taquilla boleto boletos venta vender asiento apartar pasaje',
+              to: '/taquilla',
             },
           ]
         : []),

@@ -27,7 +27,8 @@ export class PassengerTypeDto {
   @Transform(upper)
   @IsString()
   @Matches(/^[A-Z0-9_-]{2,20}$/, {
-    message: 'La clave lleva de 2 a 20 letras, números, guiones o guiones bajos',
+    message:
+      'La clave lleva de 2 a 20 letras, números, guiones o guiones bajos',
   })
   code: string;
 
@@ -62,7 +63,8 @@ export class PassengerTypeDto {
   @ApiPropertyOptional({
     enum: SeasonType,
     isArray: true,
-    description: 'El descuento solo aplica en estas temporadas (vacío = siempre)',
+    description:
+      'El descuento solo aplica en estas temporadas (vacío = siempre)',
   })
   @IsOptional()
   @IsArray()

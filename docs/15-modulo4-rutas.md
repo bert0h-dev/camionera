@@ -174,7 +174,7 @@ Baja de otoño (−10 %, 1 oct–30 nov 2026, vigente hoy), Navidad y Año Nuevo
 - Tarjetas con salida → llegada en hora local, duración, paradas intermedias y precio (tachado el base cuando la temporada ajusta). Al abrirlas, el itinerario del viaje con "Sube" y "Baja" resaltados y enlace a la ruta.
 - Sin resultados, explica si no hay rutas entre esas ciudades o si las hay pero no salen esa fecha.
 - Ctrl+K: "Buscar salidas" para admin, coordinación, supervisión y taquilla.
-- Asientos disponibles: "se confirmarán con los recorridos (Módulo 5)".
+- Asientos disponibles: desde la 6.1 la pantalla usa `/tickets/departures` y muestra los lugares libres del tramo con liga a la taquilla (o el motivo si no se vende; ver doc 17).
 
 ## Lo que deja listo el Módulo 4 para los siguientes
 - **Módulo 5 (Recorridos)**: cada resultado de búsqueda ya trae `scheduleId` + `tripDate`, que es justo la llave de un recorrido (un horario en una fecha). La generación de recorridos debe usar `runsOn` de `search-rules.ts` y `zonedInstant` de `route-rules.ts` para crear las salidas en hora local del origen. Los parámetros `trips.*` ya existen.

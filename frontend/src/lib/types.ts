@@ -1238,8 +1238,17 @@ export interface TripListItem {
   driverId: string | null
   collectorId: string | null
   notes: string | null
-  route: { id: string; code: string; name: string; originTerminal: TripTerminal; destinationTerminal: TripTerminal }
-  bus: { id: string; economicNumber: string } | null
+  route: {
+    id: string
+    code: string
+    name: string
+    originTerminal: TripTerminal
+    destinationTerminal: TripTerminal
+    _count?: { stops: number }
+  }
+  bus: { id: string; economicNumber: string; _count?: { seats: number } } | null
+  /** Boletos vendidos y apartados vigentes (Módulo 6) */
+  occupancy: TripOccupancy
   driver: TripPerson | null
   collector: TripPerson | null
 }
@@ -1334,4 +1343,110 @@ export interface PassengerType {
   isActive: boolean
   sortOrder: number
   _count?: { tickets: number }
+}
+
+export type SeatState = 'free' | 'held' | 'occupied' | 'blocked'
+
+/** Salida de la búsqueda con su recorrido y lugares libres en el tramo */
+export interface SellableDeparture extends DepartureResult {
+  trip: { id: string; tripNumber: string; status: TripStatus } | null
+  sellable: boolean
+  notSellableReason: string | null
+  freeSeats: number | null
+}
+
+export interface SellableDepartureSearch {
+  results: SellableDeparture[]
+  connectingRoutes: number
+}
+
+export interface ItineraryPoint {
+  index: number
+  terminalId: string
+  code: string
+  name: string
+  cityName: string
+  timezone: string
+  minutes: number
+  priceFromOrigin: number
+  at: string
+}
+
+export interface TripSeatMap {
+  trip: {
+    id: string
+    tripNumber: string
+    status: TripStatus
+    departureAt: string
+    route: { id: string; code: string; name: string }
+  }
+  sellable: boolean
+  notSellableReason: string | null
+  bus: {
+    id: string
+    economicNumber: string
+    model: { brand: string; model: string; layout: BusLayout; busType: string }
+  } | null
+  itinerary: ItineraryPoint[]
+  segment: { board: ItineraryPoint; alight: ItineraryPoint }
+  price: {
+    base: number
+    price: number
+    season: { name: string; seasonType: SeasonType; priceModifierPercent: number } | null
+  }
+  seats: (BusSeat & { state: SeatState; heldOrderId: string | null })[]
+  counts: Record<SeatState, number>
+  passengerTypes: {
+    id: string
+    code: string
+    name: string
+    discountPercent: number
+    requiresId: boolean
+    isDefault: boolean
+    maxPerTrip: number | null
+    left: number | null
+  }[]
+}
+
+export type OrderStatus = 'pending' | 'paid' | 'expired' | 'cancelled'
+export type TicketStatus = 'held' | 'confirmed' | 'checked_in' | 'no_show' | 'cancelled' | 'changed'
+
+export interface OrderTicket {
+  id: string
+  ticketNumber: string
+  tripId: string
+  seatNumber: string
+  boardIndex: number
+  alightIndex: number
+  boardAt: string
+  alightAt: string
+  status: TicketStatus
+  basePrice: string
+  passengerDiscount: string
+  vat: string
+  total: string
+  boardTerminal: { code: string; name: string }
+  alightTerminal: { code: string; name: string }
+  passengerType: { id: string; name: string }
+}
+
+export interface Order {
+  id: string
+  orderNumber: string
+  channel: 'counter' | 'online'
+  status: OrderStatus
+  subtotal: string
+  discount: string
+  vat: string
+  serviceFee: string
+  total: string
+  expiresAt: string | null
+  createdAt: string
+  canExtend: boolean
+  tickets: OrderTicket[]
+}
+
+export interface TripOccupancy {
+  sold: number
+  held: number
 }

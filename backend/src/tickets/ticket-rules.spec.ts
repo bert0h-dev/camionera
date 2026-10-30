@@ -212,9 +212,7 @@ describe('promociones', () => {
     expect(
       promotionError(promo({ channels: [SaleChannel.online] }), ctx),
     ).toMatch(/taquilla/);
-    expect(promotionError(promo({ minPurchase: 1500 }), ctx)).toMatch(
-      /mínima/,
-    );
+    expect(promotionError(promo({ minPurchase: 1500 }), ctx)).toMatch(/mínima/);
   });
   it('respeta el tope y no pasa del importe', () => {
     expect(promotionDiscount(promo({ maxDiscount: 50 }), 1000)).toBe(50);
@@ -244,8 +242,10 @@ describe('cancellationQuote', () => {
   it('fuera del plazo no hay reembolso', () => {
     const late = new Date('2026-11-02T13:30:00Z');
     expect(
-      cancellationQuote({ total: 500, serviceFee: 0, boardAt, now: late }, policy)
-        .refund,
+      cancellationQuote(
+        { total: 500, serviceFee: 0, boardAt, now: late },
+        policy,
+      ).refund,
     ).toBe(0);
   });
   it('si la empresa cancela el recorrido se devuelve todo', () => {

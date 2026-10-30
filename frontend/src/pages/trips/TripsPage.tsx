@@ -123,6 +123,21 @@ function TripsPage() {
           t.status !== 'cancelled' && <Badge tone="warning">sin conductor</Badge>
         ),
     },
+    {
+      header: 'Boletos',
+      cell: (t) =>
+        t.bus && t.status !== 'cancelled' ? (
+          <span
+            className="font-data text-sm"
+            title="Vendidos / asientos (con venta por tramos un asiento puede llevar varios)"
+          >
+            {t.occupancy.sold}/{t.bus._count?.seats ?? '—'}
+            {t.occupancy.held > 0 && <span className="text-xs text-fg-muted"> +{t.occupancy.held} apart.</span>}
+          </span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
     { header: 'Estado', cell: (t) => <TripStatusBadge status={t.status} /> },
   ]
 

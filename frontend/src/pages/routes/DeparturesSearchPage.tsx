@@ -5,7 +5,7 @@ import { ArrowLeftRight, ArrowRight, ChevronDown, Search, SearchX, TicketCheck }
 import { api } from '../../lib/api'
 import { cn } from '../../lib/cn'
 import { addDaysKey, dayLabel, formatMinutes, formatMoney, todayKey } from '../../lib/format'
-import type { DepartureResult, DepartureSearch } from '../../lib/types'
+import type { SellableDeparture as DepartureResult, SellableDepartureSearch as DepartureSearch } from '../../lib/types'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card, CardBody } from '../../components/ui/Card'
@@ -124,7 +124,23 @@ function ResultCard({ r }: { r: DepartureResult }) {
             <span>
               {r.routeName} · sale de origen el {dayLabel(r.tripDate)}
             </span>
-            <span>Asientos disponibles: se confirmarán con los recorridos (Módulo 5)</span>
+            {r.sellable ? (
+              <span className="flex items-center gap-2">
+                <Badge tone={r.freeSeats ? 'success' : 'danger'} dot>
+                  {r.freeSeats ? `${r.freeSeats} lugares libres` : 'Lleno en este tramo'}
+                </Badge>
+                {!!r.freeSeats && r.trip && (
+                  <Link
+                    to={`/taquilla?viaje=${r.trip.id}&sube=${r.boardIndex}&baja=${r.alightIndex}`}
+                    className="font-medium text-link hover:underline"
+                  >
+                    Vender
+                  </Link>
+                )}
+              </span>
+            ) : (
+              <span>{r.notSellableReason}</span>
+            )}
           </div>
           <TripItinerary result={r} />
         </div>
@@ -165,7 +181,7 @@ function DeparturesSearchPage() {
     placeholderData: keepPreviousData,
     queryFn: async () =>
       (
-        await api.get<DepartureSearch>('/routes/search', {
+        await api.get<DepartureSearch>('/tickets/departures', {
           params: {
             originCityId: origin,
             destinationCityId: destination,

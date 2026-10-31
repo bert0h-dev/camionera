@@ -133,7 +133,7 @@ Decisiones (2026-10-30): escáner con `BarcodeDetector` nativo y **jsQR** de res
   - Al salir (`in_transit`) se marcan `no_show` los del origen que no abordaron. Al terminar (`completed`), todos los que falten.
   - Un cron cada 5 min marca los de paradas intermedias pasada la gracia.
   - No tienen reembolso.
-- **Manifiesto** (`GET /tickets/trips/:id/manifest` y `/manifest/pdf`): pasajeros por parada de subida con asiento, nombre, tipo, identificación, bajada, folio y estado, con conteos. El PDF (carta) lleva unidad, conductor, cobrador, casilla por pasajero y firmas de conductor y despachador.
+- **Manifiesto** (`GET /tickets/trips/:id/manifest` y `/manifest/pdf`): pasajeros por parada de subida con asiento, nombre, tipo, identificación, bajada, folio y estado, con conteos. El PDF (carta) lleva unidad y andén (doc 19), conductor, cobrador, casilla por pasajero y firmas de conductor y despachador.
 - **Ocupación**: `occupancy` de Recorridos suma `boarded` y cuenta como vendidos también a los no presentados. `/trips/mine` trae `boarding` (vendidos y abordados).
 
 ## 6.6 Promociones y clientes

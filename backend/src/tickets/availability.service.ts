@@ -53,6 +53,7 @@ const terminal = {
 } as const;
 
 const tripInclude = {
+  platform: { select: { id: true, code: true, name: true } },
   route: {
     select: {
       id: true,
@@ -239,6 +240,8 @@ export class AvailabilityService {
         tripNumber: trip.tripNumber,
         status: trip.status,
         departureAt: trip.departureAt,
+        // El andén solo aplica al abordar en la terminal de origen
+        platform: segment.board === 0 ? trip.platform : null,
         route: {
           id: trip.route.id,
           code: trip.route.code,

@@ -277,6 +277,7 @@ export class BoardingService implements OnModuleInit {
         actualDepartureAt: extra.actualDepartureAt,
         route: { code: trip.route.code, name: trip.route.name },
         bus: trip.bus?.economicNumber ?? null,
+        platform: trip.platform?.code ?? null,
         driver: person(extra.driver),
         collector: person(extra.collector),
         origin: points[0],

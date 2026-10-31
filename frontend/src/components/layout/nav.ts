@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Fuel,
   LayoutDashboard,
+  MonitorPlay,
   Receipt,
   Route,
   Search,
@@ -95,6 +96,12 @@ export const NAV: NavGroup[] = [
     label: 'Operación',
     items: [
       { to: '/recorridos', label: 'Recorridos', icon: TramFront, roles: TRIP_READERS },
+      {
+        to: '/recorridos/tablero',
+        label: 'Tablero de salidas',
+        icon: MonitorPlay,
+        roles: [...TRIP_READERS, 'driver', 'collector'],
+      },
       { to: '/mis-recorridos', label: 'Mis recorridos', icon: TramFront, roles: ['driver', 'collector'] },
     ],
   },
@@ -144,6 +151,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   buscar: 'Buscar salidas',
   recorridos: 'Recorridos',
   'mis-recorridos': 'Mis recorridos',
+  tablero: 'Tablero de salidas',
   abordaje: 'Abordaje',
   taquilla: 'Taquilla',
   ventas: 'Ventas',

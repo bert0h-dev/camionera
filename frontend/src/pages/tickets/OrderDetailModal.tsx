@@ -113,6 +113,7 @@ export function OrderDetailModal({ orderId, onClose }: { orderId: string; onClos
                       <Link to={`/recorridos/${t.trip.id}`} className="font-data text-xs text-link hover:underline">
                         {t.trip.tripNumber}
                       </Link>
+                      {t.trip.platform && <div className="text-xs text-fg-muted">Andén {t.trip.platform.code}</div>}
                     </div>
                     <Badge tone={STATUS[t.status].tone} dot>
                       {STATUS[t.status].label}

@@ -475,6 +475,16 @@ export const SETTINGS = {
     description:
       'Minutos mínimos entre la llegada de una unidad y su siguiente salida (limpieza y revisión)',
   },
+  'trips.platform_boarding_minutes': {
+    type: 'number',
+    default: 30,
+    min: 0,
+    max: 180,
+    label: 'Ocupación del andén antes de la salida',
+    unit: 'min',
+    description:
+      'Minutos antes de la salida en que el recorrido ocupa su andén; dos recorridos no pueden encimarse en el mismo',
+  },
   'trips.driver_gap_minutes': {
     type: 'number',
     default: 30,

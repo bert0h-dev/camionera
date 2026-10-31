@@ -21,6 +21,7 @@ import { SchedulesService } from '../routes/schedules.service.js';
 import { dateKey, daysBetween, today } from '../common/dates.js';
 import { wallTime } from '../routes/route-rules.js';
 import { TripAssignmentService } from '../trips/trip-assignment.service.js';
+import { TripPlatformService } from '../trips/trip-platform.service.js';
 import { TripStatusService } from '../trips/trip-status.service.js';
 import { CASH_SUPERVISORS, CashService } from '../cash/cash.service.js';
 import { TicketActionsService } from '../tickets/ticket-actions.service.js';
@@ -67,6 +68,8 @@ const FLEET_AREA: UserRole[] = [
 
 const DAY_MS = 86_400_000;
 const URGENT_MS = 6 * 3_600_000;
+/** Recorridos sin andén a menos de 2 h de salir */
+const NO_PLATFORM_MS = 2 * 3_600_000;
 
 /** '30/10 14:05' en hora de la terminal de origen, como en Recorridos */
 const departure = (
@@ -103,6 +106,7 @@ export class PendingService {
     private readonly tripStatus: TripStatusService,
     private readonly cash: CashService,
     private readonly tickets: TicketActionsService,
+    private readonly platforms: TripPlatformService,
   ) {}
 
   async list(user: AuthUser): Promise<PendingItem[]> {
@@ -138,6 +142,7 @@ export class PendingService {
       openCash,
       cashDiffs,
       refundsDue,
+      noPlatform,
     ] = await Promise.all([
       staff ? this.staffDocs.expirations() : null,
       fleet ? this.buses.expiringDocuments() : null,
@@ -157,6 +162,11 @@ export class PendingService {
       cashSupervisor ? this.cash.openTooLong() : null,
       cashSupervisor ? this.cash.recentDifferences() : null,
       sales ? this.tickets.refundsDue() : null,
+      fleet
+        ? this.platforms.withoutPlatformBefore(
+            new Date(Date.now() + NO_PLATFORM_MS),
+          )
+        : null,
     ]);
     const now = Date.now();
 
@@ -293,6 +303,16 @@ export class PendingService {
           link: `/recorridos/${t.id}`,
         };
       }),
+      ...(noPlatform ?? []).map((t) => ({
+        id: `trip-no-platform-${t.id}`,
+        area: 'trip' as const,
+        severity: 'soon' as const,
+        title: `Sin andén · ${t.tripNumber}`,
+        detail: `Sale ${departure(t.departureAt, t.route)} · ${t.route.name}`,
+        date: null,
+        daysLeft: null,
+        link: `/recorridos/${t.id}`,
+      })),
       ...(unfit ?? []).map((t) => ({
         id: `trip-unfit-${t.id}`,
         area: 'trip' as const,

@@ -8,9 +8,10 @@ import { arrivalLabel, zoneGapLabel } from '../../lib/timezones'
 import type { RouteDetail, RouteScheduleRow } from '../../lib/types'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Field'
+import { Input, Select } from '../../components/ui/Field'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/toast-context'
+import { usePlatforms } from '../fleet/useFleet'
 import { DAY_NAMES, DAY_PRESETS, DAY_SHORT, WEEK_ORDER } from './useRoutes'
 
 interface Draft {
@@ -18,12 +19,19 @@ interface Draft {
   days: number[]
   validFrom: string
   validUntil: string
+  platformId: string
 }
 
 const toDraft = (s: RouteScheduleRow | null): Draft =>
   s
-    ? { times: [s.departureTime], days: s.daysOfWeek, validFrom: s.validFrom, validUntil: s.validUntil ?? '' }
-    : { times: [''], days: [1, 2, 3, 4, 5], validFrom: todayKey(), validUntil: '' }
+    ? {
+        times: [s.departureTime],
+        days: s.daysOfWeek,
+        validFrom: s.validFrom,
+        validUntil: s.validUntil ?? '',
+        platformId: s.platformId ?? '',
+      }
+    : { times: [''], days: [1, 2, 3, 4, 5], validFrom: todayKey(), validUntil: '', platformId: '' }
 
 /**
  * Alta de una o varias salidas con los mismos días y vigencia, o edición de una.
@@ -49,6 +57,7 @@ export function ScheduleModal({
   }
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
 
+  const platforms = usePlatforms(route.originTerminal.id)
   const originTz = route.originTerminal.city.timezone
   const destinationTz = route.destinationTerminal.city.timezone
   const crossesZone = originTz !== destinationTz
@@ -65,7 +74,12 @@ export function ScheduleModal({
   const save = useMutation({
     mutationFn: async () => {
       const base = `/routes/${route.id}/schedules`
-      const fields = { daysOfWeek: draft.days, validFrom: draft.validFrom, validUntil: draft.validUntil || null }
+      const fields = {
+        daysOfWeek: draft.days,
+        validFrom: draft.validFrom,
+        validUntil: draft.validUntil || null,
+        platformId: draft.platformId || null,
+      }
       if (schedule) await api.patch(`${base}/${schedule.id}`, { departureTime: times[0], ...fields })
       else await api.post(base, { departureTimes: times, ...fields })
     },
@@ -193,6 +207,25 @@ export function ScheduleModal({
             onChange={(e) => set({ validUntil: e.target.value })}
           />
         </div>
+
+        <Select
+          label="Andén habitual"
+          hint={
+            platforms.data && !platforms.data.length
+              ? `${route.originTerminal.code} no tiene andenes; dalos de alta en Flota › Catálogos`
+              : 'Los recorridos que se generen saldrán de este andén; se puede cambiar en cada recorrido'
+          }
+          value={draft.platformId}
+          onChange={(e) => set({ platformId: e.target.value })}
+        >
+          <option value="">Sin andén</option>
+          {(platforms.data ?? []).map((p) => (
+            <option key={p.id} value={p.id}>
+              Andén {p.code}
+              {p.name ? ` · ${p.name}` : ''}
+            </option>
+          ))}
+        </Select>
 
         {crossesZone && (
           <Alert tone="info">

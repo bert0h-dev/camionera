@@ -9,6 +9,7 @@ import type {
   IncidentCategory,
   IncidentSummary,
   MaintenanceSummary,
+  Platform,
   ServicePlanRow,
   Terminal,
   UserRole,
@@ -40,6 +41,15 @@ export const useTerminals = (includeInactive = false, enabled = true) =>
     queryKey: ['fleet', 'terminals', includeInactive],
     enabled,
     queryFn: async () => (await api.get<Terminal[]>('/fleet/terminals', { params: { includeInactive } })).data,
+  })
+
+/** Andenes de una terminal, ordenados por clave. */
+export const usePlatforms = (terminalId: string | null | undefined, includeInactive = false) =>
+  useQuery({
+    queryKey: ['fleet', 'platforms', terminalId, includeInactive],
+    enabled: !!terminalId,
+    queryFn: async () =>
+      (await api.get<Platform[]>(`/fleet/terminals/${terminalId}/platforms`, { params: { includeInactive } })).data,
   })
 
 export const useBusSummary = (enabled = true) =>

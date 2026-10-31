@@ -74,6 +74,7 @@ export const listInclude = {
   },
   driver: person,
   collector: person,
+  platform: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.TripInclude;
 
 const EMPTY_OCCUPANCY = { sold: 0, held: 0, boarded: 0 };
@@ -139,6 +140,7 @@ export class TripsService {
         validFrom: dateKey(s.validFrom),
         validUntil: s.validUntil ? dateKey(s.validUntil) : null,
         isActive: s.isActive,
+        platformId: s.platformId,
       })),
     }));
   }
@@ -183,7 +185,12 @@ export class TripsService {
       })),
       planned,
     );
-    return { planned, remove, stale };
+    const platforms = new Map(
+      routes.flatMap((r) =>
+        r.schedules.map((s) => [s.id, s.platformId ?? null]),
+      ),
+    );
+    return { planned, remove, stale, platforms };
   }
 
   /**
@@ -199,14 +206,23 @@ export class TripsService {
       throw new BadRequestException(
         'La fecha final no puede ser anterior a la inicial',
       );
-    const { planned, remove, stale } = await this.diff(from, to, routeId);
+    const { planned, remove, stale, platforms } = await this.diff(
+      from,
+      to,
+      routeId,
+    );
     const [removed, created] = await this.prisma.$transaction([
       this.prisma.trip.deleteMany({
         where: { id: { in: remove }, status: TripStatus.scheduled },
       }),
       // El único (horario, fecha) evita duplicados; los cancelados ocupan su lugar
       this.prisma.trip.createMany({
-        data: planned.map((p) => ({ ...p, tripDate: toDate(p.tripDate) })),
+        data: planned.map((p) => ({
+          ...p,
+          tripDate: toDate(p.tripDate),
+          // El andén habitual del horario
+          platformId: platforms.get(p.routeScheduleId) ?? null,
+        })),
         skipDuplicates: true,
       }),
     ]);

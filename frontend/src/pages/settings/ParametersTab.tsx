@@ -107,7 +107,7 @@ const GROUPS: {
     group: 'trips',
     module: 'trips',
     title: 'Recorridos',
-    description: 'Generación por adelantado y descanso mínimo de unidades y conductores entre recorridos',
+    description: 'Generación por adelantado, descanso mínimo de unidades y conductores y ocupación de andenes',
     icon: Route,
   },
   {

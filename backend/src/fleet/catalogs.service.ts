@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -7,9 +11,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import {
   CreateCityDto,
   CreateFuelTypeDto,
+  CreatePlatformDto,
   CreateTerminalDto,
   UpdateCityDto,
   UpdateFuelTypeDto,
+  UpdatePlatformDto,
   UpdateTerminalDto,
 } from './dto/fleet.dto.js';
 
@@ -159,6 +165,53 @@ export class CatalogsService {
       await this.assertNotInActiveRoutes({ id }, 'La terminal');
     const row = await this.prisma.terminal.update({ where: { id }, data: dto });
     await this.log(actor, 'terminals', id, ActionType.update, before, row);
+    return row;
+  }
+
+  // ---------- Andenes ----------
+
+  platforms(terminalId: string, includeInactive = false) {
+    return this.prisma.platform.findMany({
+      where: { terminalId, isActive: includeInactive ? undefined : true },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  private async savePlatform<T>(run: () => Promise<T>) {
+    try {
+      return await run();
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      )
+        throw new ConflictException('Ya existe un andén con esa clave');
+      throw err;
+    }
+  }
+
+  async createPlatform(
+    terminalId: string,
+    dto: CreatePlatformDto,
+    actor: AuthUser,
+  ) {
+    await this.prisma.terminal.findUniqueOrThrow({ where: { id: terminalId } });
+    const row = await this.savePlatform(() =>
+      this.prisma.platform.create({ data: { ...dto, terminalId } }),
+    );
+    await this.log(actor, 'platforms', row.id, ActionType.insert, null, row);
+    return row;
+  }
+
+  /** Desactivar un andén no lo quita de horarios ni recorridos; solo deja de ofrecerse. */
+  async updatePlatform(id: string, dto: UpdatePlatformDto, actor: AuthUser) {
+    const before = await this.prisma.platform.findUniqueOrThrow({
+      where: { id },
+    });
+    const row = await this.savePlatform(() =>
+      this.prisma.platform.update({ where: { id }, data: dto }),
+    );
+    await this.log(actor, 'platforms', id, ActionType.update, before, row);
     return row;
   }
 }

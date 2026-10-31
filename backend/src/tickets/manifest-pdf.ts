@@ -27,6 +27,7 @@ export interface ManifestInput {
     departureAt: Date;
     route: { code: string; name: string };
     bus: string | null;
+    platform: string | null;
     driver: string | null;
     collector: string | null;
     origin: { code: string; cityName: string; timezone: string };
@@ -93,7 +94,11 @@ export async function manifestPdf(
       .fillColor('#111827')
       .text(value, x, y + 10, { width: 125 });
   };
-  pair('Unidad', m.trip.bus ?? '-', 40);
+  pair(
+    'Unidad / andén',
+    `${m.trip.bus ?? '-'} / ${m.trip.platform ?? '-'}`,
+    40,
+  );
   pair('Conductor', m.trip.driver ?? '-', 170);
   pair('Cobrador', m.trip.collector ?? '-', 300);
   pair(

@@ -67,6 +67,7 @@ Decisiones:
 | delayed | antes de salir: boarding, in_transit, cancelled · ya en ruta: in_transit, completed |
 | completed, cancelled | — (finales) |
 
+- **Andén**: cada recorrido copia el andén habitual de su horario y se puede cambiar antes de salir; reglas, choques y tablero de salidas en el doc 19.
 - **Abordar**: pide unidad y conductor, y se abre `trips.boarding_open_minutes` antes de la salida (30 por defecto, Parámetros › Recorridos).
 - **Salir**: registra la hora real (`actual_departure_at`) y, opcional, el odómetro de salida. La unidad pasa a **en servicio** (y se guarda `first_service_at` si es la primera vez). Una unidad en mantenimiento o fuera de servicio no puede abordar ni salir.
 - **Retrasar** y **cancelar** piden motivo, que queda en el historial. Ya en ruta no se puede cancelar.

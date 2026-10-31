@@ -8,6 +8,7 @@ import {
   IsDateString,
   IsInt,
   IsOptional,
+  IsUUID,
   Matches,
   Max,
   Min,
@@ -40,6 +41,14 @@ class ScheduleFieldsDto {
   @IsOptional()
   @IsDateString({ strict: true })
   validUntil?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Andén habitual en la terminal de origen; null = sin andén',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  platformId?: string | null;
 }
 
 /** Alta de una o varias salidas con los mismos días y vigencia. */
@@ -86,4 +95,12 @@ export class UpdateScheduleDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Andén habitual en la terminal de origen; null = sin andén',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  platformId?: string | null;
 }

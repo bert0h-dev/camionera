@@ -3,6 +3,7 @@ import { FleetModule } from '../fleet/fleet.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { TripsController } from './trips.controller.js';
 import { TripAssignmentService } from './trip-assignment.service.js';
+import { TripPlatformService } from './trip-platform.service.js';
 import { TripStatusService } from './trip-status.service.js';
 import { TripsService } from './trips.service.js';
 
@@ -10,7 +11,17 @@ import { TripsService } from './trips.service.js';
 @Module({
   imports: [SettingsModule, FleetModule],
   controllers: [TripsController],
-  providers: [TripsService, TripAssignmentService, TripStatusService],
-  exports: [TripsService, TripAssignmentService, TripStatusService],
+  providers: [
+    TripsService,
+    TripAssignmentService,
+    TripStatusService,
+    TripPlatformService,
+  ],
+  exports: [
+    TripsService,
+    TripAssignmentService,
+    TripStatusService,
+    TripPlatformService,
+  ],
 })
 export class TripsModule {}

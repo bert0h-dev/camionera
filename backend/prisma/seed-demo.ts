@@ -3,6 +3,7 @@
 //   npm run seed:demo -w backend -- --clean → solo borra
 //   npm run seed:demo -w backend -- --fleet → solo agrega la flota y el mantenimiento demo (no toca al personal)
 //   npm run seed:demo -w backend -- --routes → solo agrega las rutas demo (clave DEM-…)
+//   npm run seed:demo -w backend -- --platforms → solo agrega andenes 1–6 a las terminales demo y los pone en horarios y recorridos
 //   npm run seed:demo -w backend -- --sales → ventas demo de 60 días atrás y 14 adelante (reemplaza las anteriores)
 //   npm run seed:demo -w backend -- --sales --clean → solo borra las ventas demo
 //   DEMO_PASSWORD en .env (opcional) crea el usuario mecánico demo
@@ -39,6 +40,8 @@ const prisma = new PrismaClient({
 });
 
 const DEMO_DOMAIN = '@demo.camionera.mx';
+const DEMO_TERMINALS = ['GDL', 'CDMXN', 'LEO', 'QRO', 'HMO', 'TIJ', 'MZT'];
+const DEMO_PLATFORMS = ['1', '2', '3', '4', '5', '6'];
 const MINUTE = 60_000;
 
 const PEOPLE: [string, string, string, StaffRole, StaffStatus?][] = [
@@ -103,6 +106,15 @@ async function clean() {
     },
   });
   await prisma.route.deleteMany({ where: { code: { startsWith: 'DEM-' } } }); // paradas y horarios en cascada
+  // Andenes demo que ya nadie usa (los que tengan horarios o recorridos del usuario se quedan)
+  await prisma.platform.deleteMany({
+    where: {
+      terminal: { code: { in: DEMO_TERMINALS } },
+      code: { in: DEMO_PLATFORMS },
+      schedules: { none: {} },
+      trips: { none: {} },
+    },
+  });
   await prisma.season.deleteMany({ where: { description: { startsWith: 'Demo · ' } } });
   await prisma.bus.deleteMany({ where: { plates: { startsWith: 'DEM' } } }); // asientos, documentos y lecturas en cascada
   await prisma.user.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
@@ -411,6 +423,7 @@ async function loadFleet() {
     });
   }
   console.log(`Flota demo: ${places.length} terminales y ${models.length} modelos`);
+  await loadPlatforms();
 
   // Unidades demo: placas DEM… para identificarlas; solo se crean las que no existen
   const allModels = await prisma.busModel.findMany({ where: { specifications: DEMO_SPEC }, orderBy: { brand: 'asc' } });
@@ -469,6 +482,57 @@ async function loadFleet() {
   await loadIncidents();
   await loadFuel();
   await loadRoutes();
+}
+
+/**
+ * Andenes 1–6 en cada terminal demo; los horarios demo sin andén se reparten entre ellos por hora
+ * de salida (para que no se encimen) y los recorridos de esos horarios sin andén toman el suyo.
+ * Es idempotente: no cambia andenes ya puestos.
+ */
+async function loadPlatforms() {
+  const terminals = await prisma.terminal.findMany({ where: { code: { in: DEMO_TERMINALS } } });
+  for (const t of terminals)
+    for (const code of DEMO_PLATFORMS)
+      await prisma.platform.upsert({
+        where: { terminalId_code: { terminalId: t.id, code } },
+        update: {},
+        create: { terminalId: t.id, code },
+      });
+  console.log(`Andenes demo: ${terminals.length * DEMO_PLATFORMS.length} en ${terminals.length} terminales`);
+
+  const schedules = await prisma.routeSchedule.findMany({
+    where: { route: { code: { startsWith: 'DEM-' } } },
+    include: { route: { select: { originTerminalId: true } } },
+    orderBy: { departureTime: 'asc' },
+  });
+  const platforms = await prisma.platform.findMany({
+    where: { terminalId: { in: terminals.map((t) => t.id) }, code: { in: DEMO_PLATFORMS } },
+    orderBy: { code: 'asc' },
+  });
+  const seen = new Map<string, number>();
+  let assigned = 0;
+  for (const s of schedules) {
+    const terminalId = s.route.originTerminalId;
+    const n = seen.get(terminalId) ?? 0;
+    seen.set(terminalId, n + 1);
+    if (s.platformId) continue;
+    const own = platforms.filter((p) => p.terminalId === terminalId);
+    if (!own.length) continue;
+    await prisma.routeSchedule.update({ where: { id: s.id }, data: { platformId: own[n % own.length].id } });
+    assigned++;
+  }
+  // Los recorridos ya generados toman el andén de su horario
+  let trips = 0;
+  for (const s of await prisma.routeSchedule.findMany({
+    where: { route: { code: { startsWith: 'DEM-' } }, platformId: { not: null } },
+  })) {
+    const r = await prisma.trip.updateMany({
+      where: { routeScheduleId: s.id, platformId: null },
+      data: { platformId: s.platformId },
+    });
+    trips += r.count;
+  }
+  console.log(`Andenes en horarios demo: ${assigned} nuevos · recorridos con andén: ${trips}`);
 }
 
 /** Rutas demo (clave DEM-…) entre las terminales demo; incluye cruces de zona horaria. */
@@ -538,6 +602,7 @@ async function loadRoutes() {
       }
   }
   console.log(`Horarios demo: ${schedules} nuevos (desde ${dateKey(start)})`);
+  await loadPlatforms();
 
   // Paradas demo: la ruta GDL ⇄ CDMX pasa por León y Querétaro; la distancia sale de los tramos
   const itineraries: Record<string, { stops: [string, number, number, number][]; finalKm: number }> = {
@@ -927,6 +992,7 @@ async function main() {
   if (process.argv.includes('--payroll')) return loadPayroll();
   if (process.argv.includes('--fleet')) return loadFleet();
   if (process.argv.includes('--routes')) return loadRoutes();
+  if (process.argv.includes('--platforms')) return loadPlatforms();
   if (process.argv.includes('--sales')) {
     await cleanSales(prisma);
     if (!process.argv.includes('--clean')) await loadSales(prisma);

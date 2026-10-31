@@ -104,12 +104,15 @@ function App() {
               <Route path="/caja" element={<CashPage />} />
               <Route path="/promociones" element={<PromotionsPage />} />
               <Route path="/clientes" element={<CustomersPage />} />
-              <Route path="/reportes" element={<ReportsPage />} />
             </Route>
             {/* El conductor y el cobrador solo llegan a la ficha de sus recorridos (lo valida el servidor) */}
             <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'vendor', 'driver', 'collector']} />}>
               <Route path="/recorridos/:id" element={<TripDetailPage />} />
               <Route path="/abordaje/:id" element={<BoardingPage />} />
+            </Route>
+            {/* Reportes: cada pestaña filtra por rol (RRHH solo ve Personal) */}
+            <Route element={<ProtectedRoute roles={['coordinator', 'supervisor', 'vendor', 'hr']} />}>
+              <Route path="/reportes" element={<ReportsPage />} />
             </Route>
             <Route element={<ProtectedRoute roles={['driver', 'collector']} />}>
               <Route path="/mis-recorridos" element={<MyTripsPage />} />

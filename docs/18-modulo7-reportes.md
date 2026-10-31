@@ -9,7 +9,7 @@ Pantalla única **Análisis › Reportes** (`/reportes`) con una pestaña por á
 | 7.1 | Base de reportes y **ventas** | ✅ fusionada (PR #34) |
 | 7.2 | **Ocupación** por recorrido, ruta, horario y tramo; ventas en SQL | ✅ fusionada (PR #35) |
 | 7.3 | **Cancelaciones y no presentados** | ✅ rama `feat/m7-cancelaciones` |
-| 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ⏳ |
+| 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ✅ rama `feat/m7-flota-personal` |
 | 7.5 | **Tablero ejecutivo** (pestaña en Inicio) | ⏳ |
 
 Decisiones:
@@ -70,11 +70,23 @@ Decisiones:
 - Lo ven admin, supervisor y coordinator.
 - Verificado contra un conteo directo en la base (octubre: 13,001 vendidos, 770 cancelados, 856 no presentados y $485,396.50 reembolsados). Un mes responde en menos de 1 s.
 
+## 7.4 Flota y personal (`GET /reports/fleet`, `/reports/staff` y sus `/export`)
+- **Reglas** (`fleet-staff-rules.ts`, con pruebas): km de un recorrido (odómetro o, si falta, km de la ruta), costo por km, rendimiento y su diferencia contra el esperado del modelo, minutos de retraso, puntualidad (a tiempo = menos de 10 min) y porcentaje de asistencia (sin justificadas; medio día vale la mitad).
+- **Flota**: por unidad, recorridos terminados, km (los estimados se marcan con *), litros y rendimiento entre llenos de tanque, combustible, taller (preventivo y correctivo, días en taller), costo por km e incidencias. Cifras: km, rendimiento, costo por km, cumplimiento del preventivo, unidades con rendimiento bajo (15 % o más abajo del esperado) y sin recorridos. Incidencias por gravedad y categoría, con resolución promedio.
+- **Personal**:
+  - Conductores: recorridos, horas, km, puntualidad, retraso promedio, incidencias.
+  - Cobradores: recorridos y abordajes (por `checked_in_by` de su usuario; en los datos demo los abordajes los registra el admin, así que salen en 0).
+  - Vendedores: compras, boletos, neto, comisión, cancelaciones, cortes y diferencias de caja.
+  - Asistencia por empleado.
+- Flota la ven admin, supervisor y coordinator; Personal también **hr** (por eso hr ya entra a Reportes, solo con esa pestaña).
+- Verificado (octubre): 420 recorridos y 198,535 km (875 estimados). Cada reporte responde en menos de 1 s.
+
 ## Pantalla
 - Banda: neto, vendido (con el cambio contra el periodo anterior), reembolsos y boletos; botones *Excel* y *PDF*; pestañas.
 - Filtros: periodo, ruta y vendedor (este último no lo ve el vendor).
 - Contenido: gráfica por día, dona por método, rutas con más ingreso, tablas por vendedor y por ruta, origen → destino, canal y descuentos, tipo de pasajero y promoción.
 - Pestaña **Ocupación** (`?vista=occupancy`): aviso de cómo se mide, línea por día, barras por ruta, mapa de calor (cuadrícula propia en índigo), tabla de horarios con barra de ocupación, trechos proporcionales a sus km y detalle paginado. El filtro de vendedor solo aparece en Ventas.
+- Pestañas **Flota** (`?vista=fleet`) y **Personal** (`?vista=staff`): sin filtro de ruta; barras de costo por km, incidencias y tablas por unidad, conductor, vendedor, cobrador y asistencia.
 - Pestaña **Cancelaciones** (`?vista=cancellations`): aviso de las dos bases de fecha, barras por día (cancelados y no presentados), anticipación, motivos, tabla por ruta, horarios con más no presentados, reembolsos por origen y método, recorridos cancelados por la empresa (con liga a su ficha) y cambios.
 
 ## Datos demo para reportes
@@ -84,6 +96,7 @@ Decisiones:
 - Pagos en efectivo, tarjeta, transferencia y mixtos, hechos por los tres vendedores demo (se les crea usuario sin contraseña conocida). Hay una caja por vendedor y día, con corte y algunas diferencias.
 - Alrededor de 93 % aborda y el resto no se presenta; alrededor de 6 % cancela con reembolso según la política, y hay algunos cambios de asiento.
 - Las compras y los boletos demo usan folios `D…`, sus compras y recorridos llevan la nota `DEMO-VENTAS`, los clientes el correo `@demo.camionera.mx` y las promociones la clave `DEMO…`. `--clean` general también los borra.
+- Cargas de combustible demo (ticket `DEMO-VENTAS…`): tanque lleno cada 900–1300 km; la unidad 1002 rinde bajo en los últimos 15 días.
 - Volumen: unos 900 recorridos y 30 mil boletos. Con él, un mes de ventas responde en menos de 1 s y uno de ocupación en alrededor de 1.5 s (incluye el periodo anterior).
 
 ## API
@@ -93,3 +106,5 @@ Decisiones:
 | GET | `/reports/sales/export?format=xlsx\|pdf&…` | igual |
 | GET | `/reports/occupancy?from=&to=&routeId=` · `/reports/occupancy/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |
 | GET | `/reports/cancellations?from=&to=&routeId=` · `/reports/cancellations/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |
+| GET | `/reports/fleet?from=&to=` · `/reports/fleet/export?format=xlsx|pdf&…` | admin, supervisor, coordinator |
+| GET | `/reports/staff?from=&to=` · `/reports/staff/export?format=xlsx|pdf&…` | admin, supervisor, coordinator, hr |

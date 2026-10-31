@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ReportsController } from './reports.controller.js';
 import { CancellationReportService } from './cancellation-report.service.js';
+import { FleetReportService } from './fleet-report.service.js';
+import { StaffReportService } from './staff-report.service.js';
 import { OccupancyReportService } from './occupancy-report.service.js';
 import { SalesReportService } from './sales-report.service.js';
 
@@ -11,6 +13,8 @@ import { SalesReportService } from './sales-report.service.js';
     SalesReportService,
     OccupancyReportService,
     CancellationReportService,
+    FleetReportService,
+    StaffReportService,
   ],
 })
 export class ReportsModule {}

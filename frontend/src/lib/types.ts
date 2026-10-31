@@ -1890,3 +1890,117 @@ export interface CancellationReport {
   }[]
   changes: { count: number; relocations: number; collected: number; returned: number; fees: number }
 }
+
+export interface FleetReport {
+  range: { from: string; to: string; timezone: string }
+  summary: {
+    buses: number
+    activeBuses: number
+    idleBuses: number
+    trips: number
+    km: number
+    kmEstimated: number
+    liters: number
+    fuelCost: number
+    efficiency: number | null
+    maintenanceCost: number
+    costPerKm: number | null
+    preventivePlanned: number
+    preventiveDone: number
+    preventiveOverdue: number
+    preventiveCompliance: number | null
+    incidents: number
+    avgResolutionHours: number | null
+    lowEfficiency: number
+  }
+  byBus: {
+    busId: string
+    number: string
+    plates: string
+    model: string
+    status: string
+    trips: number
+    hours: number
+    km: number
+    kmEstimated: number
+    estimatedTrips: number
+    fuelLoads: number
+    liters: number
+    fuelCost: number
+    efficiency: number | null
+    expectedEfficiency: number | null
+    efficiencyGap: number | null
+    maintenanceOrders: number
+    preventive: number
+    corrective: number
+    maintenanceCost: number
+    daysInShop: number
+    incidents: number
+    criticalIncidents: number
+    costPerKm: number | null
+  }[]
+  idle: { busId: string; number: string; status: string }[]
+  incidentsBySeverity: { severity: string; incidents: number }[]
+  incidentsByCategory: { category: string; incidents: number }[]
+}
+
+export interface StaffReport {
+  range: { from: string; to: string; timezone: string }
+  onTimeMinutes: number
+  vendorPercent: number
+  summary: {
+    drivers: number
+    trips: number
+    drivingHours: number
+    onTimeRate: number | null
+    avgDelay: number | null
+    late: number
+    boarded: number
+    sellers: number
+    sales: number
+    cashDifference: number
+    attendanceRate: number | null
+    absences: number
+    lateArrivals: number
+  }
+  drivers: {
+    staffId: string
+    name: string
+    trips: number
+    hours: number
+    km: number
+    onTimeRate: number | null
+    avgDelay: number | null
+    late: number
+    incidents: number
+    noShows: number
+  }[]
+  collectors: { staffId: string; name: string; trips: number; boarded: number }[]
+  sellers: {
+    userId: string
+    name: string
+    orders: number
+    tickets: number
+    sales: number
+    refunds: number
+    net: number
+    commission: number
+    cancellations: number
+    cashCloses: number
+    cashDifference: number
+    closesWithDifference: number
+  }[]
+  attendance: {
+    staffId: string
+    name: string
+    role: string
+    present: number
+    late: number
+    half_day: number
+    absent: number
+    excused: number
+    lateMinutes: number
+    overtimeHours: number
+    rate: number | null
+  }[]
+}

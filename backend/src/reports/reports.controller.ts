@@ -6,7 +6,14 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { UserRole } from '../generated/prisma/enums.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { OccupancyReportDto, SalesReportDto } from './dto/report.dto.js';
+import {
+  OccupancyReportDto,
+  ReportRangeDto,
+  SalesReportDto,
+} from './dto/report.dto.js';
+import { fleetDocument, staffDocument } from './fleet-staff-document.js';
+import { FleetReportService } from './fleet-report.service.js';
+import { StaffReportService } from './staff-report.service.js';
 import { cancellationDocument } from './cancellation-document.js';
 import { CancellationReportService } from './cancellation-report.service.js';
 import { occupancyDocument } from './occupancy-document.js';
@@ -23,6 +30,8 @@ const SALES_READERS = [
 ];
 /** Operación (ocupación): supervisión y coordinación. */
 const OPERATION_READERS = [UserRole.supervisor, UserRole.coordinator];
+/** Personal: además RRHH. */
+const STAFF_READERS = [UserRole.supervisor, UserRole.coordinator, UserRole.hr];
 
 @ApiTags('reports')
 @ApiBearerAuth()
@@ -33,6 +42,8 @@ export class ReportsController {
     private readonly sales: SalesReportService,
     private readonly occupancyReport: OccupancyReportService,
     private readonly cancellationReport: CancellationReportService,
+    private readonly fleetReport: FleetReportService,
+    private readonly staffReport: StaffReportService,
     private readonly settings: SettingsService,
   ) {}
 
@@ -123,6 +134,48 @@ export class ReportsController {
       res,
       cancellationDocument(data, await this.company()),
       `cancelaciones-${data.range.from}-a-${data.range.to}`,
+      q.format,
+    );
+  }
+
+  @Get('fleet')
+  @Roles(...OPERATION_READERS)
+  fleet(@Query() q: ReportRangeDto) {
+    return this.fleetReport.fleet(q);
+  }
+
+  @Get('fleet/export')
+  @Roles(...OPERATION_READERS)
+  async fleetExport(
+    @Query() q: ReportRangeDto & { format?: string },
+    @Res() res: Response,
+  ) {
+    const data = await this.fleetReport.fleet(q);
+    await this.send(
+      res,
+      fleetDocument(data, await this.company()),
+      `flota-${data.range.from}-a-${data.range.to}`,
+      q.format,
+    );
+  }
+
+  @Get('staff')
+  @Roles(...STAFF_READERS)
+  staff(@Query() q: ReportRangeDto) {
+    return this.staffReport.staff(q);
+  }
+
+  @Get('staff/export')
+  @Roles(...STAFF_READERS)
+  async staffExport(
+    @Query() q: ReportRangeDto & { format?: string },
+    @Res() res: Response,
+  ) {
+    const data = await this.staffReport.staff(q);
+    await this.send(
+      res,
+      staffDocument(data, await this.company()),
+      `personal-${data.range.from}-a-${data.range.to}`,
       q.format,
     );
   }

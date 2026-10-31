@@ -1,8 +1,9 @@
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Ban, FileDown, FileSpreadsheet, Gauge, ReceiptText } from 'lucide-react'
+import { Ban, Bus, FileDown, FileSpreadsheet, Gauge, ReceiptText, Users } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { useAuth } from '../../auth/useAuth'
+import type { UserRole } from '../../lib/types'
 import { Button } from '../../components/ui/Button'
 import { Select } from '../../components/ui/Field'
 import { FilterBar } from '../../components/ui/FilterBar'
@@ -10,17 +11,31 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { CancellationReportTab, CancellationStats } from './CancellationReportTab'
+import { FleetReportTab, FleetStats } from './FleetReportTab'
+import { StaffReportTab, StaffStats } from './StaffReportTab'
 import { OccupancyReportTab, OccupancyStats } from './OccupancyReportTab'
 import { RangePicker } from './ReportFilters'
 import { SalesReportTab, SalesStats } from './SalesReportTab'
-import { presetRange, useCancellationReport, useOccupancyReport, useSalesReport, type SalesFilters } from './useReports'
+import {
+  presetRange,
+  useCancellationReport,
+  useFleetReport,
+  useOccupancyReport,
+  useSalesReport,
+  useStaffReport,
+  type SalesFilters,
+} from './useReports'
 
-type TabKey = 'sales' | 'occupancy' | 'cancellations'
+type TabKey = 'sales' | 'occupancy' | 'cancellations' | 'fleet' | 'staff'
 
-const TABS: (TabItem<TabKey> & { operation?: boolean })[] = [
-  { key: 'sales', label: 'Ventas', icon: ReceiptText },
-  { key: 'occupancy', label: 'Ocupación', icon: Gauge, operation: true },
-  { key: 'cancellations', label: 'Cancelaciones', icon: Ban, operation: true },
+// Quién ve cada pestaña (admin, todas); el vendedor solo Ventas y RRHH solo Personal
+const OPERATION: UserRole[] = ['admin', 'supervisor', 'coordinator']
+const TABS: (TabItem<TabKey> & { roles: UserRole[] })[] = [
+  { key: 'sales', label: 'Ventas', icon: ReceiptText, roles: [...OPERATION, 'vendor'] },
+  { key: 'occupancy', label: 'Ocupación', icon: Gauge, roles: OPERATION },
+  { key: 'cancellations', label: 'Cancelaciones', icon: Ban, roles: OPERATION },
+  { key: 'fleet', label: 'Flota', icon: Bus, roles: OPERATION },
+  { key: 'staff', label: 'Personal', icon: Users, roles: [...OPERATION, 'hr'] },
 ]
 
 /** Exportación de cada pestaña. */
@@ -28,6 +43,8 @@ const EXPORTS: Record<TabKey, { url: string; name: string }> = {
   sales: { url: '/reports/sales/export', name: 'ventas' },
   occupancy: { url: '/reports/occupancy/export', name: 'ocupacion' },
   cancellations: { url: '/reports/cancellations/export', name: 'cancelaciones' },
+  fleet: { url: '/reports/fleet/export', name: 'flota' },
+  staff: { url: '/reports/staff/export', name: 'personal' },
 }
 
 /** Descarga un archivo del API (lleva el token, por eso no es un enlace directo). */
@@ -58,9 +75,9 @@ function ReportsPage() {
     channel: params.get('canal') ?? '',
   }
   // El vendedor solo ve ventas; las pestañas de operación son de supervisión y coordinación
-  const tabs = TABS.filter((t) => !t.operation || !isVendor)
+  const tabs = TABS.filter((t) => user && t.roles.includes(user.role))
   const requested = params.get('vista') as TabKey | null
-  const tab: TabKey = tabs.some((t) => t.key === requested) ? requested! : 'sales'
+  const tab: TabKey = tabs.some((t) => t.key === requested) ? requested! : (tabs[0]?.key ?? 'sales')
   const set = (patch: Record<string, string>) => {
     const next = new URLSearchParams(params)
     for (const [k, v] of Object.entries(patch)) {
@@ -70,10 +87,12 @@ function ReportsPage() {
     setParams(next, { replace: true })
   }
 
-  const sales = useSalesReport(f)
+  const sales = useSalesReport(f, tab === 'sales')
   const occupancy = useOccupancyReport({ from: f.from, to: f.to, routeId: f.routeId }, tab === 'occupancy')
   const cancellations = useCancellationReport({ from: f.from, to: f.to, routeId: f.routeId }, tab === 'cancellations')
-  const active = tab === 'sales' ? sales : tab === 'occupancy' ? occupancy : cancellations
+  const fleet = useFleetReport(f, tab === 'fleet')
+  const staff = useStaffReport(f, tab === 'staff')
+  const active = { sales, occupancy, cancellations, fleet, staff }[tab]
   const routes = useQuery({
     queryKey: ['trips', 'route-options'],
     queryFn: async () => (await api.get<{ id: string; code: string; name: string }[]>('/trips/route-options')).data,
@@ -128,29 +147,40 @@ function ReportsPage() {
             <SalesStats data={sales.data} loading={sales.isLoading} />
           ) : tab === 'occupancy' ? (
             <OccupancyStats data={occupancy.data} loading={occupancy.isLoading} />
-          ) : (
+          ) : tab === 'cancellations' ? (
             <CancellationStats data={cancellations.data} loading={cancellations.isLoading} />
+          ) : tab === 'fleet' ? (
+            <FleetStats data={fleet.data} loading={fleet.isLoading} />
+          ) : (
+            <StaffStats data={staff.data} loading={staff.isLoading} />
           )
         }
         bottom={
           tabs.length > 1 && (
-            <Tabs variant="band" items={tabs} value={tab} onChange={(k) => set({ vista: k === 'sales' ? '' : k })} />
+            <Tabs
+              variant="band"
+              items={tabs}
+              value={tab}
+              onChange={(k) => set({ vista: k === tabs[0]?.key ? '' : k })}
+            />
           )
         }
       />
 
       <FilterBar>
         <RangePicker from={f.from} to={f.to} onChange={(r) => set({ desde: r.from, hasta: r.to })} />
-        <div className="w-full sm:w-56">
-          <Select aria-label="Ruta" value={f.routeId} onChange={(e) => set({ ruta: e.target.value })}>
-            <option value="">Todas las rutas</option>
-            {routes.data?.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.code} · {r.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {tab !== 'fleet' && tab !== 'staff' && (
+          <div className="w-full sm:w-56">
+            <Select aria-label="Ruta" value={f.routeId} onChange={(e) => set({ ruta: e.target.value })}>
+              <option value="">Todas las rutas</option>
+              {routes.data?.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.code} · {r.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         {!isVendor && tab === 'sales' && (
           <div className="w-full sm:w-48">
             <Select aria-label="Vendedor" value={f.sellerId} onChange={(e) => set({ vendedor: e.target.value })}>
@@ -170,6 +200,8 @@ function ReportsPage() {
       {tab === 'sales' && <SalesReportTab query={sales} />}
       {tab === 'occupancy' && <OccupancyReportTab query={occupancy} />}
       {tab === 'cancellations' && <CancellationReportTab query={cancellations} />}
+      {tab === 'fleet' && <FleetReportTab query={fleet} />}
+      {tab === 'staff' && <StaffReportTab query={staff} />}
     </div>
   )
 }

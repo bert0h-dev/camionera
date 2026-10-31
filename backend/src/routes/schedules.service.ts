@@ -4,7 +4,7 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { addDays, dateKey, toDate, today } from '../common/dates.js';
 import type { RouteSchedule } from '../generated/prisma/client.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { ActionType } from '../generated/prisma/enums.js';
+import { ActionType, TripStatus } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { TripsService } from '../trips/trips.service.js';
@@ -24,13 +24,16 @@ import {
 const TABLE = 'route_schedules';
 
 /** Fila de la base → ventana con fechas y hora como texto. */
-const toWindow = (s: RouteSchedule): ScheduleWindow & { id: string } => ({
+const toWindow = (
+  s: RouteSchedule,
+): ScheduleWindow & { id: string; platformId: string | null } => ({
   id: s.id,
   departureTime: timeKey(s.departureTime),
   daysOfWeek: s.daysOfWeek,
   validFrom: dateKey(s.validFrom),
   validUntil: s.validUntil ? dateKey(s.validUntil) : null,
   isActive: s.isActive,
+  platformId: s.platformId,
 });
 
 /** Horarios que cuentan hoy: activos y dentro de su vigencia. */
@@ -65,6 +68,7 @@ export class SchedulesService {
         id: true,
         isActive: true,
         estimatedDurationMinutes: true,
+        originTerminalId: true,
         originTerminal: { select: { city: { select: { timezone: true } } } },
         destinationTerminal: {
           select: { city: { select: { timezone: true } } },
@@ -81,6 +85,7 @@ export class SchedulesService {
     const todayKey = wallTime(new Date(), originTz).date;
     const rows = await this.prisma.routeSchedule.findMany({
       where: { routeId },
+      include: { platform: { select: { id: true, code: true, name: true } } },
       orderBy: [{ departureTime: 'asc' }, { validFrom: 'asc' }],
     });
     return rows.map((s) => {
@@ -96,6 +101,7 @@ export class SchedulesService {
       );
       return {
         ...w,
+        platform: s.platform,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         status: scheduleStatus(w, todayKey),
@@ -103,6 +109,23 @@ export class SchedulesService {
         arrivalDayOffset: arrival.dayOffset,
       };
     });
+  }
+
+  /** El andén habitual debe ser de la terminal de origen de la ruta y estar activo. */
+  private async assertPlatform(
+    originTerminalId: string,
+    platformId: string | null | undefined,
+  ) {
+    if (!platformId) return;
+    const p = await this.prisma.platform.findUnique({
+      where: { id: platformId },
+    });
+    if (!p || p.terminalId !== originTerminalId)
+      throw new BadRequestException(
+        'El andén no es de la terminal de origen de la ruta',
+      );
+    if (!p.isActive)
+      throw new BadRequestException(`El andén ${p.code} está desactivado`);
   }
 
   private async assertNoClash(
@@ -127,7 +150,8 @@ export class SchedulesService {
   }
 
   async create(routeId: string, dto: CreateSchedulesDto, actor: AuthUser) {
-    await this.route(routeId);
+    const route = await this.route(routeId);
+    await this.assertPlatform(route.originTerminalId, dto.platformId);
     const validUntil = dto.validUntil ?? null;
     const err = validityError(dto.validFrom, validUntil);
     if (err) throw new BadRequestException(err);
@@ -150,6 +174,7 @@ export class SchedulesService {
             daysOfWeek,
             validFrom: toDate(c.validFrom),
             validUntil: validUntil ? toDate(validUntil) : null,
+            platformId: dto.platformId ?? null,
           },
         }),
       ),
@@ -180,6 +205,11 @@ export class SchedulesService {
     actor: AuthUser,
   ) {
     const before = await this.own(routeId, id);
+    if (dto.platformId !== undefined && dto.platformId !== before.platformId)
+      await this.assertPlatform(
+        (await this.route(routeId)).originTerminalId,
+        dto.platformId,
+      );
     const current = toWindow(before);
     const next: ScheduleWindow = {
       id,
@@ -204,8 +234,20 @@ export class SchedulesService {
         validFrom: toDate(next.validFrom),
         validUntil: next.validUntil ? toDate(next.validUntil) : null,
         isActive: next.isActive,
+        ...(dto.platformId !== undefined && { platformId: dto.platformId }),
       },
     });
+    // Los recorridos futuros que seguían el andén habitual anterior toman el nuevo
+    if (row.platformId !== before.platformId)
+      await this.prisma.trip.updateMany({
+        where: {
+          routeScheduleId: id,
+          platformId: before.platformId,
+          status: TripStatus.scheduled,
+          departureAt: { gt: new Date() },
+        },
+        data: { platformId: row.platformId, platformOverrideReason: null },
+      });
     await this.audit.log({
       userId: actor.id,
       tableName: TABLE,

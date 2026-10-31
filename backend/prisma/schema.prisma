@@ -673,9 +673,30 @@ model Terminal {
   ticketsBoarding     Ticket[]      @relation("TicketBoard")
   ticketsAlighting    Ticket[]      @relation("TicketAlight")
   cashSessions        CashSession[]
+  platforms           Platform[]
 
   @@index([cityId])
   @@map("terminals")
+}
+
+/// Andén de abordaje de una terminal; no se borra, se desactiva
+model Platform {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  terminalId String   @map("terminal_id") @db.Uuid
+  /// Clave corta visible en boletos y tablero ("1", "A3")
+  code       String   @db.VarChar(10)
+  name       String?  @db.VarChar(100)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  terminal  Terminal        @relation(fields: [terminalId], references: [id])
+  schedules RouteSchedule[]
+  trips     Trip[]
+
+  @@unique([terminalId, code])
+  @@index([terminalId])
+  @@map("platforms")
 }
 
 model BusModel {
@@ -1094,11 +1115,14 @@ model RouteSchedule {
   validFrom     DateTime  @map("valid_from") @db.Date
   validUntil    DateTime? @map("valid_until") @db.Date
   isActive      Boolean   @default(true) @map("is_active")
+  /// Andén habitual en la terminal de origen
+  platformId    String?   @map("platform_id") @db.Uuid
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
-  route Route  @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  trips Trip[]
+  route    Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  platform Platform? @relation(fields: [platformId], references: [id])
+  trips    Trip[]
 
   @@index([routeId])
   @@index([validFrom, validUntil])
@@ -1146,42 +1170,47 @@ enum TripStatus {
 
 /// Un horario de ruta en una fecha (o un recorrido extra sin horario).
 model Trip {
-  id                String     @id @default(uuid(7)) @db.Uuid
+  id                     String     @id @default(uuid(7)) @db.Uuid
   /// Clave legible: ruta-AAMMDD-HHMM (los extras llevan -E y un número)
-  tripNumber        String     @unique @map("trip_number") @db.VarChar(40)
-  routeId           String     @map("route_id") @db.Uuid
+  tripNumber             String     @unique @map("trip_number") @db.VarChar(40)
+  routeId                String     @map("route_id") @db.Uuid
   /// null = recorrido extra (refuerzo o especial)
-  routeScheduleId   String?    @map("route_schedule_id") @db.Uuid
+  routeScheduleId        String?    @map("route_schedule_id") @db.Uuid
   /// Fecha de salida en la zona del origen
-  tripDate          DateTime   @map("trip_date") @db.Date
-  departureAt       DateTime   @map("departure_at") @db.Timestamptz()
-  arrivalAt         DateTime   @map("arrival_at") @db.Timestamptz()
+  tripDate               DateTime   @map("trip_date") @db.Date
+  departureAt            DateTime   @map("departure_at") @db.Timestamptz()
+  arrivalAt              DateTime   @map("arrival_at") @db.Timestamptz()
   /// Copia de la duración de la ruta al generarlo
-  durationMinutes   Int        @map("duration_minutes")
-  status            TripStatus @default(scheduled)
-  busId             String?    @map("bus_id") @db.Uuid
-  driverId          String?    @map("driver_id") @db.Uuid
-  collectorId       String?    @map("collector_id") @db.Uuid
+  durationMinutes        Int        @map("duration_minutes")
+  status                 TripStatus @default(scheduled)
+  busId                  String?    @map("bus_id") @db.Uuid
+  driverId               String?    @map("driver_id") @db.Uuid
+  collectorId            String?    @map("collector_id") @db.Uuid
   /// Motivo cuando un admin fuerza una asignación que rompe las reglas de horas
-  overrideReason    String?    @map("override_reason") @db.Text
-  actualDepartureAt DateTime?  @map("actual_departure_at") @db.Timestamptz()
-  actualArrivalAt   DateTime?  @map("actual_arrival_at") @db.Timestamptz()
-  startOdometerKm   Int?       @map("start_odometer_km")
-  endOdometerKm     Int?       @map("end_odometer_km")
-  notes             String?    @db.Text
-  cancelReason      String?    @map("cancel_reason") @db.Text
-  cancelledAt       DateTime?  @map("cancelled_at") @db.Timestamptz()
-  cancelledById     String?    @map("cancelled_by") @db.Uuid
+  overrideReason         String?    @map("override_reason") @db.Text
+  /// Andén de salida en la terminal de origen
+  platformId             String?    @map("platform_id") @db.Uuid
+  /// Motivo cuando un admin fuerza un andén ocupado
+  platformOverrideReason String?    @map("platform_override_reason") @db.Text
+  actualDepartureAt      DateTime?  @map("actual_departure_at") @db.Timestamptz()
+  actualArrivalAt        DateTime?  @map("actual_arrival_at") @db.Timestamptz()
+  startOdometerKm        Int?       @map("start_odometer_km")
+  endOdometerKm          Int?       @map("end_odometer_km")
+  notes                  String?    @db.Text
+  cancelReason           String?    @map("cancel_reason") @db.Text
+  cancelledAt            DateTime?  @map("cancelled_at") @db.Timestamptz()
+  cancelledById          String?    @map("cancelled_by") @db.Uuid
   /// null = lo generó el sistema
-  createdById       String?    @map("created_by") @db.Uuid
-  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+  createdById            String?    @map("created_by") @db.Uuid
+  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
 
   route       Route           @relation(fields: [routeId], references: [id])
   schedule    RouteSchedule?  @relation(fields: [routeScheduleId], references: [id])
   bus         Bus?            @relation(fields: [busId], references: [id])
   driver      Staff?          @relation("TripDriver", fields: [driverId], references: [id])
   collector   Staff?          @relation("TripCollector", fields: [collectorId], references: [id])
+  platform    Platform?       @relation(fields: [platformId], references: [id])
   cancelledBy User?           @relation("TripCanceller", fields: [cancelledById], references: [id])
   createdBy   User?           @relation("TripCreator", fields: [createdById], references: [id])
   statusLog   TripStatusLog[]
@@ -1195,6 +1224,7 @@ model Trip {
   @@index([busId, departureAt])
   @@index([driverId, departureAt])
   @@index([collectorId, departureAt])
+  @@index([platformId, departureAt])
   @@map("trips")
 }
 

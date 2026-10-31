@@ -629,6 +629,17 @@ export interface Terminal {
   city: { id: string; name: string; state: string; timezone: string }
 }
 
+/** Andén de abordaje de una terminal */
+export interface Platform {
+  id: string
+  terminalId: string
+  code: string
+  name: string | null
+  isActive: boolean
+}
+
+export type PlatformRef = Pick<Platform, 'id' | 'code' | 'name'>
+
 export const CELL_TYPES = ['seat', 'aisle', 'bathroom', 'stairs', 'driver', 'door', 'cafe'] as const
 export type CellType = (typeof CELL_TYPES)[number]
 
@@ -1114,6 +1125,9 @@ export interface RouteScheduleRow {
   status: ScheduleStatus
   arrivalTime: string
   arrivalDayOffset: number
+  /** Andén habitual en la terminal de origen */
+  platformId: string | null
+  platform: PlatformRef | null
 }
 
 export interface RouteDetail extends Omit<RouteListItem, '_count'> {
@@ -1251,6 +1265,8 @@ export interface TripListItem {
   occupancy: TripOccupancy
   driver: TripPerson | null
   collector: TripPerson | null
+  platformId: string | null
+  platform: PlatformRef | null
 }
 
 export interface TripStatusLogEntry {
@@ -1264,6 +1280,8 @@ export interface TripStatusLogEntry {
 
 export interface TripDetail extends TripListItem {
   overrideReason: string | null
+  /** Motivo cuando un admin forzó un andén ocupado */
+  platformOverrideReason: string | null
   actualDepartureAt: string | null
   actualArrivalAt: string | null
   startOdometerKm: number | null
@@ -1351,7 +1369,8 @@ export type SeatState = 'free' | 'held' | 'occupied' | 'blocked'
 export interface SellableDeparture extends DepartureResult {
   /** Recorrido extra (refuerzo), sin horario */
   extra?: boolean
-  trip: { id: string; tripNumber: string; status: TripStatus } | null
+  /** platform solo cuando se aborda en la terminal de origen */
+  trip: { id: string; tripNumber: string; status: TripStatus; platform: PlatformRef | null } | null
   sellable: boolean
   notSellableReason: string | null
   freeSeats: number | null
@@ -1380,6 +1399,8 @@ export interface TripSeatMap {
     tripNumber: string
     status: TripStatus
     departureAt: string
+    /** Solo cuando se aborda en la terminal de origen */
+    platform: PlatformRef | null
     route: { id: string; code: string; name: string }
   }
   sellable: boolean
@@ -1585,6 +1606,7 @@ export interface FullTicket {
     departureAt: string
     tripDate: string
     route: { code: string; name: string }
+    platform: { code: string } | null
   }
   replacedBy: { id: string; ticketNumber: string; orderId: string } | null
   replaces: { id: string; ticketNumber: string; orderId: string } | null
@@ -2048,4 +2070,41 @@ export interface ExecutiveReport {
     cashDifferences: { userId: string; name: string; closes: number; difference: number }[]
   }
   thresholds: { lowOccupancy: number; highNoShow: number }
+}
+
+// ---------- Andenes ----------
+
+/** Andén de la terminal de origen con los recorridos que lo ocupan en la ventana del viaje */
+export interface TripPlatformOption extends PlatformRef {
+  isActive: boolean
+  conflicts: { id: string; tripNumber: string; departureAt: string }[]
+}
+
+export interface TripPlatformOptions {
+  boardingMinutes: number
+  platformId: string | null
+  platforms: TripPlatformOption[]
+}
+
+export interface BoardDeparture {
+  id: string
+  tripNumber: string
+  departureAt: string
+  /** Hora local de la terminal */
+  time: string
+  destination: string
+  destinationCode: string
+  stops: string[]
+  platform: PlatformRef | null
+  busNumber: string | null
+  status: TripStatus
+  departed: boolean
+  statusLabel: string
+}
+
+export interface DeparturesBoard {
+  terminals: { id: string; code: string; name: string }[]
+  terminal: { id: string; code: string; name: string; city: { name: string; timezone: string } } | null
+  generatedAt: string
+  departures: BoardDeparture[]
 }

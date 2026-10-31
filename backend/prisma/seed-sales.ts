@@ -277,7 +277,7 @@ export async function loadSales(prisma: PrismaClient) {
         seats: [],
         create: !prev,
       });
-      if (!prev) tripRows.push({ id, routeId: r.id, routeScheduleId: p.routeScheduleId, tripDate: new Date(`${p.tripDate}T00:00:00Z`), departureAt: p.departureAt, arrivalAt: p.arrivalAt, durationMinutes: p.durationMinutes, tripNumber: p.tripNumber, notes: SALES_NOTE });
+      if (!prev) tripRows.push({ id, routeId: r.id, routeScheduleId: p.routeScheduleId, tripDate: new Date(`${p.tripDate}T00:00:00Z`), departureAt: p.departureAt, arrivalAt: p.arrivalAt, durationMinutes: p.durationMinutes, tripNumber: p.tripNumber, notes: SALES_NOTE, platformId: r.schedules.find((s) => s.id === p.routeScheduleId)?.platformId ?? null });
     }
   }
   plans.sort((a, b) => a.departureAt.getTime() - b.departureAt.getTime());

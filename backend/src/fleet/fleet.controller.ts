@@ -21,12 +21,14 @@ import {
   CreateBusModelDto,
   CreateCityDto,
   CreateFuelTypeDto,
+  CreatePlatformDto,
   CreateTerminalDto,
   DefaultLayoutQueryDto,
   QueryBusModelsDto,
   UpdateBusModelDto,
   UpdateCityDto,
   UpdateFuelTypeDto,
+  UpdatePlatformDto,
   UpdateTerminalDto,
 } from './dto/fleet.dto.js';
 
@@ -105,6 +107,33 @@ export class FleetCatalogsController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.catalogs.updateTerminal(id, dto, actor);
+  }
+
+  @Get('terminals/:id/platforms')
+  @Roles(...FLEET_READERS, UserRole.vendor)
+  platforms(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() q: CatalogQueryDto,
+  ) {
+    return this.catalogs.platforms(id, q.includeInactive);
+  }
+
+  @Post('terminals/:id/platforms')
+  createPlatform(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreatePlatformDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.catalogs.createPlatform(id, dto, actor);
+  }
+
+  @Patch('platforms/:id')
+  updatePlatform(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePlatformDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.catalogs.updatePlatform(id, dto, actor);
   }
 }
 

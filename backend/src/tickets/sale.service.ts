@@ -416,6 +416,7 @@ export class SaleService {
             passengerType: { select: { name: true } },
             boardTerminal: {
               select: {
+                id: true,
                 code: true,
                 name: true,
                 city: { select: { name: true, timezone: true } },
@@ -431,8 +432,9 @@ export class SaleService {
             trip: {
               select: {
                 tripNumber: true,
-                route: { select: { name: true } },
+                route: { select: { name: true, originTerminalId: true } },
                 bus: { select: { economicNumber: true } },
+                platform: { select: { code: true } },
               },
             },
           },
@@ -499,6 +501,7 @@ export class SaleService {
       tripNumber: t.trip.tripNumber,
       routeName: t.trip.route.name,
       busNumber: t.trip.bus?.economicNumber ?? null,
+      platform: platformOf(t),
       board: point(t.boardTerminal, t.boardAt),
       alight: point(t.alightTerminal, t.alightAt),
       basePrice: Number(t.basePrice),
@@ -546,9 +549,10 @@ export class SaleService {
   async sendTickets(orderId: string, to: string) {
     const { order, buffer, company } = await this.pdfFor(orderId);
     const t = order.tickets[0];
+    const platform = platformOf(t);
     const html = brandedEmail({
       title: 'Tus boletos',
-      intro: `Gracias por viajar con ${company}. Adjuntamos ${order.tickets.length} boleto(s) de la compra ${order.orderNumber}: ${t.boardTerminal.city.name} → ${t.alightTerminal.city.name}. Presenta el código QR al abordar.`,
+      intro: `Gracias por viajar con ${company}. Adjuntamos ${order.tickets.length} boleto(s) de la compra ${order.orderNumber}: ${t.boardTerminal.city.name} → ${t.alightTerminal.city.name}.${platform ? ` Sale del andén ${platform}.` : ''} Presenta el código QR al abordar.`,
     });
     await this.mail.send({
       to,
@@ -587,4 +591,17 @@ export class SaleService {
     }
     return { ok: true, to, sent: this.mail.enabled };
   }
+}
+
+/** Andén de salida; solo aplica si el pasajero aborda en la terminal de origen del recorrido. */
+function platformOf(t: {
+  boardTerminal: { id: string };
+  trip: {
+    route: { originTerminalId: string };
+    platform: { code: string } | null;
+  };
+}) {
+  return t.boardTerminal.id === t.trip.route.originTerminalId
+    ? (t.trip.platform?.code ?? null)
+    : null;
 }

@@ -165,6 +165,29 @@ export class UpdateTerminalDto extends PartialType(CreateTerminalDto) {
   isActive?: boolean;
 }
 
+export class CreatePlatformDto {
+  @ApiProperty({ example: 'A3', description: 'Clave del andén en la terminal' })
+  @Transform(upper)
+  @Matches(/^[A-Z0-9-]{1,10}$/, {
+    message: 'La clave del andén debe tener de 1 a 10 letras o números',
+  })
+  code: string;
+
+  @ApiPropertyOptional({ example: 'Andén norte' })
+  @Transform(trimOrNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  name?: string | null;
+}
+
+export class UpdatePlatformDto extends PartialType(CreatePlatformDto) {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
 // ---------- Modelos de bus ----------
 
 export class CreateBusModelDto {

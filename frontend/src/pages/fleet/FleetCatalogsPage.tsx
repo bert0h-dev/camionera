@@ -17,6 +17,7 @@ import { LoadingBlock } from '../../components/ui/Spinner'
 import type { LatLng, MapPoint } from '../../components/map/TerminalMap'
 import { Tabs, type TabItem } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
+import { TerminalPlatformsModal } from './TerminalPlatformsModal'
 import { useCanEditFleet, useCities, useFuelTypes, useTerminals } from './useFleet'
 
 // El mapa (Leaflet) se descarga solo cuando se abre
@@ -95,6 +96,7 @@ function FleetCatalogsPage() {
     setPage(1)
   }
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [platformsOf, setPlatformsOf] = useState<Terminal | null>(null)
 
   const fuels = useFuelTypes(true)
   const cities = useCities(true)
@@ -167,6 +169,21 @@ function FleetCatalogsPage() {
         ),
     },
     { header: 'Estado', cell: (t) => activeBadge(t.isActive) },
+    {
+      header: '',
+      cell: (t) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPlatformsOf(t)
+          }}
+        >
+          Andenes
+        </Button>
+      ),
+    },
     {
       header: '',
       cell: (t) =>
@@ -512,6 +529,7 @@ function FleetCatalogsPage() {
           </form>
         )}
       </Modal>
+      <TerminalPlatformsModal terminal={platformsOf} canEdit={canEdit} onClose={() => setPlatformsOf(null)} />
     </div>
   )
 }

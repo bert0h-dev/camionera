@@ -17,6 +17,7 @@ type TripInfo = {
   status: TripStatus;
   busId: string | null;
   actualDepartureAt: Date | null;
+  platform: { id: string; code: string; name: string | null } | null;
 };
 
 const DAY = 86_400_000;
@@ -147,6 +148,7 @@ export class DeparturesService {
             status: true,
             busId: true,
             actualDepartureAt: true,
+            platform: { select: { id: true, code: true, name: true } },
           },
         })
       : [];
@@ -196,7 +198,13 @@ export class DeparturesService {
           ...r,
           extra: r.scheduleId.startsWith('extra-'),
           trip: t
-            ? { id: t.id, tripNumber: t.tripNumber, status: t.status }
+            ? {
+                id: t.id,
+                tripNumber: t.tripNumber,
+                status: t.status,
+                // El andén es de la terminal de origen; en una parada intermedia no aplica
+                platform: r.boardIndex === 0 ? t.platform : null,
+              }
             : null,
           sellable: !reason,
           notSellableReason: reason,

@@ -48,7 +48,8 @@ export interface PlanRoute {
   originTz: string;
   /** Una ruta inactiva no genera nada */
   isActive: boolean;
-  schedules: (ScheduleWindow & { id: string })[];
+  /** platformId = andén habitual que hereda el recorrido */
+  schedules: (ScheduleWindow & { id: string; platformId?: string | null })[];
 }
 
 export interface PlannedTrip {

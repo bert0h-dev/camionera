@@ -36,6 +36,7 @@ interface Manifest {
     departureAt: string
     route: { code: string; name: string }
     bus: string | null
+    platform: string | null
     driver: string | null
     collector: string | null
   }
@@ -150,7 +151,7 @@ function BoardingPage() {
     <div className="space-y-5">
       <PageHeader
         title="Abordaje"
-        description={`${m.trip.route.code} · ${m.trip.route.name} · ${m.trip.tripNumber}${m.trip.bus ? ` · unidad ${m.trip.bus}` : ''}`}
+        description={`${m.trip.route.code} · ${m.trip.route.name} · ${m.trip.tripNumber}${m.trip.bus ? ` · unidad ${m.trip.bus}` : ''}${m.trip.platform ? ` · andén ${m.trip.platform}` : ''}`}
         refreshing={isFetching}
         actions={
           <Button variant="glass" icon={FileDown} loading={pdf.isPending} onClick={() => pdf.mutate()}>

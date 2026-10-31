@@ -95,7 +95,7 @@ Cada alta y cambio queda en la bitácora (`routes`).
 - Parámetros: nuevo módulo **Rutas** con el grupo "Horarios de ruta".
 
 ### Datos demo
-- 17 salidas en 6 rutas, vigentes desde hace 30 días. León – Querétaro vence en 5 días y Guadalajara – Mazatlán queda sin horarios; las dos aparecen en Pendientes.
+- 17 salidas en 6 rutas, vigentes desde hace 30 días, cada una con su andén habitual desde la rama de andenes (doc 19). León – Querétaro vence en 5 días y Guadalajara – Mazatlán queda sin horarios; las dos aparecen en Pendientes.
 
 ## 4.3 Paradas
 

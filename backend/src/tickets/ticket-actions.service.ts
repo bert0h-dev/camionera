@@ -742,6 +742,7 @@ export class TicketActionsService implements OnModuleInit {
                 departureAt: true,
                 tripDate: true,
                 route: { select: { code: true, name: true } },
+                platform: { select: { code: true } },
               },
             },
             replacedBy: {

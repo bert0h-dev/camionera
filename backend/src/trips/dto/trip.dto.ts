@@ -134,6 +134,31 @@ export class AssignTripDto {
   overrideReason?: string | null;
 }
 
+export class SetTripPlatformDto {
+  @ApiProperty({ description: 'null = quitar el andén', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  platformId!: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Solo admin: motivo para usar un andén ocupado',
+  })
+  @Transform(trimOrNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  overrideReason?: string | null;
+}
+
+export class DeparturesBoardQueryDto {
+  @ApiPropertyOptional({
+    description: 'Terminal de origen; sin ella solo regresa las terminales',
+  })
+  @IsOptional()
+  @IsUUID()
+  terminalId?: string;
+}
+
 export class CreateExtraTripDto {
   @ApiProperty()
   @IsUUID()

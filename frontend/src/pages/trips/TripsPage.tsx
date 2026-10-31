@@ -106,6 +106,15 @@ function TripsPage() {
     },
     { header: 'Clave', cell: (t) => <span className="font-data text-xs text-fg-muted">{t.tripNumber}</span> },
     {
+      header: 'Andén',
+      cell: (t) =>
+        t.platform ? (
+          <span className="font-data font-semibold">{t.platform.code}</span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
+    {
       header: 'Unidad',
       cell: (t) =>
         t.bus ? (

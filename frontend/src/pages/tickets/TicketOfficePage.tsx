@@ -48,6 +48,7 @@ function DepartureRow({ r, onPick }: { r: SellableDeparture; onPick: () => void 
           <div className="text-xs text-fg-muted">
             {r.board.code} · {r.board.cityName}
           </div>
+          {r.trip?.platform && <div className="text-xs font-semibold">Andén {r.trip.platform.code}</div>}
         </div>
         <div className="flex min-w-28 flex-1 flex-col items-center text-xs text-fg-muted">
           <span>{formatMinutes(r.durationMinutes)}</span>
@@ -366,7 +367,7 @@ function TicketOfficePage() {
               <HeroStat
                 label="Salida"
                 value={localTime(m.segment.board.at, m.segment.board.timezone)}
-                hint={`${m.segment.board.code} → ${m.segment.alight.code} · ${m.trip.tripNumber}`}
+                hint={`${m.segment.board.code} → ${m.segment.alight.code} · ${m.trip.tripNumber}${m.trip.platform ? ` · andén ${m.trip.platform.code}` : ''}`}
                 tone="primary"
               />
               <HeroStat

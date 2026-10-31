@@ -124,6 +124,15 @@ export function RouteSchedulesTab({ route }: { route: RouteDetail }) {
       cell: (s) => <span className="font-data">{arrivalText(s)}</span>,
     },
     {
+      header: 'Andén',
+      cell: (s) =>
+        s.platform ? (
+          <span className="font-data font-semibold">{s.platform.code}</span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
+    },
+    {
       header: 'Días',
       cell: (s) => (
         <div className="space-y-1">

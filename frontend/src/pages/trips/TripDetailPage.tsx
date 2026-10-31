@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ScanLine, Trash2, TriangleAlert, UserCog } from 'lucide-react'
+import { DoorOpen, ScanLine, Trash2, TriangleAlert, UserCog } from 'lucide-react'
 import { api, apiErrorMessage } from '../../lib/api'
 import { localClock } from '../../lib/timezones'
 import { useAuth } from '../../auth/useAuth'
@@ -23,6 +23,7 @@ import { incidentFolio } from '../fleet/useFleet'
 import { AssignTripModal } from './AssignTripModal'
 import { TripStatusBadge } from './TripBadges'
 import { TripPassengersCard } from './TripPassengersCard'
+import { TripPlatformModal } from './TripPlatformModal'
 import { TripStatusActions } from './TripStatusActions'
 import { tripTimes, useCanManageTrips } from './useTrips'
 
@@ -37,6 +38,7 @@ function TripDetailPage() {
   const { user } = useAuth()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [choosingPlatform, setChoosingPlatform] = useState(false)
   const [reporting, setReporting] = useState<ReportPreset | null>(null)
 
   const {
@@ -105,6 +107,11 @@ function TripDetailPage() {
             {canAssign && (
               <Button variant="glass" icon={UserCog} onClick={() => setAssigning(true)}>
                 {trip.busId || trip.driverId ? 'Cambiar asignación' : 'Asignar'}
+              </Button>
+            )}
+            {canAssign && !trip.actualDepartureAt && (
+              <Button variant="glass" icon={DoorOpen} onClick={() => setChoosingPlatform(true)}>
+                {trip.platform ? 'Cambiar andén' : 'Asignar andén'}
               </Button>
             )}
             {canReport && (
@@ -194,6 +201,11 @@ function TripDetailPage() {
           {trip.overrideReason}
         </Alert>
       )}
+      {trip.platformOverrideReason && (
+        <Alert tone="warning" title="Andén forzado por un administrador">
+          {trip.platformOverrideReason}
+        </Alert>
+      )}
       {trip.status === 'cancelled' && (
         <Alert tone="danger" title="Recorrido cancelado">
           {trip.cancelReason}
@@ -223,6 +235,21 @@ function TripDetailPage() {
                 <dt className="text-xs text-fg-muted">Origen</dt>
                 <dd>
                   {origin.name} <span className="font-data text-xs text-fg-muted">{origin.code}</span>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-fg-muted">Andén de salida</dt>
+                <dd>
+                  {trip.platform ? (
+                    <span className="font-data font-semibold">
+                      {trip.platform.code}
+                      {trip.platform.name && (
+                        <span className="font-sans font-normal text-fg-muted"> · {trip.platform.name}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-fg-muted">Sin asignar</span>
+                  )}
                 </dd>
               </div>
               <div>
@@ -333,6 +360,14 @@ function TripDetailPage() {
 
       <ReportIncidentModal preset={reporting} onClose={() => setReporting(null)} />
 
+      {canAssign && (
+        <TripPlatformModal
+          key={`p-${choosingPlatform}`}
+          trip={trip}
+          open={choosingPlatform}
+          onClose={() => setChoosingPlatform(false)}
+        />
+      )}
       {canAssign && (
         <AssignTripModal key={String(assigning)} trip={trip} open={assigning} onClose={() => setAssigning(false)} />
       )}

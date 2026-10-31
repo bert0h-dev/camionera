@@ -21,11 +21,14 @@ import {
   ChangeTripStatusDto,
   MineQueryDto,
   CreateExtraTripDto,
+  DeparturesBoardQueryDto,
+  SetTripPlatformDto,
   GenerateTripsDto,
   QueryTripsDto,
   SummaryQueryDto,
 } from './dto/trip.dto.js';
 import { TripAssignmentService } from './trip-assignment.service.js';
+import { TripPlatformService } from './trip-platform.service.js';
 import { TripStatusService } from './trip-status.service.js';
 import { TripsService } from './trips.service.js';
 
@@ -46,6 +49,7 @@ export class TripsController {
     private readonly trips: TripsService,
     private readonly assignment: TripAssignmentService,
     private readonly status: TripStatusService,
+    private readonly platforms: TripPlatformService,
   ) {}
 
   @Get('summary')
@@ -58,6 +62,13 @@ export class TripsController {
   @Roles(...TRIP_READERS)
   routeOptions() {
     return this.trips.routeOptions();
+  }
+
+  /** Tablero de salidas: lo consulta toda la operación (taquilla, cobradores, conductores). */
+  @Get('departures-board')
+  @Roles(...TRIP_READERS, UserRole.collector, UserRole.driver)
+  departuresBoard(@Query() q: DeparturesBoardQueryDto) {
+    return this.platforms.board(q.terminalId);
   }
 
   // Antes de :id para que /trips/mine no se lea como un id
@@ -116,6 +127,20 @@ export class TripsController {
     @CurrentUser() actor: AuthUser,
   ) {
     return this.assignment.assign(id, dto, actor);
+  }
+
+  @Get(':id/platforms')
+  platformOptions(@Param('id', ParseUUIDPipe) id: string) {
+    return this.platforms.options(id);
+  }
+
+  @Patch(':id/platform')
+  setPlatform(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetTripPlatformDto,
+    @CurrentUser() actor: AuthUser,
+  ) {
+    return this.platforms.set(id, dto, actor);
   }
 
   @Delete(':id')

@@ -25,6 +25,8 @@ export interface TicketPdfTicket {
   tripNumber: string;
   routeName: string;
   busNumber: string | null;
+  /** Andén en la terminal de origen; null si aborda en una parada o aún no se asigna */
+  platform: string | null;
   board: {
     code: string;
     name: string;
@@ -202,7 +204,11 @@ export async function ticketsPdf(
     };
     row('Ruta', t.routeName, y);
     row('Recorrido', t.tripNumber, y + 13);
-    row('Unidad', t.busNumber ?? '—', y + 26);
+    row(
+      'Unidad / andén',
+      `${t.busNumber ?? '—'} / ${t.platform ?? '—'}`,
+      y + 26,
+    );
     row('Vendido', t.soldAt, y + 39);
 
     // Importe

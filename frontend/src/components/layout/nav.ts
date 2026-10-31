@@ -100,7 +100,7 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Análisis',
-    items: [{ to: '/reportes', label: 'Reportes', icon: BarChart3, roles: TRIP_READERS }],
+    items: [{ to: '/reportes', label: 'Reportes', icon: BarChart3, roles: [...TRIP_READERS, 'hr'] }],
   },
   {
     label: 'Sistema',

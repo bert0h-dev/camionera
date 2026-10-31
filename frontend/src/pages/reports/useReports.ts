@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { addDaysKey, todayKey } from '../../lib/format'
-import type { CancellationReport, OccupancyReport, SalesReport } from '../../lib/types'
+import type { CancellationReport, FleetReport, OccupancyReport, SalesReport, StaffReport } from '../../lib/types'
 
 export type Preset = 'today' | '7d' | 'month' | 'prev-month' | '30d' | 'custom'
 
@@ -41,9 +41,10 @@ export interface SalesFilters {
   channel: string
 }
 
-export function useSalesReport(f: SalesFilters) {
+export function useSalesReport(f: SalesFilters, enabled = true) {
   return useQuery({
     queryKey: ['reports', 'sales', f],
+    enabled,
     queryFn: async () =>
       (
         await api.get<SalesReport>('/reports/sales', {
@@ -82,5 +83,21 @@ export function useCancellationReport(f: { from: string; to: string; routeId: st
           params: { from: f.from, to: f.to, routeId: f.routeId || undefined },
         })
       ).data,
+  })
+}
+
+export function useFleetReport(f: { from: string; to: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: ['reports', 'fleet', f.from, f.to],
+    enabled,
+    queryFn: async () => (await api.get<FleetReport>('/reports/fleet', { params: { from: f.from, to: f.to } })).data,
+  })
+}
+
+export function useStaffReport(f: { from: string; to: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: ['reports', 'staff', f.from, f.to],
+    enabled,
+    queryFn: async () => (await api.get<StaffReport>('/reports/staff', { params: { from: f.from, to: f.to } })).data,
   })
 }

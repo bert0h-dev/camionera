@@ -33,6 +33,7 @@ import { fromCents, toCents } from '../src/tickets/money.js';
 import { orderTotals, priceTickets, promotionDiscount, type PromotionRule } from '../src/tickets/pricing-rules.js';
 import { qrToken } from '../src/tickets/qr-token.js';
 import { plannedTrips } from '../src/trips/trip-rules.js';
+import { fuelTotal, measureLoads } from '../src/fleet/fuel-rules.js';
 
 export const SALES_NOTE = 'DEMO-VENTAS';
 const DEMO_DOMAIN = '@demo.camionera.mx';
@@ -69,6 +70,7 @@ export async function cleanSales(prisma: PrismaClient) {
   await prisma.order.deleteMany({ where: { id: { in: ids } } }); // promociones de la compra en cascada
   await prisma.promotion.deleteMany({ where: { code: { startsWith: 'DEMO' } } });
   await prisma.customer.deleteMany({ where: { email: { endsWith: DEMO_DOMAIN } } });
+  await prisma.fuelLoad.deleteMany({ where: { ticket: { startsWith: SALES_NOTE } } });
   const trips = await prisma.trip.deleteMany({ where: { notes: SALES_NOTE } });
   console.log(`Ventas demo eliminadas: ${ids.length} compras, ${trips.count} recorridos`);
 }
@@ -100,7 +102,7 @@ export async function loadSales(prisma: PrismaClient) {
   if (!routes.length) throw new Error('No hay rutas demo; corre primero npm run seed:demo -w backend -- --routes');
   const buses = await prisma.bus.findMany({
     where: { plates: { startsWith: 'DEM' }, status: { in: ['available', 'in_service'] } },
-    include: { seats: { where: { isBlocked: false }, select: { number: true } } },
+    include: { seats: { where: { isBlocked: false }, select: { number: true } }, busModel: true },
     orderBy: { economicNumber: 'asc' },
   });
   const staff = await prisma.staff.findMany({
@@ -232,7 +234,8 @@ export async function loadSales(prisma: PrismaClient) {
     create: boolean;
   };
   const plans: TripPlan[] = [];
-  const odometer = new Map(buses.map((b) => [b.id, Math.max(0, b.odometerKm - 45000)]));
+  // Odómetro de la historia demo: muy por debajo del actual para no mezclarse con las cargas demo del M3
+  const odometer = new Map(buses.map((b) => [b.id, Math.max(0, b.odometerKm - 200000)]));
   const tripRows: Prisma.TripCreateManyInput[] = [];
   const logRows: Prisma.TripStatusLogCreateManyInput[] = [];
   const assignRows: { id: string; busId: string; driverId: string }[] = [];
@@ -344,6 +347,41 @@ export async function loadSales(prisma: PrismaClient) {
   for (const a of assignRows)
     await prisma.trip.updateMany({ where: { id: a.id, busId: null }, data: { busId: a.busId, driverId: a.driverId } }).catch(() => undefined);
   console.log(`Recorridos demo: ${tripRows.length} creados, ${assignRows.length} futuros asignados`);
+
+  // Cargas de combustible alineadas con los km de los recorridos terminados: un lleno cada ~900–1,300 km
+  const fuelRows: Prisma.FuelLoadCreateManyInput[] = [];
+  const dieselPrice = (at: Date) =>
+    Math.round((24.6 + ((at.getTime() - new Date(`${start}T00:00:00Z`).getTime()) / (24 * HOUR)) * 0.01) * 1000) / 1000;
+  for (const bus of buses) {
+    const done = tripRows
+      .filter((t) => t.busId === bus.id && t.status === TripStatus.completed && t.endOdometerKm != null)
+      .sort((a, b) => (a.startOdometerKm ?? 0) - (b.startOdometerKm ?? 0));
+    if (!done.length) continue;
+    const expected = Number(bus.busModel.expectedEfficiency ?? 3);
+    // Unidad 1002: rendimiento bajo en la última quincena (para el aviso de rendimiento)
+    const low = bus.economicNumber === '1002';
+    const rows: Prisma.FuelLoadCreateManyInput[] = [];
+    // Lleno inicial antes del primer recorrido (base para medir)
+    const first = done[0];
+    rows.push({ busId: bus.id, fuelTypeId: bus.busModel.fuelTypeId, loadedAt: new Date((first.departureAt as Date).getTime() - HOUR), quantity: 300, unitPrice: dieselPrice(first.departureAt as Date), total: fuelTotal(300, dieselPrice(first.departureAt as Date)), odometerKm: first.startOdometerKm!, station: 'Pemex Central', ticket: `${SALES_NOTE}-${bus.economicNumber}-0`, recordedBy: admin.id, reviewedBy: admin.id, reviewedAt: first.departureAt as Date });
+    let acc = 0;
+    let threshold = 900 + random() * 400;
+    for (const t of done) {
+      acc += t.endOdometerKm! - t.startOdometerKm!;
+      if (acc < threshold) continue;
+      const at = (t.actualArrivalAt ?? t.arrivalAt) as Date;
+      const recent = now.getTime() - at.getTime() < 15 * 24 * HOUR;
+      const eff = expected * (low && recent ? 0.78 : 0.94 + random() * 0.1);
+      const liters = Math.round((acc / eff) * 100) / 100;
+      rows.push({ busId: bus.id, fuelTypeId: bus.busModel.fuelTypeId, loadedAt: new Date(at.getTime() + 20 * MIN), quantity: liters, unitPrice: dieselPrice(at), total: fuelTotal(liters, dieselPrice(at)), odometerKm: t.endOdometerKm!, station: pick(['Pemex Central', 'Pemex Autopista km 120', 'G500 Libramiento']), ticket: `${SALES_NOTE}-${bus.economicNumber}-${rows.length}`, recordedBy: admin.id, reviewedBy: admin.id, reviewedAt: new Date(at.getTime() + 60 * MIN) });
+      acc = 0;
+      threshold = 900 + random() * 400;
+    }
+    const measures = measureLoads(rows.map((r, n) => ({ id: String(n), odometerKm: r.odometerKm, quantity: Number(r.quantity), isFullTank: true })));
+    fuelRows.push(...rows.map((r, n) => ({ ...r, ...measures.get(String(n)) })));
+  }
+  for (let i = 0; i < fuelRows.length; i += 500) await prisma.fuelLoad.createMany({ data: fuelRows.slice(i, i + 500) });
+  console.log(`Cargas de combustible demo: ${fuelRows.length}`);
 
   // ---------- Ventas ----------
   const sessions = new Map<string, { id: string; userId: string; day: string; openedAt: Date; movements: { type: CashMovementType; method: PaymentMethod; amount: number }[] }>();

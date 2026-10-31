@@ -1836,3 +1836,57 @@ export interface OccupancyReport {
     revenue: number
   }[]
 }
+
+interface CancellationRates {
+  sold: number
+  cancelled: number
+  cancelRate: number
+  noShow: number
+  noShowRate: number
+  noShowRevenue: number
+}
+
+export interface CancellationReport {
+  range: { from: string; to: string; timezone: string }
+  cancellationHours: number
+  summary: CancellationRates & {
+    inWindow: number
+    lateCancels: number
+    refunds: number
+    companyTrips: number
+    companyTickets: number
+    pendingRefunds: number
+    changes: number
+    previous: { from: string; to: string; cancelRate: number; noShowRate: number; refunds: number }
+    change: { cancelRate: number; noShowRate: number }
+  }
+  byDay: { date: string; cancelled: number; noShow: number; sold: number; cancelRate: number; noShowRate: number }[]
+  notice: { key: string; label: string; tickets: number; amount: number }[]
+  reasons: { reason: string; tickets: number; amount: number }[]
+  byRoute: (CancellationRates & { routeId: string; code: string; name: string })[]
+  bySchedule: (CancellationRates & {
+    scheduleId: string
+    routeId: string | null
+    routeCode: string
+    departureTime: string
+  })[]
+  byPassengerType: (CancellationRates & { key: string })[]
+  refunds: {
+    byKind: { key: 'passenger' | 'trip' | 'change'; tickets: number; amount: number }[]
+    byMethod: { key: PaymentMethod; tickets: number; amount: number }[]
+    byUser: { key: string; tickets: number; amount: number }[]
+  }
+  companyTrips: {
+    tripId: string
+    tripNumber: string
+    routeCode: string
+    departureAt: string
+    reason: string | null
+    tickets: number
+    amount: number
+    refunded: number
+    relocated: number
+    pending: number
+  }[]
+  changes: { count: number; relocations: number; collected: number; returned: number; fees: number }
+}

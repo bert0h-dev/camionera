@@ -86,7 +86,8 @@ export function occupancyDocument(
           {
             header: 'Días',
             kind: 'text',
-            value: (r) => r.daysOfWeek.map((d: number) => SHORT[d]).join(' ') || '-',
+            value: (r) =>
+              r.daysOfWeek.map((d: number) => SHORT[d]).join(' ') || '-',
             width: 1.2,
           },
           { header: 'Recorridos', kind: 'int', value: (r) => r.trips },

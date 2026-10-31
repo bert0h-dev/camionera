@@ -125,3 +125,30 @@ export function RankingBars({ data, percent }: { data: { name: string; value: nu
     </div>
   )
 }
+
+/** Barras por día de dos conteos (p. ej. cancelados y no presentados). */
+export function DailyCountChart({
+  data,
+  series,
+}: {
+  data: ({ date: string } & Record<string, number | string>)[]
+  series: { key: string; name: string }[]
+}) {
+  const rows = data.map((d) => ({ ...d, label: dayLabel(d.date) }))
+  return (
+    <div className="h-64 w-full text-fg-muted">
+      <ResponsiveContainer>
+        <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.15} vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: 'currentColor', fontSize: 11 }} tickLine={false} minTickGap={12} />
+          <YAxis allowDecimals={false} tick={{ fill: 'currentColor', fontSize: 11 }} tickLine={false} width={36} />
+          <Tooltip {...tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {series.map((s, i) => (
+            <Bar key={s.key} dataKey={s.key} name={s.name} stackId="a" fill={CHART_COLORS[[4, 1, 0][i] ?? i]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}

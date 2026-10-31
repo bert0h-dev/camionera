@@ -1,3 +1,4 @@
+import { ExecutiveReportService } from './executive-report.service.js';
 import { Module } from '@nestjs/common';
 import { ReportsController } from './reports.controller.js';
 import { CancellationReportService } from './cancellation-report.service.js';
@@ -15,6 +16,7 @@ import { SalesReportService } from './sales-report.service.js';
     CancellationReportService,
     FleetReportService,
     StaffReportService,
+    ExecutiveReportService,
   ],
 })
 export class ReportsModule {}

@@ -2004,3 +2004,48 @@ export interface StaffReport {
     rate: number | null
   }[]
 }
+
+/** Tablero ejecutivo (GET /reports/executive). Los cambios con "Change" son % salvo las tasas, en puntos. */
+export interface ExecutiveReport {
+  range: { from: string; to: string; timezone: string }
+  previous: { from: string; to: string }
+  kpis: {
+    net: number
+    netChange: number | null
+    tickets: number
+    ticketsChange: number | null
+    occupancy: number
+    occupancyChange: number | null
+    trips: number
+    cancelRate: number
+    cancelRateChange: number
+    noShowRate: number
+    noShowRateChange: number
+    km: number
+    kmChange: number | null
+    costPerKm: number | null
+    costPerKmChange: number | null
+    onTimeRate: number | null
+    attendanceRate: number | null
+  }
+  days: { date: string; net: number; tickets: number }[]
+  flags: {
+    lowOccupancyRoutes: { routeId: string; code: string; name: string; byKm: number; trips: number }[]
+    lowEfficiencyBuses: {
+      busId: string
+      number: string
+      efficiency: number | null
+      expected: number | null
+      gap: number | null
+    }[]
+    noShowSchedules: {
+      scheduleId: string
+      routeCode: string
+      departureTime: string
+      noShowRate: number
+      sold: number
+    }[]
+    cashDifferences: { userId: string; name: string; closes: number; difference: number }[]
+  }
+  thresholds: { lowOccupancy: number; highNoShow: number }
+}

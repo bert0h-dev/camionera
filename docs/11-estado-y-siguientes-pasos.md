@@ -33,18 +33,19 @@
   - 6.5 Abordaje con QR o folio, manifiesto en PDF y no presentados ✅ fusionada (PR #32).
   - 6.6 Promociones (acumulables con el tipo de pasajero) y clientes ✅ fusionada (PR #33).
   - 6.7 Venta en línea con Mercado Pago ⏸️ **pospuesta** por decisión del usuario; se retoma cuando haya llaves de prueba. El resto del módulo funciona sin ella.
-- **Módulo 7, Reportes y analytics** (doc 18): 🚧 en curso, plan 7.1–7.5 aprobado.
+- **Módulo 7, Reportes y analytics** (doc 18): ✅ completo (7.1–7.5).
   - 7.1 Base de reportes y ventas (Excel y PDF) ✅ fusionada (PR #34), con la semilla `--sales`.
   - 7.2 Ocupación por asiento-km, mapa de calor, horarios y trechos; ventas en SQL ✅ fusionada (PR #35).
-  - 7.3 Cancelaciones, no presentados, reembolsos y cambios; motivos fijos al cancelar ✅ en la rama `feat/m7-cancelaciones`.
-  - 7.4 Flota y personal (km, rendimiento, costo por km, puntualidad, vendedores, asistencia) ✅ en la rama `feat/m7-flota-personal`.
+  - 7.3 Cancelaciones, no presentados, reembolsos y cambios; motivos fijos al cancelar ✅
+  - 7.4 Flota y personal (km, rendimiento, costo por km, puntualidad, vendedores, asistencia) ✅
+  - 7.5 Tablero ejecutivo en Inicio (cifras clave contra el periodo anterior y focos rojos) ✅ en la rama `feat/m7-tablero`.
 - **Zona horaria de la central** configurable ✅ fusionada (PR #21): parámetro `company.timezone` en Configuración › Empresa.
 - **README** actualizado al estado actual (módulos 1–4, roles, tablas, variables y scripts).
 - **Inicio reorganizado** (doc 13): ✅ fusionado (PR #11).
 - **Parámetros por módulo** (doc 14): ✅ fusionado (PR #12).
 
 ## Lo que sigue
-1. **Módulo 7, Reportes**: sigue la 7.5 (tablero ejecutivo en Inicio). Fases y decisiones en el doc 18.
+1. **Módulo 7, Reportes**: cerrado con la 7.5; queda pendiente la 6.7 (venta en línea con Mercado Pago). Fases y decisiones en el doc 18.
 2. **Pospuesto**: 6.7 venta en línea (Mercado Pago, pedir llaves de prueba).
 3. **Facturación CFDI 4.0**: módulo posterior al 6 (necesita un PAC).
 

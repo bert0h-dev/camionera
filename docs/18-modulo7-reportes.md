@@ -8,9 +8,9 @@ Pantalla única **Análisis › Reportes** (`/reportes`) con una pestaña por á
 |---|---|---|
 | 7.1 | Base de reportes y **ventas** | ✅ fusionada (PR #34) |
 | 7.2 | **Ocupación** por recorrido, ruta, horario y tramo; ventas en SQL | ✅ fusionada (PR #35) |
-| 7.3 | **Cancelaciones y no presentados** | ✅ rama `feat/m7-cancelaciones` |
-| 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ✅ rama `feat/m7-flota-personal` |
-| 7.5 | **Tablero ejecutivo** (pestaña en Inicio) | ⏳ |
+| 7.3 | **Cancelaciones y no presentados** | ✅ |
+| 7.4 | **Flota y personal** (km, rendimiento, costo por km, puntualidad, productividad) | ✅ |
+| 7.5 | **Tablero ejecutivo** (pestaña en Inicio) | ✅ rama `feat/m7-tablero` |
 
 Decisiones:
 - Gráficas con **Recharts**. Solo se descarga al abrir Reportes, porque la página se carga diferida.
@@ -81,6 +81,14 @@ Decisiones:
 - Flota la ven admin, supervisor y coordinator; Personal también **hr** (por eso hr ya entra a Reportes, solo con esa pestaña).
 - Verificado (octubre): 420 recorridos y 198,535 km (875 estimados). Cada reporte responde en menos de 1 s.
 
+## 7.5 Tablero ejecutivo (`GET /reports/executive` y `/reports/executive/export?format=pdf`)
+- Pestaña **Tablero** en Inicio (la primera para admin, supervisor y coordinator; se puede ocultar en *Personalizar*). Periodo rápido: hoy, 7 días, este mes y mes anterior.
+- Reutiliza los servicios de 7.1–7.4 en paralelo; no tiene consultas propias. Responde en alrededor de 1.7 s por un mes.
+- Cifras con su cambio contra el periodo anterior: neto vendido y boletos (%), ocupación, cancelación y no presentados (puntos), km y costo por km (%), salidas a tiempo y asistencia. Cada tarjeta liga a su reporte con el mismo periodo. El color del cambio indica si es bueno (por ejemplo, bajar la cancelación es verde).
+- Gráfica del neto por día.
+- **Focos rojos** (hasta 5 de cada uno): rutas con ocupación menor a 40 % (con al menos 5 recorridos), unidades 15 % o más debajo de su rendimiento esperado, horarios con 15 % o más de no presentados y vendedores con diferencias de caja.
+- PDF de una página con las cifras y los focos rojos.
+
 ## Pantalla
 - Banda: neto, vendido (con el cambio contra el periodo anterior), reembolsos y boletos; botones *Excel* y *PDF*; pestañas.
 - Filtros: periodo, ruta y vendedor (este último no lo ve el vendor).
@@ -108,3 +116,4 @@ Decisiones:
 | GET | `/reports/cancellations?from=&to=&routeId=` · `/reports/cancellations/export?format=xlsx\|pdf&…` | admin, supervisor, coordinator |
 | GET | `/reports/fleet?from=&to=` · `/reports/fleet/export?format=xlsx|pdf&…` | admin, supervisor, coordinator |
 | GET | `/reports/staff?from=&to=` · `/reports/staff/export?format=xlsx|pdf&…` | admin, supervisor, coordinator, hr |
+| GET | `/reports/executive?from=&to=` · `/reports/executive/export?format=pdf&…` | admin, supervisor, coordinator |

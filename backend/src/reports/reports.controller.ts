@@ -1,3 +1,5 @@
+import { executiveDocument } from './executive-document.js';
+import { ExecutiveReportService } from './executive-report.service.js';
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
@@ -44,6 +46,7 @@ export class ReportsController {
     private readonly cancellationReport: CancellationReportService,
     private readonly fleetReport: FleetReportService,
     private readonly staffReport: StaffReportService,
+    private readonly executiveReport: ExecutiveReportService,
     private readonly settings: SettingsService,
   ) {}
 
@@ -176,6 +179,28 @@ export class ReportsController {
       res,
       staffDocument(data, await this.company()),
       `personal-${data.range.from}-a-${data.range.to}`,
+      q.format,
+    );
+  }
+
+  @Get('executive')
+  @Roles(...OPERATION_READERS)
+  executive(@Query() q: ReportRangeDto, @CurrentUser() user: AuthUser) {
+    return this.executiveReport.executive(q, user);
+  }
+
+  @Get('executive/export')
+  @Roles(...OPERATION_READERS)
+  async executiveExport(
+    @Query() q: ReportRangeDto & { format?: string },
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+  ) {
+    const data = await this.executiveReport.executive(q, user);
+    await this.send(
+      res,
+      executiveDocument(data, await this.company()),
+      `tablero-${data.range.from}-a-${data.range.to}`,
       q.format,
     );
   }

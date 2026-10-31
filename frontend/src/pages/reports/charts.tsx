@@ -152,3 +152,21 @@ export function DailyCountChart({
     </div>
   )
 }
+
+/** Barras del neto vendido por día. */
+export function DailyNetChart({ data }: { data: { date: string; net: number }[] }) {
+  const rows = data.map((d) => ({ ...d, label: dayLabel(d.date) }))
+  return (
+    <div className="h-64 w-full text-fg-muted">
+      <ResponsiveContainer>
+        <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.15} vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: 'currentColor', fontSize: 11 }} tickLine={false} minTickGap={12} />
+          <YAxis tickFormatter={compact} tick={{ fill: 'currentColor', fontSize: 11 }} tickLine={false} width={56} />
+          <Tooltip {...tooltipStyle} formatter={(v) => formatMoney(Number(v))} />
+          <Bar dataKey="net" name="Neto" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}

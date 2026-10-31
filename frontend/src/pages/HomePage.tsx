@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bus, SlidersHorizontal, TramFront, Users } from 'lucide-react'
+import { Bus, ChartNoAxesCombined, SlidersHorizontal, TramFront, Users } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { api, apiErrorMessage } from '../lib/api'
 import type { DashboardSummary, UserRole } from '../lib/types'
@@ -12,6 +12,7 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { Tabs, type TabItem } from '../components/ui/Tabs'
 import { useToast } from '../components/ui/toast-context'
 import { useBusSummary, useMaintenanceSummary } from './fleet/useFleet'
+import { ExecutiveDashboard } from './home/ExecutiveDashboard'
 import { FleetOverview } from './home/FleetOverview'
 import { MyOrdersPanel } from './home/MaintenancePanels'
 import { MyEvaluationsCard } from './home/MyEvaluationsCard'
@@ -28,12 +29,13 @@ const FLEET_READERS: UserRole[] = ['admin', 'coordinator', 'supervisor']
 const TRIP_READERS: UserRole[] = ['admin', 'coordinator', 'supervisor']
 const AREA_KEY = 'home.area'
 
-type Section = 'pending' | 'me' | 'staff' | 'fleet' | 'trips' | 'myOrders'
-type Area = 'staff' | 'fleet' | 'trips'
+type Section = 'pending' | 'me' | 'executive' | 'staff' | 'fleet' | 'trips' | 'myOrders'
+type Area = 'executive' | 'staff' | 'fleet' | 'trips'
 
 const SECTION_LABELS: Record<Section, { label: string; hint: string }> = {
   pending: { label: 'Pendientes', hint: 'Documentos y preventivos vencidos o por vencer' },
   me: { label: 'Mi información', hint: 'Mi turno, mi mes, mis evaluaciones y recibos' },
+  executive: { label: 'Tablero', hint: 'Cifras clave del periodo contra el anterior y focos rojos' },
   staff: { label: 'Personal', hint: 'Tablero de entradas, asistencia y puestos' },
   fleet: { label: 'Flota', hint: 'Estado de las unidades y del taller' },
   trips: { label: 'Recorridos', hint: 'Avance del día y lo que está en operación' },
@@ -62,7 +64,7 @@ function headline(team: Team | null | undefined, isTeamReader: boolean) {
 const readArea = (): Area | null => {
   try {
     const v = localStorage.getItem(AREA_KEY)
-    return v === 'staff' || v === 'fleet' || v === 'trips' ? v : null
+    return v === 'executive' || v === 'staff' || v === 'fleet' || v === 'trips' ? v : null
   } catch {
     return null
   }
@@ -100,6 +102,7 @@ function HomePage() {
   const available: Section[] = [
     ...(isTeamReader || isFleetReader ? (['pending'] as const) : []),
     ...(data?.me ? (['me'] as const) : []),
+    ...(isTripReader ? (['executive'] as const) : []),
     ...(isTeamReader ? (['staff'] as const) : []),
     ...(isFleetReader ? (['fleet'] as const) : []),
     ...(isTripReader ? (['trips'] as const) : []),
@@ -109,6 +112,7 @@ function HomePage() {
   const show = (s: Section) => available.includes(s) && !hidden.has(s)
 
   const areaTabs: TabItem<Area>[] = [
+    ...(show('executive') ? [{ key: 'executive' as const, label: 'Tablero', icon: ChartNoAxesCombined }] : []),
     ...(show('staff') ? [{ key: 'staff' as const, label: 'Personal', icon: Users }] : []),
     ...(show('fleet') ? [{ key: 'fleet' as const, label: 'Flota', icon: Bus }] : []),
     ...(show('trips') ? [{ key: 'trips' as const, label: 'Recorridos', icon: TramFront }] : []),
@@ -265,6 +269,7 @@ function HomePage() {
       {area && (
         <section className="space-y-4">
           {areaTabs.length > 1 && <Tabs items={areaTabs} value={area} onChange={chooseArea} />}
+          {area === 'executive' && <ExecutiveDashboard />}
           {area === 'staff' && <TeamDashboard team={t} />}
           {area === 'fleet' && <FleetOverview />}
           {area === 'trips' && <TripsOverview />}

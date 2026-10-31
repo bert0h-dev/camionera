@@ -1,7 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { addDaysKey, todayKey } from '../../lib/format'
-import type { CancellationReport, FleetReport, OccupancyReport, SalesReport, StaffReport } from '../../lib/types'
+import type {
+  CancellationReport,
+  ExecutiveReport,
+  FleetReport,
+  OccupancyReport,
+  SalesReport,
+  StaffReport,
+} from '../../lib/types'
 
 export type Preset = 'today' | '7d' | 'month' | 'prev-month' | '30d' | 'custom'
 
@@ -99,5 +106,14 @@ export function useStaffReport(f: { from: string; to: string }, enabled: boolean
     queryKey: ['reports', 'staff', f.from, f.to],
     enabled,
     queryFn: async () => (await api.get<StaffReport>('/reports/staff', { params: { from: f.from, to: f.to } })).data,
+  })
+}
+
+export function useExecutiveReport(f: { from: string; to: string }, enabled = true) {
+  return useQuery({
+    queryKey: ['reports', 'executive', f.from, f.to],
+    enabled,
+    queryFn: async () =>
+      (await api.get<ExecutiveReport>('/reports/executive', { params: { from: f.from, to: f.to } })).data,
   })
 }

@@ -9,6 +9,7 @@ export const HOME_SECTIONS = [
   'fleet',
   'trips',
   'myOrders',
+  'executive',
 ] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 
